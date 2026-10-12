@@ -104,7 +104,7 @@ public class ConfigScreen extends Screen {
                 testResult = Component.literal("Conexión correcta (" + (System.currentTimeMillis() - t0) / 1000.0
                         + " s). Respuesta: " + answer).withStyle(ChatFormatting.GREEN);
             } catch (Exception e) {
-                testResult = Component.literal("Error: " + e.getMessage()).withStyle(ChatFormatting.RED);
+                testResult = Component.literal("Error: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED);
             }
         }, "Traductor ES - prueba");
         t.setDaemon(true);

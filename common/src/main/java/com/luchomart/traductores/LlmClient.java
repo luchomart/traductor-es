@@ -108,7 +108,14 @@ public class LlmClient {
     static String normalizeUrl(String url) {
         String u = url.trim();
         if (!u.startsWith("http://") && !u.startsWith("https://")) u = "http://" + u;
-        return u;
+        // Ollama escucha solo en IPv4 (127.0.0.1); algunas versiones de Java resuelven "localhost" como ::1 y fallan.
+        return u.replaceFirst("^(https?://)localhost(?=[:/]|$)", "$1127.0.0.1");
+    }
+
+    /** Mensaje legible para un error, aunque la excepción no traiga texto. */
+    public static String describe(Throwable e) {
+        String msg = e.getMessage();
+        return msg == null || msg.isBlank() ? e.getClass().getSimpleName() : msg;
     }
 
     private static String abbreviate(String s, int max) {

@@ -441,8 +441,8 @@ public class TranslationJob implements Runnable {
                 if (e.isModelNotFound()) {
                     throw new FatalException("El servidor respondió 404: revisá que el modelo \"" + cfg.model + "\" exista y que la URL sea correcta", e);
                 }
-                if (e.status == 401 || e.status == 403) {
-                    throw new FatalException("La API rechazó la clave (HTTP " + e.status + "). Revisá el campo Clave", e);
+                if (e.isAuthError()) {
+                    throw new FatalException("La IA rechazó la conexión: " + e.getMessage() + ". Revisá el campo Clave", e);
                 }
                 if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
                     long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));

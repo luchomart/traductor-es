@@ -106,6 +106,8 @@ public class ConfigScreen extends Screen {
         if (p == Preset.CUSTOM) p = p.next(); // "Personalizado" aparece solo al escribir una URL propia
         url.setValue(p.url);
         model.setValue(p.model);
+        // La clave de relleno de Ollama no sirve en la nube y confunde los errores: se vacía.
+        if (p.isCloud() && key.getValue().trim().equalsIgnoreCase("ollama")) key.setValue("");
         if (p.parallel > 0) parallel.setValue(String.valueOf(p.parallel));
         presetBtn.setMessage(presetLabel(p));
         TraductorES.LOG.info("[Traductor ES] Panel: servicio cambiado a {}", p.label);

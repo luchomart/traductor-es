@@ -46,6 +46,13 @@ public class LlmClient {
         public boolean isModelNotFound() {
             return status == 404;
         }
+
+        /** Clave ausente o inválida. Gemini lo informa con 400 en vez de 401. */
+        public boolean isAuthError() {
+            if (status == 401 || status == 403) return true;
+            String m = getMessage() == null ? "" : getMessage().toLowerCase(java.util.Locale.ROOT);
+            return status == 400 && (m.contains("api key") || m.contains("api_key") || m.contains("apikey"));
+        }
     }
 
     /** Traduce un lote {clave: texto} y devuelve {clave: traducción} con lo que se pudo leer. */
@@ -67,10 +74,11 @@ public class LlmClient {
         HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(15)).GET();
         if (cfg.apiKey != null && !cfg.apiKey.isBlank()) req.header("Authorization", "Bearer " + cfg.apiKey);
         HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (res.statusCode() == 401 || res.statusCode() == 403) {
-            throw new LlmException("la API rechazó la clave (HTTP " + res.statusCode() + ")", res.statusCode(), 0);
+        if (res.statusCode() / 100 != 2) {
+            LlmException e = new LlmException(httpError(res.statusCode(), res.body()), res.statusCode(), 0);
+            if (e.isAuthError()) throw e;
+            return java.util.List.of(); // el servidor no lista modelos: no es un error
         }
-        if (res.statusCode() / 100 != 2) return java.util.List.of();
         return parseModelList(res.body());
     }
 
@@ -124,7 +132,7 @@ public class LlmClient {
         }
         if (res.statusCode() / 100 != 2) {
             long retryAfter = res.headers().firstValue("Retry-After").map(LlmClient::parseRetryAfter).orElse(0L);
-            throw new LlmException("HTTP " + res.statusCode() + ": " + abbreviate(res.body(), 300), res.statusCode(), retryAfter);
+            throw new LlmException(httpError(res.statusCode(), res.body()), res.statusCode(), retryAfter);
         }
         String finish, content;
         try {
@@ -183,8 +191,39 @@ public class LlmClient {
         return u.replaceFirst("^(https?://)localhost(?=[:/]|$)", "$1127.0.0.1");
     }
 
+    private static final java.util.regex.Pattern ERROR_MESSAGE = java.util.regex.Pattern.compile("\"message\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+
+    /** Mensaje de error HTTP entendible: el motivo que da el servidor y qué hacer. */
+    static String httpError(int status, String body) {
+        java.util.regex.Matcher m = ERROR_MESSAGE.matcher(body == null ? "" : body);
+        String reason = m.find() ? m.group(1).replace("\\\"", "\"") : abbreviate(body == null ? "" : body.strip(), 150);
+        String lower = reason.toLowerCase(java.util.Locale.ROOT);
+        String hint;
+        if (status == 401 || status == 403 || lower.contains("api key") || lower.contains("api_key") || lower.contains("authentication")) {
+            hint = "la clave (API key) falta o no es válida";
+        } else if (status == 404) {
+            hint = "no existe ese modelo o la URL está mal";
+        } else if (status == 429) {
+            hint = "el servicio pide bajar el ritmo (límite de peticiones)";
+        } else if (status >= 500) {
+            hint = "el servidor de la IA tuvo un problema";
+        } else {
+            hint = "el servidor rechazó la petición";
+        }
+        return hint + " (HTTP " + status + (reason.isEmpty() ? "" : ": " + reason) + ")";
+    }
+
     /** Mensaje legible para un error, aunque la excepción no traiga texto. */
     public static String describe(Throwable e) {
+        if (e instanceof java.net.ConnectException || e instanceof java.net.http.HttpConnectTimeoutException) {
+            return "no hay ninguna IA respondiendo en esa dirección (¿está abierto Ollama o LM Studio? ¿la URL es correcta?)";
+        }
+        if (e instanceof java.net.UnknownHostException) {
+            return "no se encontró el servidor (revisá la URL o tu conexión a internet)";
+        }
+        if (e instanceof java.net.http.HttpTimeoutException) {
+            return "la IA tardó demasiado en responder";
+        }
         String msg = e.getMessage();
         return msg == null || msg.isBlank() ? e.getClass().getSimpleName() : msg;
     }

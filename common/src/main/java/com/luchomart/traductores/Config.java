@@ -18,7 +18,8 @@ public class Config {
     public static final Path FILE = DIR.resolve("config.json");
 
     public String apiUrl = "http://localhost:11434/v1/chat/completions";
-    public String apiKey = "ollama";
+    /** Solo para servicios en la nube; Ollama y LM Studio no la necesitan. */
+    public String apiKey = "";
     public String model = "gemma3:12b";
     /** Máximo de textos por petición. */
     public int batchSize = 20;

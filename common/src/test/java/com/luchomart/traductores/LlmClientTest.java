@@ -54,4 +54,23 @@ class LlmClientTest {
         assertEquals(java.util.List.of("gemini-2.5-flash"), LlmClient.parseModelList("{\"data\":[{\"id\":\"models/gemini-2.5-flash\"}]}"));
         assertTrue(LlmClient.parseModelList("<html>no</html>").isEmpty());
     }
+
+    @Test
+    void erroresHttpEntendibles() {
+        String gemini = "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Please pass a valid API key\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n]";
+        String msg = LlmClient.httpError(400, gemini);
+        assertTrue(msg.startsWith("la clave (API key) falta o no es válida"), msg);
+        assertTrue(msg.contains("Please pass a valid API key"), msg);
+        assertTrue(new LlmClient.LlmException(msg, 400, 0).isAuthError());
+
+        assertTrue(LlmClient.httpError(404, "{\"error\":{\"message\":\"model 'x' not found\"}}").startsWith("no existe ese modelo"));
+        assertTrue(LlmClient.httpError(429, "").startsWith("el servicio pide bajar el ritmo"));
+        assertFalse(new LlmClient.LlmException(LlmClient.httpError(400, "{\"error\":{\"message\":\"bad json\"}}"), 400, 0).isAuthError());
+    }
+
+    @Test
+    void describeErroresDeConexion() {
+        assertTrue(LlmClient.describe(new java.net.ConnectException()).startsWith("no hay ninguna IA respondiendo"));
+        assertTrue(LlmClient.describe(new java.net.UnknownHostException("x")).startsWith("no se encontró el servidor"));
+    }
 }

@@ -14,7 +14,9 @@ import java.util.List;
 public class GuideScreen extends Screen {
     private record Section(String title, String body) {}
 
-    private record Page(String title, List<FormattedCharSequence> lines) {}
+    private record Page(String title, List<FormattedCharSequence> lines, boolean helpPage) {}
+
+    private static final String HELP_TITLE = "¿Necesitás ayuda?";
 
     private static final List<Section> SECTIONS = List.of(
             new Section("¿Qué hace este mod?", """
@@ -72,12 +74,20 @@ public class GuideScreen extends Screen {
 
                     §eEl juego se cierra solo:§r falta memoria. Cerrá programas o usá un modelo más chico.
 
-                    §eTextos en inglés:§r mirá §einforme.txt§r en la carpeta del mod. Se reintentan cada vez que abrís el juego."""));
+                    §eTextos en inglés:§r mirá §einforme.txt§r en la carpeta del mod. Se reintentan cada vez que abrís el juego."""),
+            new Section(HELP_TITLE, """
+                    ¿Te trabaste con la instalación? Pedile ayuda a la IA que uses (ChatGPT, Claude, Gemini…).
+
+                    §e1.§r Tocá §eCopiar prompt§r, acá abajo.
+                    §e2.§r Abrí la IA en el navegador y pegá el texto (Ctrl + V).
+                    §e3.§r Respondé lo que te pregunte: te va a guiar paso a paso.
+
+                    El prompt ya le explica a la IA cómo funciona este mod, qué versión usar, qué modelo bajar según tu placa de video y cómo resolver los problemas conocidos, para que no tenga que adivinar."""));
 
     private final Screen parent;
     private final List<Page> pages = new ArrayList<>();
     private int page;
-    private Button prev, next;
+    private Button prev, next, copy;
 
     public GuideScreen(Screen parent) {
         super(Component.literal("Guía de Traductor ES"));
@@ -95,6 +105,10 @@ public class GuideScreen extends Screen {
                 .bounds(width / 2 - w / 2, y, w, 20).build());
         next = addRenderableWidget(Button.builder(Component.literal("Siguiente >"), b -> turn(1))
                 .bounds(width / 2 + w / 2 + 6, y, w, 20).build());
+        copy = addRenderableWidget(Button.builder(Component.literal("Copiar prompt"), b -> {
+            Minecraft.getInstance().keyboardHandler.setClipboard(HelpPrompt.TEXT);
+            b.setMessage(Component.literal("¡Copiado!"));
+        }).bounds(width / 2 - 60, y - 24, 120, 20).build());
         updateButtons();
     }
 
@@ -104,7 +118,7 @@ public class GuideScreen extends Screen {
     private void paginate() {
         pages.clear();
         int lineH = font.lineHeight + 2;
-        int perPage = Math.max(4, (height - 40 - 40) / lineH);
+        int perPage = Math.max(4, (height - 40 - 64) / lineH);
         for (Section s : SECTIONS) {
             List<FormattedCharSequence> lines = new ArrayList<>();
             for (String paragraph : s.body().split("\n", -1)) {
@@ -113,7 +127,7 @@ public class GuideScreen extends Screen {
             }
             for (int i = 0; i < lines.size(); i += perPage) {
                 String title = i == 0 ? s.title() : s.title() + " (cont.)";
-                pages.add(new Page(title, lines.subList(i, Math.min(lines.size(), i + perPage))));
+                pages.add(new Page(title, lines.subList(i, Math.min(lines.size(), i + perPage)), s.title().equals(HELP_TITLE)));
             }
         }
     }
@@ -126,6 +140,7 @@ public class GuideScreen extends Screen {
     private void updateButtons() {
         prev.active = page > 0;
         next.active = page < pages.size() - 1;
+        copy.visible = pages.get(page).helpPage();
     }
 
     @Override
@@ -139,7 +154,7 @@ public class GuideScreen extends Screen {
             g.drawString(font, line, x, y, 0xE0E0E0);
             y += font.lineHeight + 2;
         }
-        g.drawCenteredString(font, Component.literal((page + 1) + " / " + pages.size()), width / 2, height - 42, 0x808080);
+        g.drawCenteredString(font, Component.literal((page + 1) + " / " + pages.size()), width / 2, height - 60, 0x808080);
     }
 
     @Override

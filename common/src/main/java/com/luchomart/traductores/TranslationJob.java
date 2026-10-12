@@ -126,6 +126,7 @@ public class TranslationJob implements Runnable {
     @Override
     public void run() {
         try {
+            if (cfg.model.isBlank()) chooseModel(null);
             List<Item> pending = prepare();
             if (cancelRequested) { finish(State.CANCELLED, "Cancelado"); return; }
             if (pending.isEmpty()) {
@@ -438,6 +439,12 @@ public class TranslationJob implements Runnable {
                 Thread.currentThread().interrupt();
                 throw new FatalException("Traducción interrumpida", e);
             } catch (LlmClient.LlmException e) {
+                if (e.isModelNotFound() && !modelSwitched) {
+                    // El servicio retiró el modelo: se cambia una vez al que sugiere o al recomendado.
+                    modelSwitched = true;
+                    chooseModel(e);
+                    continue;
+                }
                 if (e.isModelNotFound()) {
                     throw new FatalException("El servidor respondió 404: revisá que el modelo \"" + cfg.model + "\" exista y que la URL sea correcta", e);
                 }
@@ -462,6 +469,36 @@ public class TranslationJob implements Runnable {
             else if (raw.containsKey(k)) maskErrors.put(k, "fichas ⟦⟧ perdidas, repetidas o inventadas");
         }
         return out;
+    }
+
+    private volatile boolean modelSwitched;
+
+    /**
+     * Elige el modelo de la lista real del servicio (campo vacío o modelo retirado) y lo guarda en la configuración.
+     * Sincronizado: con peticiones simultáneas, varias pueden descubrir a la vez que el modelo ya no existe.
+     */
+    private synchronized void chooseModel(LlmClient.LlmException cause) throws FatalException {
+        String old = cfg.model;
+        try {
+            List<String> models = client.listModels(cfg);
+            String pick = cause == null ? null : ModelPicker.suggestedReplacement(cause.getMessage());
+            if (pick == null || pick.equals(old) || (!models.isEmpty() && !models.contains(pick))) {
+                List<String> others = new ArrayList<>(models);
+                others.remove(old);
+                pick = ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
+            }
+            if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause);
+            cfg.model = pick;
+            cfg.save();
+            TraductorES.LOG.info("[Traductor ES] Modelo elegido automáticamente: {}{}", pick, old.isBlank() ? "" : " (antes: " + old + ")");
+        } catch (FatalException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new FatalException("Traducción interrumpida", e);
+        } catch (IOException e) {
+            throw new FatalException("No se pudo elegir un modelo: " + LlmClient.describe(e), e);
+        }
     }
 
     /** Si la IA falla una y otra vez sin que sea algo pasajero, se corta en vez de mandar miles de peticiones inútiles. */

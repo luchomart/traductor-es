@@ -160,37 +160,55 @@ public class ConfigScreen extends Screen {
                 .withStyle(ChatFormatting.AQUA));
     }
 
-    /** Lista los modelos del servidor, avisa si el configurado no existe y hace una petición de prueba. */
+    /**
+     * Lista los modelos del servidor y hace una petición de prueba. Si el modelo configurado no existe
+     * o el servicio lo retiró, elige el recomendado (o el que sugiere el propio servicio) y lo deja puesto.
+     */
     private void testConnection() {
         applyFields();
         Config cfg = Config.get();
-        if (Preset.fromUrl(cfg.apiUrl).isCloud() && cfg.apiKey.isBlank()) {
+        Preset preset = Preset.fromUrl(cfg.apiUrl);
+        if (preset.isCloud() && cfg.apiKey.isBlank()) {
             report(Component.literal("Este servicio necesita una clave (API key). Tocá «Conseguir», creala y pegala en Clave.")
                     .withStyle(ChatFormatting.YELLOW));
             return;
         }
         testResult = Component.literal("Probando…").withStyle(ChatFormatting.GRAY);
-        Minecraft mc = Minecraft.getInstance();
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();
             try {
                 List<String> models = client.listModels(cfg);
-                if (cfg.model.isBlank() && !models.isEmpty()) {
-                    // Sin modelo elegido: se usa el primero disponible.
-                    cfg.model = models.get(0);
-                    cfg.save();
-                    mc.execute(() -> model.setValue(cfg.model));
-                }
-                if (!models.isEmpty() && !models.contains(cfg.model)) {
-                    report(Component.literal("El modelo «" + cfg.model + "» no está en el servidor. Disponibles: "
-                            + summarize(models)).withStyle(ChatFormatting.RED));
-                    return;
+                String note = "";
+                if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
+                    String pick = ModelPicker.recommend(preset, models);
+                    if (pick != null) {
+                        note = cfg.model.isBlank() ? " Se eligió el modelo recomendado." : " «" + cfg.model + "» no estaba; se eligió el recomendado.";
+                        setModel(cfg, pick);
+                    }
                 }
                 long t0 = System.currentTimeMillis();
-                client.ping(cfg);
+                try {
+                    client.ping(cfg);
+                } catch (LlmClient.LlmException e) {
+                    if (!e.isModelNotFound()) throw e;
+                    // El servicio lista el modelo pero ya no lo da (pasó con Gemini): se prueba con su sugerencia o el recomendado.
+                    String old = cfg.model, alt = ModelPicker.suggestedReplacement(e.getMessage());
+                    if (alt == null || alt.equals(old)) {
+                        List<String> others = new java.util.ArrayList<>(models);
+                        others.remove(old);
+                        alt = ModelPicker.recommend(preset, others);
+                    }
+                    if (alt == null) throw e;
+                    setModel(cfg, alt);
+                    note = " «" + old + "» ya no está disponible; se cambió a «" + alt + "».";
+                    t0 = System.currentTimeMillis();
+                    client.ping(cfg);
+                }
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
-                        + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s).").withStyle(ChatFormatting.GREEN);
-                if (models.size() > 1) ok.append(Component.literal(" Otros modelos: " + summarize(models)).withStyle(ChatFormatting.GRAY));
+                        + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
+                List<String> others = ModelPicker.ranked(preset, models);
+                others.remove(cfg.model);
+                if (!others.isEmpty()) ok.append(Component.literal(" Otros modelos: " + summarize(others)).withStyle(ChatFormatting.GRAY));
                 report(ok);
             } catch (Exception e) {
                 report(Component.literal("Error: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
@@ -198,6 +216,13 @@ public class ConfigScreen extends Screen {
         }, "Traductor ES - prueba");
         t.setDaemon(true);
         t.start();
+    }
+
+    /** Guarda el modelo elegido y lo muestra en el campo. */
+    private void setModel(Config cfg, String m) {
+        cfg.model = m;
+        cfg.save();
+        Minecraft.getInstance().execute(() -> model.setValue(m));
     }
 
     private static String summarize(List<String> models) {

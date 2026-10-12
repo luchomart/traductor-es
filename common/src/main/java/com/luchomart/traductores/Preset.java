@@ -2,16 +2,17 @@ package com.luchomart.traductores;
 
 /**
  * Servicios de IA predefinidos para el panel. Todos hablan el protocolo de OpenAI (/chat/completions).
- * Los nombres de modelo de la nube son una sugerencia: "Probar conexión" muestra los que hay de verdad.
+ * En la nube el modelo queda vacío: los nombres cambian cada pocos meses, así que ModelPicker elige
+ * el recomendado de la lista real del servicio (al probar la conexión o al empezar a traducir).
  */
 public enum Preset {
     OLLAMA("Ollama (en tu PC)", "http://localhost:11434/v1/chat/completions", "gemma3:12b", false, 1, "https://ollama.com/download"),
     LM_STUDIO("LM Studio (en tu PC)", "http://localhost:1234/v1/chat/completions", "", false, 1, "https://lmstudio.ai"),
-    GEMINI("Google Gemini (nube)", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.5-flash", true, 2,
+    GEMINI("Google Gemini (nube)", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "", true, 2,
             "https://aistudio.google.com/apikey"),
-    OPENROUTER("OpenRouter (nube)", "https://openrouter.ai/api/v1/chat/completions", "google/gemini-2.5-flash", true, 4,
+    OPENROUTER("OpenRouter (nube)", "https://openrouter.ai/api/v1/chat/completions", "", true, 4,
             "https://openrouter.ai/settings/keys"),
-    GROQ("Groq (nube)", "https://api.groq.com/openai/v1/chat/completions", "llama-3.3-70b-versatile", true, 2,
+    GROQ("Groq (nube)", "https://api.groq.com/openai/v1/chat/completions", "", true, 2,
             "https://console.groq.com/keys"),
     CUSTOM("Personalizado", null, null, false, 0, null);
 

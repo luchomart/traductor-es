@@ -59,7 +59,7 @@ public class LlmClient {
             throws IOException, InterruptedException {
         JsonObject input = new JsonObject();
         batch.forEach(input::addProperty);
-        String content = chat(cfg, systemPrompt, input.toString(), cfg.jsonMode && !jsonModeUnsupported);
+        String content = chat(cfg, systemPrompt, input.toString(), cfg.jsonMode && !jsonModeUnsupported, MAX_OUTPUT_TOKENS);
         return parseObject(content);
     }
 
@@ -98,12 +98,19 @@ public class LlmClient {
 
     /** Petición corta para comprobar que el servidor y el modelo responden. */
     public String ping(Config cfg) throws IOException, InterruptedException {
-        return chat(cfg, "Responde solo con la palabra: OK", "Di OK", false).trim();
+        return chat(cfg, "Responde solo con la palabra: OK", "Di OK", false, 16).trim();
     }
 
-    private String chat(Config cfg, String system, String user, boolean jsonMode) throws IOException, InterruptedException {
+    /**
+     * Tope de la respuesta. Sin él, servicios como OpenRouter reservan saldo para el máximo del modelo
+     * (decenas de miles de tokens) y rechazan la petición con poco crédito. Un lote traducido usa menos de 2.000.
+     */
+    static final int MAX_OUTPUT_TOKENS = 4096;
+
+    private String chat(Config cfg, String system, String user, boolean jsonMode, int maxTokens) throws IOException, InterruptedException {
         JsonObject body = new JsonObject();
         body.addProperty("model", cfg.model);
+        body.addProperty("max_tokens", maxTokens);
         body.addProperty("temperature", cfg.temperature);
         body.addProperty("stream", false);
         JsonArray messages = new JsonArray();
@@ -127,7 +134,7 @@ public class LlmClient {
             // Algunos servidores no aceptan response_format: se reintenta sin él y no se vuelve a pedir.
             jsonModeUnsupported = true;
             TraductorES.LOG.warn("[Traductor ES] El servidor no acepta modo JSON, se continúa sin él");
-            return chat(cfg, system, user, false);
+            return chat(cfg, system, user, false, maxTokens);
         }
         if (res.statusCode() / 100 != 2) {
             long retryAfter = res.headers().firstValue("Retry-After").map(LlmClient::parseRetryAfter).orElse(0L);
@@ -199,6 +206,8 @@ public class LlmClient {
         String hint;
         if (status == 401 || status == 403 || mentionsAuth(reason)) {
             hint = "la clave (API key) falta o no es válida";
+        } else if (status == 402) {
+            hint = "la cuenta no tiene saldo suficiente o la clave tiene un límite de gasto";
         } else if (status == 404) {
             hint = "no existe ese modelo o la URL está mal";
         } else if (status == 429) {

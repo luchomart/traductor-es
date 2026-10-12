@@ -19,6 +19,8 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Peticiones simultáneas (configurable)
 - [x] "Probar conexión" lista los modelos instalados y avisa si el configurado no existe
 - [x] Exportar el pack como .zip
+- [x] Mensajes de error entendibles y botón Conseguir clave / Descargar (encontrado al probar)
+- [x] Elección automática del modelo en la nube, tope de respuesta (max_tokens) y cambio solo si el servicio retira el modelo (encontrado al probar con claves reales)
 
 ## Fase 3: Fabric
 - [ ] Fabric 1.20.1

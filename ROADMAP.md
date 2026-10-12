@@ -22,6 +22,15 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Mensajes de error entendibles y botón Conseguir clave / Descargar (encontrado al probar)
 - [x] Elección automática del modelo en la nube, tope de respuesta (max_tokens) y cambio solo si el servicio retira el modelo (encontrado al probar con claves reales)
 
+## Pendientes chicos (para la etapa visual)
+- [ ] Filtrar modelos raros de la lista de Gemini (antigravity, deep-research, preview)
+- [ ] Mostrar en el log los reintentos de Probar conexión
+- [ ] Probar una traducción completa con un servicio en la nube
+
+## Etapa visual
+- [ ] Maquetas para elegir (panel, progreso, asistente de primera vez, guía)
+- [ ] Implementar el diseño elegido
+
 ## Fase 3: Fabric
 - [ ] Fabric 1.20.1
 - [ ] Fabric 1.21.1

@@ -25,6 +25,12 @@ public class ConfigScreen extends Screen {
     private boolean autoStart;
     private volatile Component testResult;
 
+    /** Muestra un resultado en el panel y lo deja también en el log (para poder diagnosticar después). */
+    private void report(Component msg) {
+        testResult = msg;
+        TraductorES.LOG.info("[Traductor ES] Panel: {}", msg.getString());
+    }
+
     public ConfigScreen(Screen parent) {
         super(Component.literal("Traductor ES"));
         this.parent = parent;
@@ -102,6 +108,7 @@ public class ConfigScreen extends Screen {
         model.setValue(p.model);
         if (p.parallel > 0) parallel.setValue(String.valueOf(p.parallel));
         presetBtn.setMessage(presetLabel(p));
+        TraductorES.LOG.info("[Traductor ES] Panel: servicio cambiado a {}", p.label);
         if (p.isCloud()) {
             testResult = Component.literal((key.getValue().isBlank() ? "Este servicio necesita una clave (API key). " : "")
                     + "Ojo: los textos de los mods se envían a ese servicio por internet. Tocá Probar conexión para ver los modelos.")
@@ -150,8 +157,8 @@ public class ConfigScreen extends Screen {
                     mc.execute(() -> model.setValue(cfg.model));
                 }
                 if (!models.isEmpty() && !models.contains(cfg.model)) {
-                    testResult = Component.literal("El modelo «" + cfg.model + "» no está en el servidor. Disponibles: "
-                            + summarize(models)).withStyle(ChatFormatting.RED);
+                    report(Component.literal("El modelo «" + cfg.model + "» no está en el servidor. Disponibles: "
+                            + summarize(models)).withStyle(ChatFormatting.RED));
                     return;
                 }
                 long t0 = System.currentTimeMillis();
@@ -159,9 +166,9 @@ public class ConfigScreen extends Screen {
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s).").withStyle(ChatFormatting.GREEN);
                 if (models.size() > 1) ok.append(Component.literal(" Otros modelos: " + summarize(models)).withStyle(ChatFormatting.GRAY));
-                testResult = ok;
+                report(ok);
             } catch (Exception e) {
-                testResult = Component.literal("Error: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED);
+                report(Component.literal("Error: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
             }
         }, "Traductor ES - prueba");
         t.setDaemon(true);
@@ -176,11 +183,12 @@ public class ConfigScreen extends Screen {
     private void exportPack() {
         try {
             Path zip = PackExporter.export();
-            testResult = Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()
+            report(Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()
                     + ". Quien juegue el mismo modpack lo activa como cualquier paquete de recursos, sin IA.")
-                    .withStyle(ChatFormatting.GREEN);
+                    .withStyle(ChatFormatting.GREEN));
         } catch (Exception e) {
-            testResult = Component.literal("No se pudo exportar: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED);
+            TraductorES.LOG.error("[Traductor ES] Error al exportar el pack", e);
+            report(Component.literal("No se pudo exportar: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
         }
     }
 

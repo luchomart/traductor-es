@@ -55,10 +55,15 @@ public class ConfigScreen extends Screen {
         }).bounds(rx, y, half, 20).build());
         y += ROW;
 
+        int third = (LABEL_W + FIELD_W - 8) / 3;
         addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
-                .bounds(left, y, half, 20).build());
+                .bounds(left, y, third, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Guía"), b -> {
+            applyFields();
+            Minecraft.getInstance().setScreen(new GuideScreen(this));
+        }).bounds(left + third + 4, y, third, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Guardar y volver"), b -> onClose())
-                .bounds(rx, y, half, 20).build());
+                .bounds(left + 2 * (third + 4), y, third, 20).build());
         updateButtons();
     }
 

@@ -688,7 +688,7 @@ public class TranslationJob implements Runnable {
         message = msg;
         currentNamespace = "";
         state = end;
-        TraductorES.LOG.info("[Traductor ES] {}", msg);
+        if (end != State.ERROR) TraductorES.LOG.info("[Traductor ES] {}", msg); // los errores ya se registraron
         onFinish.accept(this);
     }
 

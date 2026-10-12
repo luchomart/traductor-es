@@ -21,7 +21,9 @@ public class ConfigScreen extends Screen {
 
     private final Screen parent;
     private EditBox url, key, model, batch, parallel;
-    private Button runBtn, cancelBtn, presetBtn, helpBtn;
+    private Button runBtn, cancelBtn, presetBtn, helpBtn, testBtn;
+    /** Hay una prueba de conexión en curso (no se puede lanzar otra). */
+    private volatile boolean testing;
     private static final int HELP_W = 70;
     private boolean autoStart;
     private volatile Component testResult;
@@ -65,7 +67,7 @@ public class ConfigScreen extends Screen {
             autoStart = !autoStart;
             b.setMessage(autoStartLabel());
         }).bounds(left, y, half, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection())
+        testBtn = addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection())
                 .bounds(left + half + 4, y, half, 20).build());
         y += ROW;
 
@@ -143,6 +145,8 @@ public class ConfigScreen extends Screen {
         runBtn.setMessage(Component.literal(!running ? "Traducir ahora"
                 : j.state == TranslationJob.State.PAUSED ? "Reanudar" : "Pausar"));
         cancelBtn.active = running;
+        testBtn.active = !testing;
+        testBtn.setMessage(Component.literal(testing ? "Probando…" : "Probar conexión"));
         Preset p = Preset.fromUrl(url.getValue());
         presetBtn.setMessage(presetLabel(p));
         // En la nube abre la página para crear la clave; en local, la de descarga del programa.
@@ -174,6 +178,7 @@ public class ConfigScreen extends Screen {
             return;
         }
         testResult = Component.literal("Probando…").withStyle(ChatFormatting.GRAY);
+        testing = true;
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();
             try {
@@ -188,7 +193,7 @@ public class ConfigScreen extends Screen {
                 }
                 long t0 = System.currentTimeMillis();
                 try {
-                    client.ping(cfg);
+                    pingRetrying(client, cfg);
                 } catch (LlmClient.LlmException e) {
                     if (!e.isModelNotFound()) throw e;
                     // El servicio lista el modelo pero ya no lo da (pasó con Gemini): se prueba con su sugerencia o el recomendado.
@@ -202,7 +207,7 @@ public class ConfigScreen extends Screen {
                     setModel(cfg, alt);
                     note = " «" + old + "» ya no está disponible; se cambió a «" + alt + "».";
                     t0 = System.currentTimeMillis();
-                    client.ping(cfg);
+                    pingRetrying(client, cfg);
                 }
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
@@ -211,11 +216,28 @@ public class ConfigScreen extends Screen {
                 if (!others.isEmpty()) ok.append(Component.literal(" Otros modelos: " + summarize(others)).withStyle(ChatFormatting.GRAY));
                 report(ok);
             } catch (Exception e) {
-                report(Component.literal("Error: " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
+                String with = cfg.model.isBlank() ? "" : " con «" + cfg.model + "»";
+                report(Component.literal("Error" + with + ": " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
+            } finally {
+                testing = false;
             }
         }, "Traductor ES - prueba");
         t.setDaemon(true);
         t.start();
+    }
+
+    /** Prueba la conexión reintentando si el servicio está saturado (503) o pide esperar (429). */
+    private void pingRetrying(LlmClient client, Config cfg) throws Exception {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                client.ping(cfg);
+                return;
+            } catch (LlmClient.LlmException e) {
+                if (!e.isTransient() || attempt >= 3) throw e;
+                testResult = Component.literal("El servicio está saturado, reintentando (" + attempt + "/2)…").withStyle(ChatFormatting.YELLOW);
+                Thread.sleep(e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 10) * 1000 : 4000);
+            }
+        }
     }
 
     /** Guarda el modelo elegido y lo muestra en el campo. */

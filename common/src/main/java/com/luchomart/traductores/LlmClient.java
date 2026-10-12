@@ -23,6 +23,7 @@ public class LlmClient {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     private volatile boolean jsonModeUnsupported = false;
+    private volatile boolean reasoningUnsupported = false;
 
     public static class LlmException extends IOException {
         /** Código HTTP, o 0 si el error no vino de una respuesta HTTP. */
@@ -98,7 +99,9 @@ public class LlmClient {
 
     /** Petición corta para comprobar que el servidor y el modelo responden. */
     public String ping(Config cfg) throws IOException, InterruptedException {
-        return chat(cfg, "Responde solo con la palabra: OK", "Di OK", false, 16).trim();
+        // Margen amplio: los modelos que razonan gastan tokens pensando antes de contestar.
+        // Para la prueba alcanza con que el servidor responda bien, aunque el texto venga vacío o cortado.
+        return chat(cfg, "Responde solo con la palabra: OK", "Di OK", false, 1024, true).trim();
     }
 
     /**
@@ -108,11 +111,22 @@ public class LlmClient {
     static final int MAX_OUTPUT_TOKENS = 4096;
 
     private String chat(Config cfg, String system, String user, boolean jsonMode, int maxTokens) throws IOException, InterruptedException {
+        return chat(cfg, system, user, jsonMode, maxTokens, false);
+    }
+
+    /**
+     * @param tolerant si es true, una respuesta vacía o cortada no es un error (para la prueba de conexión).
+     */
+    private String chat(Config cfg, String system, String user, boolean jsonMode, int maxTokens, boolean tolerant)
+            throws IOException, InterruptedException {
+        // Traducir no necesita razonar: en la nube se pide el mínimo (ahorra tiempo y saldo).
+        boolean lowReasoning = !reasoningUnsupported && Preset.fromUrl(cfg.apiUrl).isCloud();
         JsonObject body = new JsonObject();
         body.addProperty("model", cfg.model);
         body.addProperty("max_tokens", maxTokens);
         body.addProperty("temperature", cfg.temperature);
         body.addProperty("stream", false);
+        if (lowReasoning) body.addProperty("reasoning_effort", "low");
         JsonArray messages = new JsonArray();
         messages.add(message("system", system));
         messages.add(message("user", user));
@@ -130,11 +144,19 @@ public class LlmClient {
         if (cfg.apiKey != null && !cfg.apiKey.isBlank()) req.header("Authorization", "Bearer " + cfg.apiKey);
 
         HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (res.statusCode() == 400 && jsonMode) {
-            // Algunos servidores no aceptan response_format: se reintenta sin él y no se vuelve a pedir.
-            jsonModeUnsupported = true;
-            TraductorES.LOG.warn("[Traductor ES] El servidor no acepta modo JSON, se continúa sin él");
-            return chat(cfg, system, user, false, maxTokens);
+        if (res.statusCode() == 400) {
+            // Parámetros opcionales que algunos servidores no aceptan: se sigue sin ellos y no se vuelven a pedir.
+            String err = res.body() == null ? "" : res.body().toLowerCase(java.util.Locale.ROOT);
+            if (jsonMode && (err.contains("response_format") || err.contains("json_object"))) {
+                jsonModeUnsupported = true;
+                TraductorES.LOG.warn("[Traductor ES] El servidor no acepta modo JSON, se continúa sin él");
+                return chat(cfg, system, user, false, maxTokens, tolerant);
+            }
+            if (lowReasoning && err.contains("reasoning")) {
+                reasoningUnsupported = true;
+                TraductorES.LOG.warn("[Traductor ES] El servidor no acepta reasoning_effort, se continúa sin él");
+                return chat(cfg, system, user, jsonMode, maxTokens, tolerant);
+            }
         }
         if (res.statusCode() / 100 != 2) {
             long retryAfter = res.headers().firstValue("Retry-After").map(LlmClient::parseRetryAfter).orElse(0L);
@@ -146,13 +168,19 @@ public class LlmClient {
             JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
             finish = choice.has("finish_reason") && !choice.get("finish_reason").isJsonNull()
                     ? choice.get("finish_reason").getAsString() : "";
-            content = choice.getAsJsonObject("message").get("content").getAsString();
+            // Los modelos que razonan pueden devolver content null si se les acaban los tokens pensando.
+            JsonElement c = choice.getAsJsonObject("message").get("content");
+            content = c == null || c.isJsonNull() ? "" : c.getAsString();
         } catch (RuntimeException e) {
             // Respuesta 200 que no tiene el formato de OpenAI (proxy, página de error, servidor incompatible).
-            throw new LlmException("respuesta del servidor con formato inesperado: " + abbreviate(res.body(), 200));
+            throw new LlmException("respuesta del servidor con formato inesperado: " + abbreviate(res.body().strip(), 200));
         }
+        if (tolerant) return content;
         if ("length".equals(finish)) {
-            throw new LlmException("respuesta cortada por falta de contexto (bajá el tamaño de lote o subí el contexto del servidor)");
+            throw new LlmException("respuesta cortada por falta de espacio (bajá Textos por lote; si es un modelo que razona, probá otro)");
+        }
+        if (content.isBlank()) {
+            throw new LlmException("la IA respondió sin texto (si es un modelo que razona, probá otro modelo)");
         }
         return content;
     }

@@ -37,22 +37,22 @@ public final class PackWriter {
     }
 
     /**
-     * Reemplaza el contenido del pack: un es_es.json por namespace.
+     * Reemplaza el contenido del pack: un <idioma>.json por namespace.
      * Borra los de namespaces que ya no tienen nada (por ejemplo, un mod desinstalado).
      * Devuelve true si cambió algún archivo.
      */
-    public static boolean write(Map<String, Map<String, String>> byNamespace) throws IOException {
+    public static boolean write(Map<String, Map<String, String>> byNamespace, String target) throws IOException {
         ensureExists();
         boolean changed = false;
         Path assets = DIR.resolve("assets");
         for (Map.Entry<String, Map<String, String>> e : byNamespace.entrySet()) {
             if (e.getValue().isEmpty() || e.getKey().startsWith(PatchouliBooks.PREFIX)) continue;
             Path lang = assets.resolve(e.getKey()).resolve("lang");
-            Path file = lang.resolve("es_es.json");
+            Path file = lang.resolve(target + ".json");
             String json = GSON.toJson(new TreeMap<>(e.getValue()));
             if (Files.exists(file) && Files.readString(file, StandardCharsets.UTF_8).equals(json)) continue;
             Files.createDirectories(lang);
-            Path tmp = lang.resolve("es_es.json.tmp");
+            Path tmp = lang.resolve(target + ".json.tmp");
             Files.writeString(tmp, json, StandardCharsets.UTF_8);
             Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             changed = true;
@@ -61,7 +61,7 @@ public final class PackWriter {
             for (Path nsDir : dirs.toList()) {
                 Map<String, String> content = byNamespace.get(nsDir.getFileName().toString());
                 if (content == null || content.isEmpty()) {
-                    changed |= Files.deleteIfExists(nsDir.resolve("lang").resolve("es_es.json"));
+                    changed |= Files.deleteIfExists(nsDir.resolve("lang").resolve(target + ".json"));
                 }
             }
         }

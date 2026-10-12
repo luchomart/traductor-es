@@ -17,7 +17,8 @@ public final class Masker {
             + "|%(?:\\d+\\$)?[-#+0,(]*\\d*(?:\\.\\d+)?[sdfxXcbeEgGo%]" // %s, %1$s, %%
             + "|§[0-9a-fk-orA-FK-OR]"                             // §a, §r
             + "|</?[a-zA-Z][a-zA-Z0-9_:#-]{0,30}>"                 // <item>, <r>, <n>, </b>
-            + "|\\\\n");                                           // \n escrito como texto
+            + "|\\\\n"                                             // \n escrito como texto
+            + "|" + Validator.HIGHLIGHT.pattern());                // _resaltado_ de Create (no el _ de stone_bricks)
     private static final Pattern TOKEN = Pattern.compile("⟦(\\d+)⟧");
 
     /** Texto con fichas y la lista de marcadores originales (la ficha ⟦n⟧ es tokens.get(n-1)). */

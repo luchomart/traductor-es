@@ -20,12 +20,12 @@ public class GuideScreen extends Screen {
 
     private static final List<Section> SECTIONS = List.of(
             new Section("¿Qué hace este mod?", """
-                    Traduce al §eespañol de España§r los textos de tus mods: nombres de objetos, descripciones, menús y manuales.
+                    Traduce los textos de tus mods al §eespañol que tengas elegido en el juego§r (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador): objetos, descripciones, menús y manuales.
 
-                    La traducción la hace una IA que corre en tu propia PC (Ollama), gratis y sin internet.
+                    La traducción la hace una IA: en tu propia PC (Ollama, gratis y sin internet) o un servicio en la nube.
 
-                    • Si un mod ya trae español de España, se respeta.
-                    • Si trae otro español (México, Argentina…), se usa ese.
+                    • Si un mod ya trae tu español, se respeta.
+                    • Si trae otro español, se usa ese en vez de traducir.
                     • Lo que falta lo traduce la IA y queda guardado."""),
             new Section("Antes de empezar", """
                     Necesitás tres cosas:
@@ -36,7 +36,9 @@ public class GuideScreen extends Screen {
                     §7ollama pull gemma3:12b§r
                     Si tu placa de video tiene menos de 12 GB, usá §7gemma3:4b§r y escribilo en el campo Modelo.
 
-                    §e3.§r Tener el juego en §eEspañol (España)§r: Opciones → Idioma."""),
+                    §e3.§r Tener el juego en §eespañol§r (cualquier país): Opciones → Idioma.
+
+                    §7¿Sin placa de video potente? Mirá la página "IA en la nube".§r"""),
             new Section("Cómo se usa", """
                     No hace falta hacer nada: al abrir el juego, el mod traduce solo lo que falta mientras estás en el §emenú principal§r. Arriba a la izquierda ves el progreso y cuánto falta.
 
@@ -46,20 +48,32 @@ public class GuideScreen extends Screen {
                     • §eSi cerrás el juego§r, lo traducido queda guardado.
                     • §eSi termina mientras jugás§r, apretá F3 + T para ver los textos nuevos."""),
             new Section("Este panel", """
-                    §eProbar conexión:§r comprueba que la IA responde.
+                    §eServicio:§r elegí Ollama, LM Studio o un servicio en la nube; completa la URL y el modelo.
+                    §eProbar conexión:§r comprueba la IA y muestra los modelos que tiene.
                     §eTraducir ahora / Pausar:§r arranca, pausa o reanuda.
-                    §eTraducir al iniciar:§r en "No", solo traduce con el botón.
-                    §eTextos por lote:§r si ves errores de "respuesta cortada", bajalo a 10.
+                    §eTextos por lote:§r si ves "respuesta cortada", bajalo a 10.
+                    §eA la vez:§r peticiones simultáneas. 1 para tu PC; 2 a 4 en la nube.
+                    §eExportar pack:§r crea un .zip para amigos con el mismo modpack: lo usan sin IA.
                     §eAbrir carpeta:§r configuración, informe y correcciones.
 
                     También hay comandos en el chat:
                     §7/traductor estado, iniciar, pausar, reanudar, cancelar"""),
+            new Section("IA en la nube", """
+                    Si tu PC no tiene una placa de video potente, podés usar un servicio en internet. Los más conocidos tienen planes gratis con límites.
+
+                    §e1.§r En el panel, tocá §eServicio§r hasta elegir uno (Gemini, OpenRouter o Groq).
+                    §e2.§r Creá una clave (API key) en la página del servicio y pegala en §eClave§r.
+                    §e3.§r Tocá §eProbar conexión§r: muestra los modelos disponibles.
+
+                    Si el servicio pide bajar el ritmo, el mod espera solo y sigue.
+
+                    §cOjo:§r los textos de tus mods se mandan a ese servicio, y la clave queda guardada en config.json."""),
             new Section("Corregir traducciones", """
                     La IA a veces se equivoca. Para corregir un texto, abrí la carpeta (botón Abrir carpeta) y editá §ecorrecciones.json§r:
 
                     §7"mod:clave": "texto corregido"§r
 
-                    La clave la encontrás en la carpeta §ecache§r: abrí el archivo del mod y buscá la traducción con Ctrl + F.
+                    La clave la encontrás en §ecache§r, dentro de la carpeta de tu idioma (por ejemplo es_es): abrí el archivo del mod y buscá la traducción con Ctrl + F.
 
                     Para que una palabra se traduzca siempre igual, agregala en §eglosario.json§r:
                     §7"Pressure Tube": "Tubo de presión"§r

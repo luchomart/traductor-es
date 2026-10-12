@@ -8,12 +8,13 @@ public final class HelpPrompt {
             Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Dame un paso por vez y esperá a que te confirme antes de seguir.
 
             Datos del mod (no inventes opciones que no estén acá):
-            - Traduce al español de España los textos de los mods usando una IA local con Ollama. Es un mod solo de cliente.
+            - Traduce los textos de los mods al español que el jugador tenga elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec) usando una IA. Es un mod solo de cliente.
             - Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
-            - Necesita Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
+            - Lo recomendado es una IA local con Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
+            - Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq: hay que crear una clave (API key) en ese servicio y pegarla en el campo Clave. Los textos de los mods se envían a ese servicio.
             - Modelo recomendado: "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más). Con menos VRAM: "ollama pull gemma3:4b". "ollama list" muestra los modelos instalados.
-            - El juego tiene que estar en Español (España): Opciones → Idioma.
-            - Configuración en el juego: Mods → Traductor ES → Configurar. Campos: URL de la API, Clave (no importa con Ollama), Modelo (el nombre exacto de "ollama list") y Textos por lote (20 por defecto). Botones: Probar conexión, Traducir ahora/Pausar, Abrir carpeta y Guía.
+            - El juego tiene que estar en algún español: Opciones → Idioma.
+            - Configuración en el juego: Mods → Traductor ES → Configurar. Campos: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL de la API, Clave (no importa con Ollama), Modelo, Textos por lote (20 por defecto) y A la vez (peticiones simultáneas: 1 local, 2 a 4 en la nube). Botones: Probar conexión (muestra los modelos disponibles), Traducir ahora/Pausar, Cancelar, Exportar pack, Abrir carpeta y Guía.
             - Traduce solo en el menú principal al abrir el juego y muestra el progreso arriba a la izquierda. La primera vez puede tardar horas. Se pausa al entrar a un mundo. F3 + T recarga los textos.
             - Comandos: /traductor estado, iniciar, pausar, reanudar, cancelar.
             - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).

@@ -19,8 +19,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -78,7 +85,10 @@ public class TranslationJob implements Runnable {
     private final Config cfg;
     private final Consumer<TranslationJob> onFinish;
     private final LlmClient client = new LlmClient();
-    private final TranslationCache cache = new TranslationCache();
+    private final TranslationCache cache;
+    /** Variante del español de destino (es_es, es_mx…) y las que se usan como respaldo. */
+    public final String target;
+    private final List<String> fallbacks;
     private final Map<String, Map<String, String>> output = new TreeMap<>();
     private final List<String> failures = new ArrayList<>();
     private final Map<String, int[]> perMod = new TreeMap<>(); // [traducidos, fallidos]
@@ -86,12 +96,15 @@ public class TranslationJob implements Runnable {
     private Glossary glossary;
     private long lastFlushMs;
     /** Motivo por el que no se pudo restituir una ficha, por clave de petición (para el reintento). */
-    private final Map<String, String> maskErrors = new HashMap<>();
+    private final Map<String, String> maskErrors = new ConcurrentHashMap<>();
 
-    private int consecutiveFailures;
+    private final AtomicInteger consecutiveFailures = new AtomicInteger();
 
-    public TranslationJob(Config cfg, Consumer<TranslationJob> onFinish) {
+    public TranslationJob(Config cfg, String target, Consumer<TranslationJob> onFinish) {
         this.cfg = cfg;
+        this.target = target;
+        this.fallbacks = SpanishTarget.fallbacks(target);
+        this.cache = new TranslationCache(target);
         this.onFinish = onFinish;
     }
 
@@ -149,7 +162,7 @@ public class TranslationJob implements Runnable {
 
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
         glossary = Glossary.create();
-        glossary.addVanilla(vanilla.getOrDefault("en_us", Map.of()), vanilla.getOrDefault("es_es", Map.of()));
+        glossary.addVanilla(vanilla.getOrDefault("en_us", Map.of()), vanilla.getOrDefault(target, Map.of()));
 
         Set<String> excluded = new HashSet<>(cfg.excludedNamespaces);
         for (Map.Entry<String, Map<String, Map<String, String>>> nsEntry : all.entrySet()) {
@@ -157,7 +170,7 @@ public class TranslationJob implements Runnable {
             if (excluded.contains(ns)) continue;
             Map<String, Map<String, String>> langs = nsEntry.getValue();
             Map<String, String> source = sourceLanguage(langs);
-            Map<String, String> es = langs.getOrDefault("es_es", Map.of());
+            Map<String, String> es = langs.getOrDefault(target, Map.of());
             Map<String, String> corr = corrections.getOrDefault(ns, Map.of());
             Map<String, String> nsOut = output.computeIfAbsent(ns, k -> new TreeMap<>());
             nsOut.putAll(corr);
@@ -250,7 +263,7 @@ public class TranslationJob implements Runnable {
                     if (mc.getOverlay() != null) { f.complete(null); return; } // recargando recursos
                     ResourceManager rm = mc.getResourceManager();
                     f.complete(new Scan(LangScanner.scan(rm),
-                            cfg.translateBooks ? PatchouliBooks.scan(rm, cfg.spanishVariants) : List.of()));
+                            cfg.translateBooks ? PatchouliBooks.scan(rm, target, cfg.useSpanishVariants ? fallbacks : List.of()) : List.of()));
                 } catch (Throwable t) {
                     f.completeExceptionally(t);
                 }
@@ -278,16 +291,17 @@ public class TranslationJob implements Runnable {
     }
 
     private String fromVariant(Map<String, Map<String, String>> langs, String key) {
-        for (String v : cfg.spanishVariants) {
+        for (String v : fallbacks) {
             Map<String, String> m = langs.get(v);
             if (m != null && m.containsKey(key)) return m.get(key);
         }
         return null;
     }
 
-    private boolean writePack() throws IOException {
-        boolean changed = PackWriter.write(output);
-        changed |= PatchouliBooks.write(books, output);
+    /** Sincronizado: con peticiones simultáneas, accept/fail modifican output desde varios hilos. */
+    private synchronized boolean writePack() throws IOException {
+        boolean changed = PackWriter.write(output, target);
+        changed |= PatchouliBooks.write(books, output, target);
         return changed;
     }
 
@@ -295,43 +309,107 @@ public class TranslationJob implements Runnable {
 
     private void translateAll(List<Item> pending) throws FatalException, IOException {
         state = State.TRANSLATING;
+        message = "Traduciendo";
         translateStartMs = System.currentTimeMillis();
         lastFlushMs = translateStartMs;
-        boolean namesPhase = true;
-        int i = 0;
-        while (i < pending.size()) {
-            waitWhilePaused();
-            if (cancelRequested) break;
-            if (namesPhase && !pending.get(i).isName) {
-                namesPhase = false;
-                glossary.sort(); // los nombres recién traducidos pasan a estar ordenados en el glosario
-            }
+        // Primero todos los nombres; recién después el resto, que los usa como glosario.
+        runBatches(makeBatches(pending.stream().filter(it -> it.isName).toList()));
+        glossary.sort();
+        if (!cancelRequested) runBatches(makeBatches(pending.stream().filter(it -> !it.isName).toList()));
+    }
 
-            List<Item> batch = new ArrayList<>();
-            int chars = 0;
-            while (i < pending.size() && batch.size() < cfg.batchSize) {
-                Item next = pending.get(i);
-                if (!batch.isEmpty() && (chars + next.text.length() > cfg.batchMaxChars
-                        || !next.modNs.equals(batch.get(0).modNs) || next.isName != batch.get(0).isName)) break;
-                batch.add(next);
-                chars += next.text.length();
-                i++;
+    /** Agrupa textos del mismo mod en lotes que respeten el tamaño y los caracteres máximos. */
+    private List<List<Item>> makeBatches(List<Item> items) {
+        List<List<Item>> batches = new ArrayList<>();
+        List<Item> batch = new ArrayList<>();
+        int chars = 0;
+        for (Item next : items) {
+            if (!batch.isEmpty() && (batch.size() >= cfg.batchSize || chars + next.text.length() > cfg.batchMaxChars
+                    || !next.modNs.equals(batch.get(0).modNs))) {
+                batches.add(batch);
+                batch = new ArrayList<>();
+                chars = 0;
             }
-            currentNamespace = batch.get(0).modNs;
-            message = "Traduciendo";
-            translateBatch(batch, 0);
-
-            if (System.currentTimeMillis() - lastFlushMs > 60_000) {
-                cache.flush();
-                packChanged |= writePack();
-                lastFlushMs = System.currentTimeMillis();
-            }
+            batch.add(next);
+            chars += next.text.length();
         }
+        if (!batch.isEmpty()) batches.add(batch);
+        return batches;
+    }
+
+    /** Ejecuta los lotes, de a uno o varios a la vez según la configuración. */
+    private void runBatches(List<List<Item>> batches) throws FatalException, IOException {
+        int parallel = Math.max(1, cfg.parallelRequests);
+        if (parallel == 1) {
+            for (List<Item> batch : batches) {
+                waitWhilePaused();
+                if (cancelRequested) return;
+                currentNamespace = batch.get(0).modNs;
+                translateBatch(batch, 0);
+                maybeFlush();
+            }
+            return;
+        }
+        ExecutorService pool = Executors.newFixedThreadPool(parallel, r -> {
+            Thread t = new Thread(r, "Traductor ES - petición");
+            t.setDaemon(true);
+            t.setPriority(Thread.MIN_PRIORITY);
+            return t;
+        });
+        try {
+            Iterator<List<Item>> it = batches.iterator();
+            List<Future<?>> running = new ArrayList<>();
+            while (it.hasNext() || !running.isEmpty()) {
+                // Con pausa o cancelación no se mandan lotes nuevos; los que están en curso terminan.
+                while (running.size() < parallel && it.hasNext() && !pauseRequested && !cancelRequested) {
+                    List<Item> batch = it.next();
+                    running.add(pool.submit(() -> {
+                        currentNamespace = batch.get(0).modNs;
+                        translateBatch(batch, 0);
+                        return null;
+                    }));
+                }
+                boolean progressed = false;
+                for (Iterator<Future<?>> f = running.iterator(); f.hasNext(); ) {
+                    Future<?> fut = f.next();
+                    if (!fut.isDone()) continue;
+                    f.remove();
+                    progressed = true;
+                    try {
+                        fut.get();
+                    } catch (ExecutionException e) {
+                        Throwable c = e.getCause();
+                        if (c instanceof FatalException fe) throw fe;
+                        if (c instanceof RuntimeException re) throw re;
+                        throw new IOException(c);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new FatalException("Traducción interrumpida", e);
+                    }
+                }
+                if (running.isEmpty()) {
+                    if (cancelRequested) return;
+                    if (pauseRequested) waitWhilePaused();
+                }
+                maybeFlush();
+                if (!progressed) sleepQuietly(50);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    /** Cada minuto se guarda el caché y se actualiza el pack, por si el juego se cierra. */
+    private void maybeFlush() throws IOException {
+        if (System.currentTimeMillis() - lastFlushMs < 60_000) return;
+        cache.flush();
+        packChanged |= writePack();
+        lastFlushMs = System.currentTimeMillis();
     }
 
     /** Una petición a la IA. Los errores de conexión o de modelo inexistente detienen todo. */
     private Map<String, String> request(Map<String, String> req, String modNs, String note) throws FatalException, IOException {
-        String prompt = Prompts.withGlossary(cfg.effectivePrompt(), glossary.relevant(req.values(), modNs));
+        String prompt = Prompts.withGlossary(cfg.effectivePrompt(target), glossary.relevant(req.values(), modNs));
         if (note != null) prompt += "\n" + note;
         // Los marcadores viajan como fichas ⟦n⟧ para que la IA no pueda romperlos.
         Map<String, String> masked = new LinkedHashMap<>();
@@ -348,7 +426,7 @@ public class TranslationJob implements Runnable {
             try {
                 raw = client.translate(cfg, prompt, masked);
                 waitingMessage = null;
-                consecutiveFailures = 0;
+                consecutiveFailures.set(0);
                 break;
             } catch (ConnectException | HttpConnectTimeoutException e) {
                 // Ollama cerrado o reiniciándose: se espera un rato antes de rendirse.
@@ -389,8 +467,9 @@ public class TranslationJob implements Runnable {
     /** Si la IA falla una y otra vez sin que sea algo pasajero, se corta en vez de mandar miles de peticiones inútiles. */
     private IOException countFailure(IOException e) throws FatalException {
         waitingMessage = null;
-        if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            throw new FatalException("La IA falló " + consecutiveFailures + " veces seguidas. Último error: " + LlmClient.describe(e), e);
+        int fails = consecutiveFailures.incrementAndGet();
+        if (fails >= MAX_CONSECUTIVE_FAILURES) {
+            throw new FatalException("La IA falló " + fails + " veces seguidas. Último error: " + LlmClient.describe(e), e);
         }
         return e;
     }
@@ -454,7 +533,7 @@ public class TranslationJob implements Runnable {
             return;
         }
         String note = UNCHANGED.equals(reason)
-                ? "ATENCIÓN: en el intento anterior devolviste este texto sin traducir. Tradúcelo al español de España salvo que sea un nombre propio o una marca; en ese caso devuélvelo igual."
+                ? "ATENCIÓN: en el intento anterior devolviste este texto sin traducir. Tradúcelo al " + SpanishTarget.describe(target) + " salvo que sea un nombre propio o una marca; en ese caso devuélvelo igual."
                 : "ATENCIÓN: en el intento anterior la traducción de este texto fue rechazada (" + reason + "). Corrígelo y conserva exactamente los marcadores del original.";
         String t, why;
         try {
@@ -526,7 +605,7 @@ public class TranslationJob implements Runnable {
         return Validator.check(it.text, joined) == null ? joined : null;
     }
 
-    private void accept(Item it, String translation) {
+    private synchronized void accept(Item it, String translation) {
         for (Target t : it.targets) {
             cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation));
             output.computeIfAbsent(t.ns(), k -> new TreeMap<>()).put(t.key(), translation);
@@ -536,7 +615,7 @@ public class TranslationJob implements Runnable {
         done++;
     }
 
-    private void fail(Item it, String why) {
+    private synchronized void fail(Item it, String why) {
         failed++;
         done++;
         perMod.computeIfAbsent(it.modNs, k -> new int[2])[1]++;
@@ -580,6 +659,7 @@ public class TranslationJob implements Runnable {
         StringBuilder sb = new StringBuilder();
         sb.append("Traductor ES — informe\n");
         sb.append("Fecha: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append('\n');
+        sb.append("Idioma de destino: ").append(target).append(" (").append(SpanishTarget.describe(target)).append(")\n");
         sb.append("Resultado: ").append(msg).append("\n\n");
         sb.append("Textos con español oficial (no se tocan): ").append(official).append('\n');
         sb.append("Copiados de otra variante del español: ").append(fromVariants).append('\n');

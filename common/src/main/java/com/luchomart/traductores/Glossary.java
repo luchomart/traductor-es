@@ -43,7 +43,7 @@ public class Glossary {
         return g;
     }
 
-    /** Agrega los nombres oficiales de Minecraft (en_us → es_es). */
+    /** Agrega los nombres oficiales de Minecraft (en_us → idioma de destino). */
     public void addVanilla(Map<String, String> en, Map<String, String> es) {
         for (Map.Entry<String, String> e : en.entrySet()) {
             String t = es.get(e.getKey());

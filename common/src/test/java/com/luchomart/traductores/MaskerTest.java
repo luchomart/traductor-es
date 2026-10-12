@@ -56,4 +56,10 @@ class MaskerTest {
         assertEquals("Hola", Masker.unmask("Hola", List.of()));
         assertNull(Masker.unmask("Hola ⟦1⟧", List.of()));
     }
+
+    @Test
+    void protegeElResaltadoDeCreatePeroNoLosIdentificadores() {
+        assertEquals("Spawns ⟦1⟧Mobs⟦2⟧ with spawn liquid.", Masker.mask("Spawns _Mobs_ with spawn liquid.").text());
+        assertEquals("Use stone_bricks", Masker.mask("Use stone_bricks").text());
+    }
 }

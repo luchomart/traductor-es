@@ -45,4 +45,13 @@ class LlmClientTest {
         assertEquals(30, LlmClient.parseRetryAfter(" 30 "));
         assertEquals(0, LlmClient.parseRetryAfter("Wed, 21 Oct 2026 07:28:00 GMT"));
     }
+
+    @Test
+    void leeLaListaDeModelos() {
+        assertEquals(java.util.List.of("gemma3:12b", "gemma3:4b"),
+                LlmClient.parseModelList("{\"object\":\"list\",\"data\":[{\"id\":\"gemma3:4b\"},{\"id\":\"gemma3:12b\"}]}"));
+        // Gemini antepone "models/".
+        assertEquals(java.util.List.of("gemini-2.5-flash"), LlmClient.parseModelList("{\"data\":[{\"id\":\"models/gemini-2.5-flash\"}]}"));
+        assertTrue(LlmClient.parseModelList("<html>no</html>").isEmpty());
+    }
 }

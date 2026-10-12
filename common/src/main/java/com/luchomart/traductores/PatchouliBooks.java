@@ -54,7 +54,7 @@ public final class PatchouliBooks {
 
     private PatchouliBooks() {}
 
-    public static List<Book> scan(ResourceManager rm, List<String> variants) {
+    public static List<Book> scan(ResourceManager rm, String target, List<String> variants) {
         Map<ResourceLocation, List<Resource>> stacks = rm.listResourceStacks("patchouli_books", rl -> rl.getPath().endsWith(".json"));
         // ns/libro → idioma → archivo → recurso de más arriba (sin contar nuestro pack)
         Map<String, Map<String, Map<String, Resource>>> index = new TreeMap<>();
@@ -76,7 +76,7 @@ public final class PatchouliBooks {
             if (en == null) continue;
             String[] parts = e.getKey().split("/", 2);
             Book book = new Book(parts[0], parts[1]);
-            Map<String, Resource> es = e.getValue().getOrDefault("es_es", Map.of());
+            Map<String, Resource> es = e.getValue().getOrDefault(target, Map.of());
             for (Map.Entry<String, Resource> file : en.entrySet()) {
                 String rel = file.getKey();
                 if (es.containsKey(rel)) { book.official++; continue; }
@@ -143,11 +143,11 @@ public final class PatchouliBooks {
      * Escribe los libros traducidos en el pack. output contiene, por pseudo-namespace del libro,
      * "archivo#puntero" → traducción. Borra archivos de libros que ya no corresponden.
      */
-    public static boolean write(List<Book> books, Map<String, Map<String, String>> output) throws IOException {
+    public static boolean write(List<Book> books, Map<String, Map<String, String>> output, String target) throws IOException {
         boolean changed = false;
         Set<Path> written = new HashSet<>();
         for (Book book : books) {
-            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve("patchouli_books").resolve(book.book).resolve("es_es");
+            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve("patchouli_books").resolve(book.book).resolve(target);
             for (Map.Entry<String, JsonElement> v : book.fromVariant.entrySet()) {
                 changed |= writeIfChanged(base.resolve(v.getKey()), GSON.toJson(v.getValue()), written);
             }
@@ -168,7 +168,8 @@ public final class PatchouliBooks {
             try (Stream<Path> files = Files.walk(assets)) {
                 for (Path p : files.filter(Files::isRegularFile).toList()) {
                     String s = assets.relativize(p).toString().replace('\\', '/');
-                    if (s.contains("/patchouli_books/") && !written.contains(p)) {
+                    // Solo los del idioma actual: los de otras variantes del español se conservan.
+                    if (s.contains("/patchouli_books/") && s.contains("/" + target + "/") && !written.contains(p)) {
                         Files.delete(p);
                         changed = true;
                     }

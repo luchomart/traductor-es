@@ -13,11 +13,12 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Tests automáticos: Validator, Masker, LlmClient (lectura de JSON, URL)
 
 ## Fase 2: más público
-- [ ] Destino según el español elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec)
-- [ ] Presets de IA: Ollama, LM Studio, Gemini, OpenRouter, Groq; manejo de límites de peticiones
-- [ ] Peticiones simultáneas (configurable)
-- [ ] "Probar conexión" lista los modelos instalados y avisa si el configurado no existe
-- [ ] Exportar el pack como .zip
+- [x] Proteger el _resaltado_ de Create en tooltips (encontrado al probar)
+- [x] Destino según el español elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec)
+- [x] Presets de IA: Ollama, LM Studio, Gemini, OpenRouter, Groq; manejo de límites de peticiones
+- [x] Peticiones simultáneas (configurable)
+- [x] "Probar conexión" lista los modelos instalados y avisa si el configurado no existe
+- [x] Exportar el pack como .zip
 
 ## Fase 3: Fabric
 - [ ] Fabric 1.20.1

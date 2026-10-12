@@ -46,7 +46,12 @@ public final class Traductor {
     public static synchronized boolean start() {
         if (isRunning()) return false;
         Minecraft mc = Minecraft.getInstance();
-        TranslationJob j = new TranslationJob(Config.get(), Traductor::onFinish);
+        String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
+        if (target == null) {
+            toast("Traductor ES", "Elegí un idioma español en Opciones → Idioma (o un destino en config.json)");
+            return false;
+        }
+        TranslationJob j = new TranslationJob(Config.get(), target, Traductor::onFinish);
         job = j;
         Thread t = new Thread(j, "Traductor ES");
         t.setDaemon(true);
@@ -92,8 +97,8 @@ public final class Traductor {
         autoStartCheckedLang = lang;
         Config cfg = Config.get();
         if (!cfg.autoStart || isRunning()) return;
-        if (!"es_es".equals(lang)) {
-            TraductorES.LOG.info("[Traductor ES] El idioma del juego es {}, no es_es: no se traduce automáticamente", lang);
+        if (SpanishTarget.resolve(cfg.targetLanguage, lang) == null) {
+            TraductorES.LOG.info("[Traductor ES] El idioma del juego es {}, no es una variante del español: no se traduce automáticamente", lang);
             return;
         }
         start();

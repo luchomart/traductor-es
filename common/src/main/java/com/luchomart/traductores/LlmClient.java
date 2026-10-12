@@ -57,6 +57,38 @@ public class LlmClient {
         return parseObject(content);
     }
 
+    /**
+     * Modelos disponibles en el servidor (GET .../models, parte del protocolo de OpenAI).
+     * Devuelve una lista vacía si el servidor no lo soporta.
+     */
+    public java.util.List<String> listModels(Config cfg) throws IOException, InterruptedException {
+        String url = normalizeUrl(cfg.apiUrl).replaceFirst("/chat/completions/?$", "/models");
+        if (!url.endsWith("/models")) return java.util.List.of();
+        HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(15)).GET();
+        if (cfg.apiKey != null && !cfg.apiKey.isBlank()) req.header("Authorization", "Bearer " + cfg.apiKey);
+        HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (res.statusCode() == 401 || res.statusCode() == 403) {
+            throw new LlmException("la API rechazó la clave (HTTP " + res.statusCode() + ")", res.statusCode(), 0);
+        }
+        if (res.statusCode() / 100 != 2) return java.util.List.of();
+        return parseModelList(res.body());
+    }
+
+    /** Lee {"data":[{"id":"..."}]}. Gemini antepone "models/" a los ids: se quita. */
+    static java.util.List<String> parseModelList(String body) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        try {
+            for (JsonElement el : JsonParser.parseString(body).getAsJsonObject().getAsJsonArray("data")) {
+                String id = el.getAsJsonObject().get("id").getAsString();
+                out.add(id.startsWith("models/") ? id.substring("models/".length()) : id);
+            }
+        } catch (RuntimeException ignored) {
+            // formato distinto: se trata como "no soportado"
+        }
+        out.sort(String.CASE_INSENSITIVE_ORDER);
+        return out;
+    }
+
     /** Petición corta para comprobar que el servidor y el modelo responden. */
     public String ping(Config cfg) throws IOException, InterruptedException {
         return chat(cfg, "Responde solo con la palabra: OK", "Di OK", false).trim();

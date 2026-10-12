@@ -55,4 +55,13 @@ class ValidatorTest {
         assertFalse(Validator.looksUntranslated("Mekanism", "Mekanism")); // una sola palabra: nombre propio
         assertFalse(Validator.looksUntranslated("§a%s FE", "§a%s FE"));
     }
+
+    @Test
+    void respetaElResaltadoDeCreate() {
+        assertNull(Validator.check("Spawns _Mobs_ with spawn liquid.", "Genera _criaturas_ con líquido de aparición."));
+        assertNotNull(Validator.check("Spawns _Mobs_ with spawn liquid.", "Genera criaturas con líquido de aparición."));
+        // El guion bajo dentro de un identificador no es resaltado.
+        assertNull(Validator.check("Place stone_bricks here", "Coloca stone_bricks aquí"));
+        assertNull(Validator.check("_Right-Click_ to use.", "_Clic derecho_ para usar."));
+    }
 }

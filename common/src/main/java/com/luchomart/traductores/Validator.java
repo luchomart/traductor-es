@@ -16,6 +16,8 @@ public final class Validator {
     private static final Pattern BRACES = Pattern.compile("\\{[^{}\\s]{1,40}}");
     private static final Pattern PATCHOULI = Pattern.compile("\\$\\([^)]{0,60}\\)");
     private static final Pattern TAGS = Pattern.compile("</?[a-zA-Z][a-zA-Z0-9_:#-]{0,30}>");
+    /** Guion bajo de resaltado de Create (_Palabra_): el que está al borde de una palabra, no el de stone_bricks. */
+    static final Pattern HIGHLIGHT = Pattern.compile("(?<![\\p{L}\\p{N}])_(?=[\\p{L}\\p{N}])|(?<=[\\p{L}\\p{N}.!?)])_(?![\\p{L}\\p{N}])");
 
     /** Devuelve null si es válida, o el motivo del rechazo. */
     public static String check(String source, String translated) {
@@ -26,6 +28,7 @@ public final class Validator {
         if (why == null) why = compare("marcadores {}", BRACES, source, translated);
         if (why == null) why = compare("marcadores $()", PATCHOULI, source, translated);
         if (why == null) why = compare("etiquetas <>", TAGS, source, translated);
+        if (why == null) why = compare("resaltados _ _", HIGHLIGHT, source, translated);
         if (why == null && count(source, '\n') != count(translated, '\n')) why = NEWLINES;
         if (why == null && literalNewlines(source) != literalNewlines(translated)) why = NEWLINES;
         return why;

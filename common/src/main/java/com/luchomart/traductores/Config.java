@@ -22,6 +22,8 @@ public class Config {
     public String model = "gemma3:12b";
     /** Máximo de textos por petición. */
     public int batchSize = 20;
+    /** Peticiones a la IA al mismo tiempo. 1 para una IA local; más para servicios en la nube. */
+    public int parallelRequests = 1;
     /** Máximo de caracteres de origen por petición (protege la ventana de contexto). */
     public int batchMaxChars = 2500;
     public int timeoutSeconds = 180;
@@ -38,10 +40,10 @@ public class Config {
     public boolean translateBooks = true;
     /** Si la IA devuelve sin cambios un texto de varias palabras, pedirle una vez más que lo traduzca. */
     public boolean retryUnchanged = true;
-    /** Usar es_mx, es_ar, etc. como español de España cuando no hay es_es oficial. */
+    /** Español de destino: "auto" usa el idioma del juego; también es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec. */
+    public String targetLanguage = "auto";
+    /** Usar otras variantes del español (es_mx, es_ar…) cuando un mod no trae la de destino. */
     public boolean useSpanishVariants = true;
-    /** Orden de preferencia de las variantes del español. */
-    public List<String> spanishVariants = new ArrayList<>(List.of("es_mx", "es_ar", "es_cl", "es_uy", "es_ve", "es_ec"));
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
     /** Prompt de sistema. Vacío = usar el prompt incorporado. */
@@ -81,14 +83,16 @@ public class Config {
 
     private void sanitize() {
         if (batchSize < 1) batchSize = 1;
+        if (parallelRequests < 1) parallelRequests = 1;
+        if (parallelRequests > 16) parallelRequests = 16;
         if (batchMaxChars < 200) batchMaxChars = 200;
         if (timeoutSeconds < 10) timeoutSeconds = 10;
-        if (spanishVariants == null) spanishVariants = new ArrayList<>();
+        if (targetLanguage == null || targetLanguage.isBlank()) targetLanguage = "auto";
         if (excludedNamespaces == null) excludedNamespaces = new ArrayList<>();
         if (systemPrompt == null) systemPrompt = "";
     }
 
-    public String effectivePrompt() {
-        return systemPrompt.isBlank() ? Prompts.SYSTEM : systemPrompt;
+    public String effectivePrompt(String target) {
+        return systemPrompt.isBlank() ? Prompts.system(target) : systemPrompt;
     }
 }

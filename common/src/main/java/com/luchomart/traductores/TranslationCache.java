@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -20,7 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Cada entrada guarda el texto original: si el mod cambia ese texto, la entrada deja de valer.
  */
 public class TranslationCache {
-    public static final Path DIR = Config.DIR.resolve("cache");
+    public static final Path ROOT = Config.DIR.resolve("cache");
+    /** Carpeta del idioma de destino: cache/es_es, cache/es_mx… */
+    private final Path dir;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     /** o = original, t = traducción. */
@@ -34,6 +37,26 @@ public class TranslationCache {
     }
 
     private final Map<String, Map<String, Entry>> data = new ConcurrentHashMap<>();
+
+    public TranslationCache(String target) {
+        dir = ROOT.resolve(target);
+        migrateLegacy(target);
+    }
+
+    /** Las versiones anteriores guardaban el caché (solo es_es) directo en cache/: se mueve a cache/es_es. */
+    private static void migrateLegacy(String target) {
+        if (!"es_es".equals(target)) return;
+        try (java.util.stream.Stream<Path> files = Files.list(ROOT)) {
+            List<Path> legacy = files.filter(p -> Files.isRegularFile(p) && p.toString().endsWith(".json")).toList();
+            if (legacy.isEmpty()) return;
+            Path dest = ROOT.resolve("es_es");
+            Files.createDirectories(dest);
+            for (Path p : legacy) Files.move(p, dest.resolve(p.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+            TraductorES.LOG.info("[Traductor ES] Caché anterior movido a {}", dest);
+        } catch (IOException e) {
+            if (Files.isDirectory(ROOT)) TraductorES.LOG.error("[Traductor ES] No se pudo mover el caché anterior", e);
+        }
+    }
     private final Set<String> dirty = ConcurrentHashMap.newKeySet();
 
     public String get(String ns, String key, String source) {
@@ -74,8 +97,8 @@ public class TranslationCache {
     }
 
     /** Los libros usan namespaces con "/" ("@patchouli/mod/libro"): se aplanan para el nombre de archivo. */
-    private static Path fileFor(String ns) {
-        return DIR.resolve(ns.replace("/", "__") + ".json");
+    private Path fileFor(String ns) {
+        return dir.resolve(ns.replace("/", "__") + ".json");
     }
 
     /** Escribe a disco los namespaces modificados. */
@@ -83,7 +106,7 @@ public class TranslationCache {
         for (String ns : new HashSet<>(dirty)) {
             dirty.remove(ns);
             try {
-                Files.createDirectories(DIR);
+                Files.createDirectories(dir);
                 Path f = fileFor(ns), tmp = f.resolveSibling(f.getFileName() + ".tmp");
                 Files.writeString(tmp, GSON.toJson(new TreeMap<>(namespace(ns))), StandardCharsets.UTF_8);
                 Files.move(tmp, f, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);

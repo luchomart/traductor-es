@@ -1,9 +1,11 @@
 # Traductor ES
 
-Mod de Minecraft que **traduce al español de España todos los textos de tus mods**: nombres de objetos, descripciones, menús y manuales del juego. Usa una inteligencia artificial que corre **en tu propia PC**: gratis, sin cuentas y sin mandar nada a internet.
+Mod de Minecraft que **traduce al español todos los textos de tus mods**: nombres de objetos, descripciones, menús y manuales del juego. Traduce al español que tengas elegido en el juego: **España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador**, cada uno con sus palabras ("cubo" o "balde", "tienes" o "tenés").
 
-- Si un mod ya trae español de España, lo respeta y no lo toca.
-- Si trae otro español (México, Argentina…), lo usa en vez de traducir.
+Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuentas y sin mandar nada a internet) o, si tu PC no da, un **servicio en la nube**.
+
+- Si un mod ya trae tu español, lo respeta y no lo toca.
+- Si trae otro español, lo usa en vez de traducir.
 - Lo que falta lo traduce la IA, y lo guarda para no volver a traducirlo.
 
 ## Qué necesitás
@@ -13,7 +15,7 @@ Mod de Minecraft que **traduce al español de España todos los textos de tus mo
 | **Minecraft** | Forge **1.20.1** o NeoForge **1.21.1** |
 | **Placa de video** | Recomendado: 12 GB de VRAM o más. Con menos también funciona, usando un modelo más chico (ver abajo). |
 | **Espacio** | Unos 8 GB libres para el modelo de IA |
-| **Ollama** | El programa que hace correr la IA. Se instala una sola vez. |
+| **Ollama** | El programa que hace correr la IA. Se instala una sola vez. (Si no tenés placa de video, mirá [IA en la nube](#ia-en-la-nube).) |
 
 ## Instalación paso a paso
 
@@ -43,7 +45,7 @@ Copiá el archivo del mod en la carpeta `mods` de tu modpack. Usá el que corres
 
 ### 4. Poner el juego en español
 
-Abrí el juego → **Opciones → Idioma → Español (España)**.
+Abrí el juego → **Opciones → Idioma** y elegí tu español (España, México, Argentina…). El mod traduce a ese.
 
 ### 5. ¡Listo!
 
@@ -63,16 +65,33 @@ En el menú principal: **Mods → Traductor ES → Configurar**.
 
 | Opción | Para qué sirve |
 |---|---|
+| Servicio | Elegí Ollama, LM Studio o un servicio en la nube (Gemini, OpenRouter, Groq). Completa la URL y el modelo. |
 | URL de la API | Dónde está la IA. Con Ollama no hace falta tocarla. |
+| Clave (API key) | Solo para servicios en la nube. |
 | Modelo | El modelo de IA. Cambialo si bajaste otro (por ejemplo `gemma3:4b`). |
 | Textos por lote | Cuántos textos manda juntos. Si ves errores de "respuesta cortada", bajalo a 10. |
+| A la vez | Cuántas peticiones manda al mismo tiempo. 1 para una IA en tu PC; 2 a 4 en la nube. |
 | Traducir al iniciar | Si está en "No", solo traduce cuando apretás "Traducir ahora". |
-| Probar conexión | Comprueba que la IA responde. |
-| Traducir ahora / Pausar | Arranca, pausa o reanuda la traducción. |
+| Probar conexión | Comprueba que la IA responde y muestra los modelos disponibles. |
+| Traducir ahora / Pausar / Cancelar | Arranca, pausa, reanuda o corta la traducción. |
+| Exportar pack | Crea `resourcepacks/TraductorES-traducciones.zip` para pasárselo a amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod. |
 | Abrir carpeta | Abre la carpeta del mod (configuración, informe y correcciones). |
 | Guía | Esta guía, dentro del juego. |
 
 También podés usar comandos en el chat: `/traductor estado`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
+
+## IA en la nube
+
+Si tu PC no tiene una placa de video potente, el mod puede usar un servicio en internet compatible con OpenAI. Varios tienen planes gratis con límites.
+
+1. En el panel, tocá **Servicio** hasta elegir uno: **Gemini**, **OpenRouter** o **Groq**.
+2. Creá una clave (API key) en la página del servicio y pegala en **Clave**.
+3. Tocá **Probar conexión**: te muestra los modelos disponibles. Si el sugerido no existe, copiá uno de la lista en **Modelo**.
+4. Subí **A la vez** a 2–4 para que vaya más rápido.
+
+Si el servicio pide bajar el ritmo, el mod espera lo que haga falta y sigue solo.
+
+> **Ojo:** con un servicio en la nube, los textos de tus mods se envían a ese servicio, y la clave queda guardada en `config/traductor_es/config.json`. No compartas ese archivo.
 
 ## Corregir una traducción
 
@@ -84,7 +103,7 @@ La IA a veces se equivoca. Para arreglar un texto a mano, abrí la carpeta del m
 }
 ```
 
-El formato es `"mod:clave": "texto"`. Para encontrar la clave, abrí la carpeta `cache`, abrí el archivo del mod (por ejemplo `pneumaticcraft.json`) y buscá (Ctrl + F) la traducción que querés cambiar. Cada texto aparece así, y la clave es lo que encabeza el bloque:
+El formato es `"mod:clave": "texto"`. Para encontrar la clave, abrí la carpeta `cache`, entrá a la carpeta de tu idioma (por ejemplo `es_es`), abrí el archivo del mod (por ejemplo `pneumaticcraft.json`) y buscá (Ctrl + F) la traducción que querés cambiar. Cada texto aparece así, y la clave es lo que encabeza el bloque:
 
 ```json
 "block.pneumaticcraft.solar_compressor": {
@@ -123,12 +142,13 @@ Copiá este texto y pegalo en la IA que uses (ChatGPT, Claude, Gemini…). Te va
 Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Dame un paso por vez y esperá a que te confirme antes de seguir.
 
 Datos del mod (no inventes opciones que no estén acá):
-- Traduce al español de España los textos de los mods usando una IA local con Ollama. Es un mod solo de cliente.
+- Traduce los textos de los mods al español que el jugador tenga elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec) usando una IA. Es un mod solo de cliente.
 - Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
-- Necesita Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
+- Lo recomendado es una IA local con Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
+- Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq: hay que crear una clave (API key) en ese servicio y pegarla en el campo Clave. Los textos de los mods se envían a ese servicio.
 - Modelo recomendado: "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más). Con menos VRAM: "ollama pull gemma3:4b". "ollama list" muestra los modelos instalados.
-- El juego tiene que estar en Español (España): Opciones → Idioma.
-- Configuración en el juego: Mods → Traductor ES → Configurar. Campos: URL de la API, Clave (no importa con Ollama), Modelo (el nombre exacto de "ollama list") y Textos por lote (20 por defecto). Botones: Probar conexión, Traducir ahora/Pausar, Abrir carpeta y Guía.
+- El juego tiene que estar en algún español: Opciones → Idioma.
+- Configuración en el juego: Mods → Traductor ES → Configurar. Campos: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL de la API, Clave (no importa con Ollama), Modelo, Textos por lote (20 por defecto) y A la vez (peticiones simultáneas: 1 local, 2 a 4 en la nube). Botones: Probar conexión (muestra los modelos disponibles), Traducir ahora/Pausar, Cancelar, Exportar pack, Abrir carpeta y Guía.
 - Traduce solo en el menú principal al abrir el juego y muestra el progreso arriba a la izquierda. La primera vez puede tardar horas. Se pausa al entrar a un mundo. F3 + T recarga los textos.
 - Comandos: /traductor estado, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
@@ -150,7 +170,7 @@ Todo está en `config/traductor_es/` dentro de la carpeta del modpack:
 | `correcciones.json` | Tus correcciones a mano |
 | `glosario.json` | Términos que siempre se traducen igual |
 | `informe.txt` | Resumen de la última traducción y textos que fallaron |
-| `cache/` | Todas las traducciones hechas (si la borrás, se traduce todo de nuevo) |
+| `cache/` | Todas las traducciones hechas, una carpeta por idioma (si la borrás, se traduce todo de nuevo) |
 | `pack/` | El paquete de recursos que usa el juego (se genera solo) |
 
 ---

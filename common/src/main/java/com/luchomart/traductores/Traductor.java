@@ -6,23 +6,22 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.commands.CommandSourceStack;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.event.GameShuttingDownEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Controla la tarea de traducción y su relación con el juego (menú, comandos, recarga). */
+/**
+ * Controla la tarea de traducción y su relación con el juego (menú, comandos, recarga).
+ * Cada plataforma (NeoForge, Forge) conecta sus eventos con los métodos on*.
+ */
 public final class Traductor {
-    private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId(8000L);
     private static final long SHOW_RESULT_MS = 30_000;
 
     private static volatile TranslationJob job;
@@ -69,13 +68,14 @@ public final class Traductor {
     }
 
     private static void toast(String title, String msg) {
-        SystemToast.addOrUpdate(Minecraft.getInstance().getToasts(), TOAST, Component.literal(title), Component.literal(msg));
+        Platform.toast(Component.literal(title), Component.literal(msg));
     }
 
     // ---------- Eventos ----------
 
-    public static void onScreenInit(ScreenEvent.Init.Post event) {
-        if (autoStartChecked || !(event.getScreen() instanceof TitleScreen)) return;
+    /** Después de inicializar cualquier pantalla. */
+    public static void onScreenInit(Screen screen) {
+        if (autoStartChecked || !(screen instanceof TitleScreen)) return;
         autoStartChecked = true;
         Config cfg = Config.get();
         String lang = Minecraft.getInstance().options.languageCode;
@@ -87,7 +87,8 @@ public final class Traductor {
         start();
     }
 
-    public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+    /** Al entrar a un mundo o servidor. */
+    public static void onWorldJoin() {
         TranslationJob j = job;
         if (!Config.get().pauseInWorld || j == null || !j.isRunning() || j.isPauseRequested()) return;
         j.pause();
@@ -95,25 +96,27 @@ public final class Traductor {
         toast("Traductor ES", "Traducción en pausa mientras juegas. Se reanuda al volver al menú");
     }
 
-    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+    /** Al salir de un mundo o servidor. */
+    public static void onWorldLeave() {
         TranslationJob j = job;
         if (!autoPaused) return;
         autoPaused = false;
         if (j != null && j.isRunning()) j.resume();
     }
 
-    public static void onShutdown(GameShuttingDownEvent event) {
+    /** Al cerrar el juego. */
+    public static void onShutdown() {
         TranslationJob j = job;
         if (j != null && j.isRunning()) j.flushCache();
     }
 
-    public static void onScreenRender(ScreenEvent.Render.Post event) {
-        if (!(event.getScreen() instanceof TitleScreen)) return;
+    /** Después de dibujar cualquier pantalla: en el menú principal muestra el progreso. */
+    public static void onScreenRender(Screen screen, GuiGraphics g) {
+        if (!(screen instanceof TitleScreen)) return;
         TranslationJob j = job;
         if (j == null) return;
         if (!j.isRunning() && System.currentTimeMillis() - finishedAtMs > SHOW_RESULT_MS) return;
         List<Component> lines = statusLines(j);
-        GuiGraphics g = event.getGuiGraphics();
         Font font = Minecraft.getInstance().font;
         int y = 4;
         for (Component line : lines) {
@@ -122,8 +125,9 @@ public final class Traductor {
         }
     }
 
-    public static void onRegisterCommands(RegisterClientCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("traductor")
+    /** El comando de cliente /traductor; cada plataforma lo registra en su evento. */
+    public static LiteralArgumentBuilder<CommandSourceStack> command() {
+        return Commands.literal("traductor")
                 .executes(Traductor::cmdStatus)
                 .then(Commands.literal("estado").executes(Traductor::cmdStatus))
                 .then(Commands.literal("iniciar").executes(ctx -> reply(ctx, start() ? "Traducción iniciada" : "Ya hay una traducción en curso")))
@@ -145,7 +149,7 @@ public final class Traductor {
                     if (j == null || !j.isRunning()) return reply(ctx, "No hay ninguna traducción en curso");
                     j.cancel();
                     return reply(ctx, "Cancelando… lo ya traducido se guarda");
-                })));
+                }));
     }
 
     private static int cmdStatus(CommandContext<CommandSourceStack> ctx) {

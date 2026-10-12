@@ -2,7 +2,6 @@ package com.luchomart.traductores;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -15,7 +14,7 @@ import java.util.List;
 public class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    public static final Path DIR = FMLPaths.CONFIGDIR.get().resolve(TraductorES.MODID);
+    public static final Path DIR = Platform.configDir().resolve(TraductorES.MODID);
     public static final Path FILE = DIR.resolve("config.json");
 
     public String apiUrl = "http://localhost:11434/v1/chat/completions";

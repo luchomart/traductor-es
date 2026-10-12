@@ -14,8 +14,6 @@ import java.util.Optional;
 
 /** Registra el pack generado como pack del juego: siempre activo y por encima del resto. */
 public final class PackRegistration {
-    public static final String PACK_ID = TraductorES.MODID + "/traducciones";
-
     private PackRegistration() {}
 
     public static void onAddPackFinders(AddPackFindersEvent event) {
@@ -23,7 +21,7 @@ public final class PackRegistration {
         PackWriter.ensureExists();
         event.addRepositorySource(consumer -> {
             Pack pack = Pack.readMetaAndCreate(
-                    new PackLocationInfo(PACK_ID, Component.literal("Traductor ES"), PackSource.BUILT_IN, Optional.empty()),
+                    new PackLocationInfo(PackWriter.PACK_ID, Component.literal("Traductor ES"), PackSource.BUILT_IN, Optional.empty()),
                     BuiltInPackSource.fromName(info -> new PathPackResources(info, PackWriter.DIR)),
                     PackType.CLIENT_RESOURCES,
                     new PackSelectionConfig(true, Pack.Position.TOP, false));

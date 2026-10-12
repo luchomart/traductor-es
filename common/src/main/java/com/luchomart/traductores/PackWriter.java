@@ -15,7 +15,8 @@ import java.util.stream.Stream;
 /** Escribe el resource pack generado en config/traductor_es/pack. */
 public final class PackWriter {
     public static final Path DIR = Config.DIR.resolve("pack");
-    public static final int PACK_FORMAT = 34; // 1.21 / 1.21.1
+    /** Id del pack registrado: se usa para no leer nuestras propias traducciones como si fueran oficiales. */
+    public static final String PACK_ID = TraductorES.MODID + "/traducciones";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     private PackWriter() {}
@@ -25,7 +26,7 @@ public final class PackWriter {
         try {
             Files.createDirectories(DIR.resolve("assets"));
             Path meta = DIR.resolve("pack.mcmeta");
-            String json = "{\n  \"pack\": {\n    \"pack_format\": " + PACK_FORMAT
+            String json = "{\n  \"pack\": {\n    \"pack_format\": " + Platform.PACK_FORMAT
                     + ",\n    \"description\": \"Traducciones al español generadas por Traductor ES\"\n  }\n}\n";
             if (!Files.exists(meta) || !Files.readString(meta, StandardCharsets.UTF_8).equals(json)) {
                 Files.writeString(meta, json, StandardCharsets.UTF_8);

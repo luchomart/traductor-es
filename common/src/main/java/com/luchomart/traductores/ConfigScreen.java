@@ -55,7 +55,7 @@ public class ConfigScreen extends Screen {
         }).bounds(rx, y, half, 20).build());
         y += ROW;
 
-        addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openPath(Config.DIR))
+        addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
                 .bounds(left, y, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Guardar y volver"), b -> onClose())
                 .bounds(rx, y, half, 20).build());
@@ -131,6 +131,7 @@ public class ConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        Platform.renderBackground(this, g, mouseX, mouseY, partialTick);
         super.render(g, mouseX, mouseY, partialTick);
         g.drawCenteredString(font, title, width / 2, 12, 0xFFD700);
         int left = (width - LABEL_W - FIELD_W) / 2, y = 30 + 6;

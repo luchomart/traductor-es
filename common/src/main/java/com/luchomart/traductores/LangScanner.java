@@ -55,7 +55,7 @@ public final class LangScanner {
     private static Map<String, String> read(List<Resource> stack) {
         Map<String, String> merged = new HashMap<>();
         for (Resource res : stack) {
-            if (PackRegistration.PACK_ID.equals(res.sourcePackId())) continue;
+            if (PackWriter.PACK_ID.equals(res.sourcePackId())) continue;
             try (Reader r = res.openAsReader()) {
                 JsonElement el = JsonParser.parseReader(r);
                 if (!el.isJsonObject()) continue;

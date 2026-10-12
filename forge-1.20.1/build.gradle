@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev.legacyforge'
+    id 'idea'
+}
+
+ext {
+    forge_minecraft_version = '1.20.1'
+    forge_version = '47.4.0'
+}
+
+version = mod_version
+group = mod_group_id
+
+// La lógica compartida con la versión de NeoForge vive en ../common
+sourceSets.main.java.srcDir('../common/src/main/java')
+
+base {
+    archivesName = "${mod_id}-forge-${forge_minecraft_version}"
+}
+
+// Minecraft 1.20.1 usa Java 17.
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+legacyForge {
+    version = "${forge_minecraft_version}-${forge_version}"
+
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            mod_id     : mod_id,
+            mod_name   : mod_name,
+            mod_license: mod_license,
+            mod_version: mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+legacyForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

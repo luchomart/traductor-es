@@ -64,7 +64,7 @@ public final class PatchouliBooks {
             String lang = m.group(2);
             if (!lang.equals("en_us") && !lang.startsWith("es_")) continue;
             Resource top = null;
-            for (Resource r : e.getValue()) if (!PackRegistration.PACK_ID.equals(r.sourcePackId())) top = r;
+            for (Resource r : e.getValue()) if (!PackWriter.PACK_ID.equals(r.sourcePackId())) top = r;
             if (top == null) continue;
             index.computeIfAbsent(e.getKey().getNamespace() + "/" + m.group(1), k -> new TreeMap<>())
                     .computeIfAbsent(lang, k -> new TreeMap<>()).put(m.group(3), top);

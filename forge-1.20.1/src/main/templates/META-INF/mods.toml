@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="luchomart"
+# Solo cliente: los servidores no lo necesitan y no se exige en ambos lados.
+displayTest="IGNORE_ALL_VERSION"
+description='''
+Traduce automáticamente al español de España todos los textos de los mods usando una IA local (Ollama, LM Studio o cualquier API compatible con OpenAI).
+Usa traducciones oficiales y otras variantes del español cuando existen, y nunca pisa traducciones hechas por personas.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="CLIENT"

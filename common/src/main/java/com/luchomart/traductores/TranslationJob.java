@@ -1,5 +1,6 @@
 package com.luchomart.traductores;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.IOException;
@@ -18,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,6 +52,16 @@ public class TranslationJob implements Runnable {
         FatalException(String msg, Throwable cause) { super(msg, cause); }
     }
 
+    /** Cancelación pedida mientras se esperaba (para salir de lo que se esté haciendo). */
+    private static class Cancelled extends RuntimeException {}
+
+    private static final int CONNECT_RETRIES = 6;          // ~2 minutos esperando a que vuelva la conexión
+    private static final int TRANSIENT_RETRIES = 5;
+    private static final int MAX_CONSECUTIVE_FAILURES = 10;
+
+    /** Lo que se escaneó de los recursos del juego. */
+    private record Scan(Map<String, Map<String, Map<String, String>>> lang, List<PatchouliBooks.Book> books) {}
+
     // Estado visible desde la interfaz.
     public volatile State state = State.SCANNING;
     public volatile String message = "Buscando textos…";
@@ -57,10 +70,11 @@ public class TranslationJob implements Runnable {
     public volatile int official, fromVariants, fromCache, corrected, bookFiles;
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
+    /** Motivo de la espera actual antes de reintentar (null si no se está esperando). */
+    public volatile String waitingMessage;
 
     private volatile boolean pauseRequested, cancelRequested;
 
-    private final ResourceManager resources;
     private final Config cfg;
     private final Consumer<TranslationJob> onFinish;
     private final LlmClient client = new LlmClient();
@@ -74,8 +88,9 @@ public class TranslationJob implements Runnable {
     /** Motivo por el que no se pudo restituir una ficha, por clave de petición (para el reintento). */
     private final Map<String, String> maskErrors = new HashMap<>();
 
-    public TranslationJob(ResourceManager resources, Config cfg, Consumer<TranslationJob> onFinish) {
-        this.resources = resources;
+    private int consecutiveFailures;
+
+    public TranslationJob(Config cfg, Consumer<TranslationJob> onFinish) {
         this.cfg = cfg;
         this.onFinish = onFinish;
     }
@@ -107,6 +122,8 @@ public class TranslationJob implements Runnable {
             translateAll(pending);
             if (cancelRequested) finish(State.CANCELLED, "Cancelado. Lo traducido se guardó y se retoma la próxima vez");
             else finish(State.DONE, failed == 0 ? "¡Traducción terminada!" : "Traducción terminada (" + failed + " textos quedaron sin traducir)");
+        } catch (Cancelled e) {
+            finish(State.CANCELLED, "Cancelado. Lo traducido se guardó y se retoma la próxima vez");
         } catch (FatalException e) {
             TraductorES.LOG.error("[Traductor ES] {}", e.getMessage(), e.getCause());
             finish(State.ERROR, e.getMessage());
@@ -126,7 +143,8 @@ public class TranslationJob implements Runnable {
     private List<Item> prepare() throws IOException {
         state = State.SCANNING;
         message = "Buscando textos en los mods…";
-        Map<String, Map<String, Map<String, String>>> all = LangScanner.scan(resources);
+        Scan scan = scanOnMainThread();
+        Map<String, Map<String, Map<String, String>>> all = scan.lang();
         Map<String, Map<String, String>> corrections = Corrections.load();
 
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
@@ -164,7 +182,7 @@ public class TranslationJob implements Runnable {
             if (!all.containsKey(ns)) { output.computeIfAbsent(ns, k -> new TreeMap<>()).putAll(corr); corrected += corr.size(); }
         });
 
-        if (cfg.translateBooks) prepareBooks();
+        if (cfg.translateBooks) prepareBooks(scan.books());
         glossary.sort();
 
         packChanged |= writePack();
@@ -177,9 +195,8 @@ public class TranslationJob implements Runnable {
         return pending;
     }
 
-    private void prepareBooks() {
-        message = "Buscando libros…";
-        books = PatchouliBooks.scan(resources, cfg.spanishVariants);
+    private void prepareBooks(List<PatchouliBooks.Book> scanned) {
+        books = scanned;
         for (PatchouliBooks.Book book : books) {
             String pseudo = book.pseudoNamespace();
             Map<String, String> bookOut = output.computeIfAbsent(pseudo, k -> new TreeMap<>());
@@ -217,6 +234,36 @@ public class TranslationJob implements Runnable {
             byText.put(text, item);
         }
         item.targets.add(new Target(ns, key));
+    }
+
+    /**
+     * Lee los recursos en el hilo principal del juego y solo cuando no hay una recarga en curso:
+     * así nunca se leen packs que se están cerrando o reemplazando.
+     */
+    private Scan scanOnMainThread() {
+        Minecraft mc = Minecraft.getInstance();
+        while (true) {
+            if (cancelRequested) throw new Cancelled();
+            CompletableFuture<Scan> f = new CompletableFuture<>();
+            mc.execute(() -> {
+                try {
+                    if (mc.getOverlay() != null) { f.complete(null); return; } // recargando recursos
+                    ResourceManager rm = mc.getResourceManager();
+                    f.complete(new Scan(LangScanner.scan(rm),
+                            cfg.translateBooks ? PatchouliBooks.scan(rm, cfg.spanishVariants) : List.of()));
+                } catch (Throwable t) {
+                    f.completeExceptionally(t);
+                }
+            });
+            Scan result;
+            try {
+                result = f.join();
+            } catch (CompletionException e) {
+                throw e.getCause() instanceof RuntimeException re ? re : e;
+            }
+            if (result != null) return result;
+            sleepQuietly(500);
+        }
     }
 
     /** Inglés si existe; si no, el idioma con más textos que no sea español. */
@@ -294,25 +341,76 @@ public class TranslationJob implements Runnable {
             masked.put(k, mk.text());
             tokens.put(k, mk.tokens());
         });
-        try {
-            Map<String, String> raw = client.translate(cfg, prompt, masked);
-            Map<String, String> out = new HashMap<>();
-            for (String k : req.keySet()) {
-                String restored = Masker.unmask(raw.get(k), tokens.get(k));
-                if (restored != null) out.put(k, restored);
-                else if (raw.containsKey(k)) maskErrors.put(k, "fichas ⟦⟧ perdidas, repetidas o inventadas");
+
+        Map<String, String> raw;
+        int connectFails = 0, transientFails = 0;
+        while (true) {
+            try {
+                raw = client.translate(cfg, prompt, masked);
+                waitingMessage = null;
+                consecutiveFailures = 0;
+                break;
+            } catch (ConnectException | HttpConnectTimeoutException e) {
+                // Ollama cerrado o reiniciándose: se espera un rato antes de rendirse.
+                if (++connectFails > CONNECT_RETRIES) {
+                    throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e);
+                }
+                backoff(Math.min(30, 5L << (connectFails - 1)), "No hay conexión con la IA, reintentando");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new FatalException("Traducción interrumpida", e);
+            } catch (LlmClient.LlmException e) {
+                if (e.isModelNotFound()) {
+                    throw new FatalException("El servidor respondió 404: revisá que el modelo \"" + cfg.model + "\" exista y que la URL sea correcta", e);
+                }
+                if (e.status == 401 || e.status == 403) {
+                    throw new FatalException("La API rechazó la clave (HTTP " + e.status + "). Revisá el campo Clave", e);
+                }
+                if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
+                    long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));
+                    backoff(wait, e.status == 429 ? "La IA pidió bajar el ritmo" : "La IA está ocupada");
+                    continue;
+                }
+                throw countFailure(e);
+            } catch (IOException e) {
+                throw countFailure(e);
             }
-            return out;
-        } catch (ConnectException | HttpConnectTimeoutException e) {
-            throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e);
+        }
+
+        Map<String, String> out = new HashMap<>();
+        for (String k : req.keySet()) {
+            String restored = Masker.unmask(raw.get(k), tokens.get(k));
+            if (restored != null) out.put(k, restored);
+            else if (raw.containsKey(k)) maskErrors.put(k, "fichas ⟦⟧ perdidas, repetidas o inventadas");
+        }
+        return out;
+    }
+
+    /** Si la IA falla una y otra vez sin que sea algo pasajero, se corta en vez de mandar miles de peticiones inútiles. */
+    private IOException countFailure(IOException e) throws FatalException {
+        waitingMessage = null;
+        if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            throw new FatalException("La IA falló " + consecutiveFailures + " veces seguidas. Último error: " + LlmClient.describe(e), e);
+        }
+        return e;
+    }
+
+    /** Espera antes de reintentar, mostrando el motivo. Se puede cancelar mientras tanto. */
+    private void backoff(long seconds, String why) {
+        long until = System.currentTimeMillis() + seconds * 1000;
+        while (System.currentTimeMillis() < until) {
+            if (cancelRequested) throw new Cancelled();
+            waitingMessage = why + " (" + Math.max(1, (until - System.currentTimeMillis() + 999) / 1000) + " s)";
+            sleepQuietly(250);
+        }
+        waitingMessage = null;
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new FatalException("Traducción interrumpida", e);
-        } catch (IOException e) {
-            if (e.getMessage() != null && e.getMessage().startsWith("HTTP 404")) {
-                throw new FatalException("El servidor no encuentra el modelo \"" + cfg.model + "\" (HTTP 404)", e);
-            }
-            throw e;
         }
     }
 

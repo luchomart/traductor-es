@@ -17,11 +17,35 @@ import java.util.Map;
 
 /** Cliente mínimo para APIs compatibles con OpenAI (/v1/chat/completions). */
 public class LlmClient {
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    // HTTP/1.1: con http:// Java intenta pasar a HTTP/2 y algunos servidores locales no lo entienden.
+    private final HttpClient http = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
     private volatile boolean jsonModeUnsupported = false;
 
     public static class LlmException extends IOException {
-        public LlmException(String msg) { super(msg); }
+        /** Código HTTP, o 0 si el error no vino de una respuesta HTTP. */
+        public final int status;
+        /** Segundos que el servidor pidió esperar (cabecera Retry-After), o 0. */
+        public final long retryAfterSeconds;
+
+        public LlmException(String msg) { this(msg, 0, 0); }
+
+        public LlmException(String msg, int status, long retryAfterSeconds) {
+            super(msg);
+            this.status = status;
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+
+        /** Errores que suelen pasar solos: límite de peticiones o servidor ocupado o reiniciándose. */
+        public boolean isTransient() {
+            return status == 408 || status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
+        }
+
+        public boolean isModelNotFound() {
+            return status == 404;
+        }
     }
 
     /** Traduce un lote {clave: texto} y devuelve {clave: traducción} con lo que se pudo leer. */
@@ -67,17 +91,32 @@ public class LlmClient {
             return chat(cfg, system, user, false);
         }
         if (res.statusCode() / 100 != 2) {
-            throw new LlmException("HTTP " + res.statusCode() + ": " + abbreviate(res.body(), 300));
+            long retryAfter = res.headers().firstValue("Retry-After").map(LlmClient::parseRetryAfter).orElse(0L);
+            throw new LlmException("HTTP " + res.statusCode() + ": " + abbreviate(res.body(), 300), res.statusCode(), retryAfter);
         }
-        JsonObject json = JsonParser.parseString(res.body()).getAsJsonObject();
-        JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
-        String finish = choice.has("finish_reason") && !choice.get("finish_reason").isJsonNull()
-                ? choice.get("finish_reason").getAsString() : "";
-        String content = choice.getAsJsonObject("message").get("content").getAsString();
+        String finish, content;
+        try {
+            JsonObject json = JsonParser.parseString(res.body()).getAsJsonObject();
+            JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
+            finish = choice.has("finish_reason") && !choice.get("finish_reason").isJsonNull()
+                    ? choice.get("finish_reason").getAsString() : "";
+            content = choice.getAsJsonObject("message").get("content").getAsString();
+        } catch (RuntimeException e) {
+            // Respuesta 200 que no tiene el formato de OpenAI (proxy, página de error, servidor incompatible).
+            throw new LlmException("respuesta del servidor con formato inesperado: " + abbreviate(res.body(), 200));
+        }
         if ("length".equals(finish)) {
             throw new LlmException("respuesta cortada por falta de contexto (bajá el tamaño de lote o subí el contexto del servidor)");
         }
         return content;
+    }
+
+    static long parseRetryAfter(String value) {
+        try {
+            return Math.max(0, Long.parseLong(value.trim()));
+        } catch (NumberFormatException e) {
+            return 0; // también puede venir como fecha HTTP: se usa la espera por defecto
+        }
     }
 
     private static JsonObject message(String role, String content) {

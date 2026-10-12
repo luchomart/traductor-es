@@ -1,0 +1,48 @@
+package com.luchomart.traductores;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class LlmClientTest {
+    @Test
+    void leeJsonPuro() throws Exception {
+        assertEquals(Map.of("a", "uno", "b", "dos"), LlmClient.parseObject("{\"a\":\"uno\",\"b\":\"dos\"}"));
+    }
+
+    @Test
+    void toleraBloquesDeMarkdownYTextoAlrededor() throws Exception {
+        assertEquals(Map.of("a", "uno"), LlmClient.parseObject("Aquí tienes:\n```json\n{\"a\": \"uno\"}\n```"));
+    }
+
+    @Test
+    void ignoraValoresQueNoSonTexto() throws Exception {
+        assertEquals(Map.of("a", "uno"), LlmClient.parseObject("{\"a\":\"uno\",\"b\":{\"x\":1},\"c\":[1]}"));
+    }
+
+    @Test
+    void fallaSinJson() {
+        assertThrows(LlmClient.LlmException.class, () -> LlmClient.parseObject("lo siento, no puedo"));
+        assertThrows(LlmClient.LlmException.class, () -> LlmClient.parseObject("{roto"));
+    }
+
+    @Test
+    void normalizaLaUrl() {
+        assertEquals("http://127.0.0.1:11434/v1/chat/completions", LlmClient.normalizeUrl("http://localhost:11434/v1/chat/completions"));
+        assertEquals("http://127.0.0.1:1234/v1/chat/completions", LlmClient.normalizeUrl("localhost:1234/v1/chat/completions"));
+        assertEquals("http://localhostfoo:1/x", LlmClient.normalizeUrl("http://localhostfoo:1/x"));
+        assertEquals("https://api.example.com/v1", LlmClient.normalizeUrl(" https://api.example.com/v1 "));
+    }
+
+    @Test
+    void clasificaErroresPasajeros() {
+        assertTrue(new LlmClient.LlmException("x", 429, 10).isTransient());
+        assertTrue(new LlmClient.LlmException("x", 503, 0).isTransient());
+        assertFalse(new LlmClient.LlmException("x", 400, 0).isTransient());
+        assertTrue(new LlmClient.LlmException("x", 404, 0).isModelNotFound());
+        assertEquals(30, LlmClient.parseRetryAfter(" 30 "));
+        assertEquals(0, LlmClient.parseRetryAfter("Wed, 21 Oct 2026 07:28:00 GMT"));
+    }
+}

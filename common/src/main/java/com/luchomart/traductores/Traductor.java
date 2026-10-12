@@ -25,7 +25,10 @@ public final class Traductor {
     private static final long SHOW_RESULT_MS = 30_000;
 
     private static volatile TranslationJob job;
-    private static boolean autoStartChecked;
+    /** Idioma con el que ya se evaluó el inicio automático (para volver a evaluar si el jugador lo cambia). */
+    private static String autoStartCheckedLang;
+    /** Terminó mientras se jugaba: los textos se recargan al volver al menú. */
+    private static boolean reloadOnMenu;
     private static long finishedAtMs;
     /** La pausa la puso el mod al entrar a un mundo (y no el jugador). */
     private static boolean autoPaused;
@@ -43,7 +46,7 @@ public final class Traductor {
     public static synchronized boolean start() {
         if (isRunning()) return false;
         Minecraft mc = Minecraft.getInstance();
-        TranslationJob j = new TranslationJob(mc.getResourceManager(), Config.get(), Traductor::onFinish);
+        TranslationJob j = new TranslationJob(Config.get(), Traductor::onFinish);
         job = j;
         Thread t = new Thread(j, "Traductor ES");
         t.setDaemon(true);
@@ -60,7 +63,8 @@ public final class Traductor {
             if (j.packChanged && inMenu && Config.get().autoReload) {
                 mc.reloadResourcePacks();
             } else if (j.packChanged) {
-                toast("Traductor ES", j.message + " — pulsa F3+T para ver los textos nuevos");
+                reloadOnMenu = Config.get().autoReload;
+                toast("Traductor ES", j.message + " — se aplica al volver al menú (o pulsa F3+T)");
             } else if (j.state != TranslationJob.State.DONE) {
                 toast("Traductor ES", j.message);
             }
@@ -75,11 +79,19 @@ public final class Traductor {
 
     /** Después de inicializar cualquier pantalla. */
     public static void onScreenInit(Screen screen) {
-        if (autoStartChecked || !(screen instanceof TitleScreen)) return;
-        autoStartChecked = true;
+        if (!(screen instanceof TitleScreen)) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (reloadOnMenu) {
+            reloadOnMenu = false;
+            mc.execute(mc::reloadResourcePacks);
+            return; // al terminar la recarga se vuelve a abrir el menú y se evalúa lo demás
+        }
+        // Se evalúa una vez por idioma: si el jugador lo cambia a español durante la sesión, arranca.
+        String lang = mc.options.languageCode;
+        if (lang.equals(autoStartCheckedLang)) return;
+        autoStartCheckedLang = lang;
         Config cfg = Config.get();
-        String lang = Minecraft.getInstance().options.languageCode;
-        if (!cfg.autoStart) return;
+        if (!cfg.autoStart || isRunning()) return;
         if (!"es_es".equals(lang)) {
             TraductorES.LOG.info("[Traductor ES] El idioma del juego es {}, no es_es: no se traduce automáticamente", lang);
             return;
@@ -182,6 +194,8 @@ public final class Traductor {
                 String detail = j.currentNamespace + " · " + Math.round(rate) + " textos/min";
                 if (rate > 0) detail += " · quedan " + duration((long) ((j.total - j.done) / rate * 60_000));
                 out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
+                String waiting = j.waitingMessage;
+                if (waiting != null) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
             }
             case DONE -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.GREEN)));

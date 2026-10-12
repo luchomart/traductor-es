@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
@@ -147,13 +148,19 @@ public class ConfigScreen extends Screen {
         int sy = 30 + ROW * 7 + 10;
         TranslationJob j = Traductor.job();
         if (j != null) {
-            for (Component line : Traductor.statusLines(j)) {
-                g.drawCenteredString(font, line, width / 2, sy, 0xFFFFFF);
-                sy += font.lineHeight + 2;
-            }
+            for (Component line : Traductor.statusLines(j)) sy = drawWrapped(g, line, sy);
         }
         Component test = testResult;
-        if (test != null) g.drawCenteredString(font, test, width / 2, sy + 2, 0xFFFFFF);
+        if (test != null) drawWrapped(g, test, sy + 2);
+    }
+
+    /** Dibuja un texto centrado partido en renglones que entren en la pantalla. Devuelve la y siguiente. */
+    private int drawWrapped(GuiGraphics g, Component text, int y) {
+        for (FormattedCharSequence line : font.split(text, Math.max(100, width - 30))) {
+            g.drawString(font, line, (width - font.width(line)) / 2, y, 0xFFFFFF);
+            y += font.lineHeight + 2;
+        }
+        return y;
     }
 
     @Override

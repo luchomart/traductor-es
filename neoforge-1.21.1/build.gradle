@@ -167,3 +167,15 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// Tests de la lógica compartida (common/src/test). Se corren con: ./gradlew test
+sourceSets.test.java.srcDir('../common/src/test/java')
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.11.4'
+    testImplementation 'com.google.code.gson:gson:2.11.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+test {
+    useJUnitPlatform()
+}

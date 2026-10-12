@@ -21,7 +21,8 @@ public class ConfigScreen extends Screen {
 
     private final Screen parent;
     private EditBox url, key, model, batch, parallel;
-    private Button runBtn, cancelBtn, presetBtn;
+    private Button runBtn, cancelBtn, presetBtn, helpBtn;
+    private static final int HELP_W = 70;
     private boolean autoStart;
     private volatile Component testResult;
 
@@ -47,7 +48,10 @@ public class ConfigScreen extends Screen {
                 .bounds(left, y, full, 20).build());
         y += ROW;
         url = field(fx, y, FIELD_W, cfg.apiUrl, 512); y += ROW;
-        key = field(fx, y, FIELD_W, cfg.apiKey, 256); y += ROW;
+        key = field(fx, y, FIELD_W - HELP_W - 4, cfg.apiKey, 256);
+        helpBtn = addRenderableWidget(Button.builder(Component.empty(), b -> openHelpPage())
+                .bounds(fx + FIELD_W - HELP_W, y, HELP_W, 20).build());
+        y += ROW;
         model = field(fx, y, FIELD_W, cfg.model, 128); y += ROW;
         batch = field(fx, y, 50, String.valueOf(cfg.batchSize), 3);
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));
@@ -113,7 +117,7 @@ public class ConfigScreen extends Screen {
         TraductorES.LOG.info("[Traductor ES] Panel: servicio cambiado a {}", p.label);
         if (p.isCloud()) {
             testResult = Component.literal((key.getValue().isBlank() ? "Este servicio necesita una clave (API key). " : "")
-                    + "Ojo: los textos de los mods se envían a ese servicio por internet. Tocá Probar conexión para ver los modelos.")
+                    + "Tocá «Conseguir» para crearla. Ojo: los textos de los mods se envían a ese servicio por internet.")
                     .withStyle(ChatFormatting.YELLOW);
         } else {
             testResult = Component.literal("IA en tu PC: tiene que estar abierta. Tocá Probar conexión para ver los modelos instalados.")
@@ -139,14 +143,33 @@ public class ConfigScreen extends Screen {
         runBtn.setMessage(Component.literal(!running ? "Traducir ahora"
                 : j.state == TranslationJob.State.PAUSED ? "Reanudar" : "Pausar"));
         cancelBtn.active = running;
-        presetBtn.setMessage(presetLabel(Preset.fromUrl(url.getValue())));
+        Preset p = Preset.fromUrl(url.getValue());
+        presetBtn.setMessage(presetLabel(p));
+        // En la nube abre la página para crear la clave; en local, la de descarga del programa.
+        helpBtn.setMessage(Component.literal(p.isCloud() ? "Conseguir" : "Descargar"));
+        helpBtn.active = p.helpUrl != null;
+    }
+
+    private void openHelpPage() {
+        Preset p = Preset.fromUrl(url.getValue());
+        if (p.helpUrl == null) return;
+        Util.getPlatform().openUri(p.helpUrl);
+        report(Component.literal(p.isCloud()
+                ? "Se abrió " + p.helpUrl + " en el navegador. Creá la clave, copiala (se muestra una sola vez) y pegala en Clave."
+                : "Se abrió " + p.helpUrl + " en el navegador para descargar " + p.label.replace(" (en tu PC)", "") + ".")
+                .withStyle(ChatFormatting.AQUA));
     }
 
     /** Lista los modelos del servidor, avisa si el configurado no existe y hace una petición de prueba. */
     private void testConnection() {
         applyFields();
-        testResult = Component.literal("Probando…").withStyle(ChatFormatting.GRAY);
         Config cfg = Config.get();
+        if (Preset.fromUrl(cfg.apiUrl).isCloud() && cfg.apiKey.isBlank()) {
+            report(Component.literal("Este servicio necesita una clave (API key). Tocá «Conseguir», creala y pegala en Clave.")
+                    .withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+        testResult = Component.literal("Probando…").withStyle(ChatFormatting.GRAY);
         Minecraft mc = Minecraft.getInstance();
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();

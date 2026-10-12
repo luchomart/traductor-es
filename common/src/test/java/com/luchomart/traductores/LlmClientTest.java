@@ -73,4 +73,11 @@ class LlmClientTest {
         assertTrue(LlmClient.describe(new java.net.ConnectException()).startsWith("no hay ninguna IA respondiendo"));
         assertTrue(LlmClient.describe(new java.net.UnknownHostException("x")).startsWith("no se encontró el servidor"));
     }
+
+    @Test
+    void geminiSinClaveEsErrorDeClave() {
+        String msg = LlmClient.httpError(400, "[{\"error\":{\"code\":400,\"message\":\"Missing or invalid Authorization header.\"}}]");
+        assertTrue(msg.startsWith("la clave (API key) falta o no es válida"), msg);
+        assertTrue(new LlmClient.LlmException(msg, 400, 0).isAuthError());
+    }
 }

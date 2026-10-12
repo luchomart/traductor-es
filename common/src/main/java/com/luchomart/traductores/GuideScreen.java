@@ -62,12 +62,22 @@ public class GuideScreen extends Screen {
                     Si tu PC no tiene una placa de video potente, podés usar un servicio en internet. Los más conocidos tienen planes gratis con límites.
 
                     §e1.§r En el panel, tocá §eServicio§r hasta elegir uno (Gemini, OpenRouter o Groq).
-                    §e2.§r Creá una clave (API key) en la página del servicio y pegala en §eClave§r.
-                    §e3.§r Tocá §eProbar conexión§r: muestra los modelos disponibles.
+                    §e2.§r Tocá §eConseguir§r, al lado de Clave: se abre la página para crear tu clave (la siguiente página de esta guía explica cómo).
+                    §e3.§r Pegá la clave en §eClave§r y tocá §eProbar conexión§r: muestra los modelos disponibles.
 
                     Si el servicio pide bajar el ritmo, el mod espera solo y sigue.
 
                     §cOjo:§r los textos de tus mods se mandan a ese servicio, y la clave queda guardada en config.json."""),
+            new Section("Conseguir una clave (API key)", """
+                    Una clave es como una contraseña que le dice al servicio que sos vos. Los tres tienen un plan gratis con límites.
+
+                    §eGoogle Gemini§r (aistudio.google.com/apikey): entrá con tu cuenta de Google y tocá «Create API key». No pide tarjeta.
+
+                    §eGroq§r (console.groq.com/keys): creá una cuenta y tocá «Create API Key». No pide tarjeta.
+
+                    §eOpenRouter§r (openrouter.ai/settings/keys): creá una cuenta y tocá «Create Key». Los modelos gratis tienen «:free» al final del nombre.
+
+                    §cImportante:§r la clave se muestra §euna sola vez§r. Copiala enseguida y no se la pases a nadie."""),
             new Section("Corregir traducciones", """
                     La IA a veces se equivoca. Para corregir un texto, abrí la carpeta (botón Abrir carpeta) y editá §ecorrecciones.json§r:
 

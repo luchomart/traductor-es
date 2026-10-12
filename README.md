@@ -85,11 +85,23 @@ También podés usar comandos en el chat: `/traductor estado`, `/traductor inici
 Si tu PC no tiene una placa de video potente, el mod puede usar un servicio en internet compatible con OpenAI. Varios tienen planes gratis con límites.
 
 1. En el panel, tocá **Servicio** hasta elegir uno: **Gemini**, **OpenRouter** o **Groq**.
-2. Creá una clave (API key) en la página del servicio y pegala en **Clave**.
+2. Tocá **Conseguir**, al lado de Clave: se abre la página para crear tu clave (ver abajo). Pegala en **Clave**.
 3. Tocá **Probar conexión**: te muestra los modelos disponibles. Si el sugerido no existe, copiá uno de la lista en **Modelo**.
 4. Subí **A la vez** a 2–4 para que vaya más rápido.
 
 Si el servicio pide bajar el ritmo, el mod espera lo que haga falta y sigue solo.
+
+### Conseguir una clave (API key)
+
+Una clave es como una contraseña que le dice al servicio que sos vos. Los tres tienen un plan gratis con límites (que cambian seguido; los actuales están en la página de cada uno).
+
+| Servicio | Dónde | Cómo |
+|---|---|---|
+| **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Entrá con tu cuenta de Google y tocá **Create API key**. No pide tarjeta. |
+| **Groq** | [console.groq.com/keys](https://console.groq.com/keys) | Creá una cuenta y tocá **Create API Key**. No pide tarjeta. |
+| **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) | Creá una cuenta y tocá **Create Key**. Los modelos gratis llevan `:free` al final del nombre. |
+
+> **Importante:** la clave se muestra **una sola vez**. Copiala enseguida y no se la pases a nadie. Algunos planes gratis pueden usar lo que les mandás (acá, los textos de los mods) para mejorar sus modelos.
 
 > **Ojo:** con un servicio en la nube, los textos de tus mods se envían a ese servicio, y la clave queda guardada en `config/traductor_es/config.json`. No compartas ese archivo.
 
@@ -145,7 +157,7 @@ Datos del mod (no inventes opciones que no estén acá):
 - Traduce los textos de los mods al español que el jugador tenga elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec) usando una IA. Es un mod solo de cliente.
 - Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
 - Lo recomendado es una IA local con Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
-- Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq: hay que crear una clave (API key) en ese servicio y pegarla en el campo Clave. Los textos de los mods se envían a ese servicio.
+- Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq. El botón "Conseguir" (al lado del campo Clave) abre la página para crear la clave: Gemini en aistudio.google.com/apikey, Groq en console.groq.com/keys, OpenRouter en openrouter.ai/settings/keys. La clave se muestra una sola vez y va en el campo Clave. Los textos de los mods se envían a ese servicio.
 - Modelo recomendado: "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más). Con menos VRAM: "ollama pull gemma3:4b". "ollama list" muestra los modelos instalados.
 - El juego tiene que estar en algún español: Opciones → Idioma.
 - Configuración en el juego: Mods → Traductor ES → Configurar. Campos: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL de la API, Clave (no importa con Ollama), Modelo, Textos por lote (20 por defecto) y A la vez (peticiones simultáneas: 1 local, 2 a 4 en la nube). Botones: Probar conexión (muestra los modelos disponibles), Traducir ahora/Pausar, Cancelar, Exportar pack, Abrir carpeta y Guía.

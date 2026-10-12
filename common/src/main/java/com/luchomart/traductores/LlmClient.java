@@ -50,8 +50,7 @@ public class LlmClient {
         /** Clave ausente o inválida. Gemini lo informa con 400 en vez de 401. */
         public boolean isAuthError() {
             if (status == 401 || status == 403) return true;
-            String m = getMessage() == null ? "" : getMessage().toLowerCase(java.util.Locale.ROOT);
-            return status == 400 && (m.contains("api key") || m.contains("api_key") || m.contains("apikey"));
+            return status == 400 && mentionsAuth(getMessage());
         }
     }
 
@@ -197,9 +196,8 @@ public class LlmClient {
     static String httpError(int status, String body) {
         java.util.regex.Matcher m = ERROR_MESSAGE.matcher(body == null ? "" : body);
         String reason = m.find() ? m.group(1).replace("\\\"", "\"") : abbreviate(body == null ? "" : body.strip(), 150);
-        String lower = reason.toLowerCase(java.util.Locale.ROOT);
         String hint;
-        if (status == 401 || status == 403 || lower.contains("api key") || lower.contains("api_key") || lower.contains("authentication")) {
+        if (status == 401 || status == 403 || mentionsAuth(reason)) {
             hint = "la clave (API key) falta o no es válida";
         } else if (status == 404) {
             hint = "no existe ese modelo o la URL está mal";
@@ -211,6 +209,15 @@ public class LlmClient {
             hint = "el servidor rechazó la petición";
         }
         return hint + " (HTTP " + status + (reason.isEmpty() ? "" : ": " + reason) + ")";
+    }
+
+    /** El servidor habla de la clave o de la autorización (cada servicio lo dice distinto). */
+    static boolean mentionsAuth(String text) {
+        String m = text == null ? "" : text.toLowerCase(java.util.Locale.ROOT);
+        for (String w : new String[]{"api key", "api_key", "apikey", "authorization", "authentication", "credential", "unauthorized", "clave"}) {
+            if (m.contains(w)) return true;
+        }
+        return false;
     }
 
     /** Mensaje legible para un error, aunque la excepción no traiga texto. */

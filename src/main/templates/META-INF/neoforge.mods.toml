@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="luchomart"
+description='''
+Traduce automáticamente al español de España todos los textos de los mods usando una IA local (Ollama, LM Studio o cualquier API compatible con OpenAI).
+Usa traducciones oficiales y otras variantes del español cuando existen, y nunca pisa traducciones hechas por personas.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="CLIENT"

@@ -194,7 +194,8 @@ public class LlmClient {
                 TraductorES.LOG.warn("[Traductor ES] El servidor no acepta modo JSON, se continúa sin él");
                 return chat(cfg, system, user, false, maxTokens, tolerant);
             }
-            if (lowReasoning && err.contains("reasoning")) {
+            // Cada servicio lo dice distinto: "reasoning_effort" (OpenAI) o "Thinking level is not supported" (Google).
+            if (lowReasoning && (err.contains("reasoning") || err.contains("thinking"))) {
                 reasoningUnsupported = true;
                 TraductorES.LOG.warn("[Traductor ES] El servidor no acepta reasoning_effort, se continúa sin él");
                 return chat(cfg, system, user, jsonMode, maxTokens, tolerant);

@@ -459,7 +459,12 @@ public class ConfigScreen extends BaseScreen {
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
         SpeedTest.Result speed = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");
-        if (speed == null) return null;
+        if (speed == null) {
+            // Conecta pero no pudo traducir una tanda de prueba: casi siempre es el modelo (razona de más, se corta).
+            String why = SpeedTest.lastError();
+            return why == null ? null : Component.literal("Ojo: respondió, pero no pudo traducir una tanda de prueba (" + why
+                    + "). Con este modelo la traducción va a fallar: probá otro.").withStyle(ChatFormatting.GOLD);
+        }
         String line = "Velocidad: " + speed.describe();
         if (target != null) {
             try {

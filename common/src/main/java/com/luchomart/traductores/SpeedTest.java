@@ -54,7 +54,8 @@ public final class SpeedTest {
         client.translate(cfg, prompt, SAMPLE);
         double seconds = Math.max(0.2, (System.nanoTime() - t0) / 1e9);
         int perMinute = estimate(seconds, SAMPLE.size(), cfg.parallelRequests, cfg.isLocalAi(), ServiceGuide.current(cfg));
-        int raw = (int) Math.max(1, Math.round(SAMPLE.size() / seconds * 60 * (cfg.isLocalAi() ? 1 : Math.max(1, cfg.parallelRequests))));
+        // En la PC no hay plan gratis que la frene: lo que se muestra es directamente la estimación real.
+        int raw = cfg.isLocalAi() ? perMinute : (int) Math.max(1, Math.round(SAMPLE.size() / seconds * 60 * Math.max(1, cfg.parallelRequests)));
         ServiceGuide.measured(cfg.apiUrl, cfg.model, perMinute);
         TraductorES.LOG.info("[Traductor ES] Minitest: {} textos en {} s → ~{} textos/min (sin límite: ~{})", SAMPLE.size(),
                 Math.round(seconds * 10) / 10.0, perMinute, raw);
@@ -62,18 +63,34 @@ public final class SpeedTest {
         return last;
     }
 
+    private static volatile String lastError;
+
+    /** Por qué falló el último minitest (para mostrarlo: suele decir algo del modelo), o null. */
+    public static String lastError() {
+        return lastError;
+    }
+
     /** Como {@link #measure}, pero si falla devuelve null (el minitest es un extra: no debe cortar la prueba). */
     public static Result tryMeasure(LlmClient client, Config cfg, String target) {
+        lastError = null;
         try {
             return measure(client, cfg, target);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
         } catch (Exception e) {
-            TraductorES.LOG.info("[Traductor ES] No se pudo hacer el minitest de velocidad: {}", LlmClient.describe(e));
+            lastError = LlmClient.describe(e);
+            TraductorES.LOG.info("[Traductor ES] No se pudo hacer el minitest de velocidad: {}", lastError);
             return null;
         }
     }
+
+    /**
+     * Con la IA en la PC, la traducción real rinde menos de la mitad que el test: los textos reales son más largos
+     * (libros: 43 letras de promedio contra 24 del test) y cada pedido lleva el glosario. Medido: 161/min en el test,
+     * ~60/min traduciendo OceanBlock.
+     */
+    static final double LOCAL_REAL_FACTOR = 0.4;
 
     /**
      * Una IA en la PC atiende de a una petición (las simultáneas hacen fila); en la nube se multiplican, pero
@@ -81,7 +98,7 @@ public final class SpeedTest {
      */
     static int estimate(double seconds, int texts, int parallel, boolean local, ServiceGuide.Option service) {
         double single = texts / seconds * 60;
-        double total = local ? single : single * Math.max(1, parallel);
+        double total = local ? single * LOCAL_REAL_FACTOR : single * Math.max(1, parallel);
         if (!local && service.free()) total = Math.min(total, service.perMinute());
         return (int) Math.max(1, Math.round(total));
     }

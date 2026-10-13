@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * elegirlos solos.
  */
 public final class ModelStatus {
-    public enum State { RETIRED, NO_FREE, EXHAUSTED }
+    public enum State { RETIRED, NO_FREE, EXHAUSTED, TOO_SMALL }
 
     /** Estado de un modelo; until: hasta cuándo vale (solo EXHAUSTED); limit: el cupo que informó el servicio, si lo dijo. */
     public record Info(State state, long until, String limit) {
@@ -30,6 +30,7 @@ public final class ModelStatus {
             return switch (state) {
                 case RETIRED -> "RETIRADO";
                 case NO_FREE -> "SIN PLAN GRATIS";
+                case TOO_SMALL -> "CUPO MUY CHICO";
                 case EXHAUSTED -> "AGOTADO · vuelve en " + inWords(until - System.currentTimeMillis());
             };
         }
@@ -39,6 +40,8 @@ public final class ModelStatus {
             return switch (state) {
                 case RETIRED -> "El servicio todavía lista «" + model + "», pero ya no lo da: elegí otro.";
                 case NO_FREE -> "«" + model + "» no tiene plan gratis: hace falta cargar saldo en el servicio.";
+                case TOO_SMALL -> "El plan gratis de «" + model + "» deja pedir muy poco por minuto" + (limit != null ? " (" + limit + ")" : "")
+                        + ": no alcanza para traducir. Elegí otro.";
                 case EXHAUSTED -> "Se acabó el cupo gratis de «" + model + "»" + (limit != null ? " (" + limit + ")" : "")
                         + ". Vuelve en " + inWords(until - System.currentTimeMillis()) + ". Mientras tanto, usá otro modelo.";
             };
@@ -127,9 +130,14 @@ public final class ModelStatus {
         String msg = message == null ? "" : message;
         String low = msg.toLowerCase(Locale.ROOT);
         if (status == 404) return new Info(State.RETIRED, 0, null);
-        if (status != 429) return null;
+        if (status != 429 && status != 413) return null;
         Matcher lm = LIMIT.matcher(msg);
         String limitNum = lm.find() ? lm.group(1) : null;
+        // Groq: "Request too large … output tokens per minute (OTPM): Limit 1000": un solo pedido ya supera lo que
+        // el plan gratis de ese modelo deja por minuto. Esperar no sirve nunca.
+        if (low.contains("request too large")) {
+            return new Info(State.TOO_SMALL, 0, limitNum == null ? null : limitNum + (low.contains("token") ? " tokens" : " peticiones") + " por minuto");
+        }
         // Gemini: "free_tier_requests, limit: 0" = ese modelo no se puede usar gratis.
         if ("0".equals(limitNum) && low.contains("free")) return new Info(State.NO_FREE, 0, null);
         long wait = parseWait(msg) * 1000;

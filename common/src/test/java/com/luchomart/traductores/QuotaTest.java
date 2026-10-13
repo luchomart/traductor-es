@@ -48,7 +48,7 @@ class QuotaTest {
         ServiceGuide.Option paid = ServiceGuide.current("https://openrouter.ai/api/v1/chat/completions", "gpt", false);
         ServiceGuide.Option local = ServiceGuide.current("http://localhost:11434/v1/chat/completions", "gemma3:12b", true);
         // 20 textos en 10 s = 120/min por petición.
-        assertEquals(120, SpeedTest.estimate(10, 20, 4, true, local));        // en la PC no se multiplica
+        assertEquals(48, SpeedTest.estimate(10, 20, 4, true, local));         // en la PC no se multiplica y rinde ~40 % del test
         assertEquals(groq.perMinute(), SpeedTest.estimate(10, 20, 2, false, groq)); // tope del plan gratis
         assertEquals(480, SpeedTest.estimate(10, 20, 4, false, paid));       // de pago: sin tope
         assertEquals(1, SpeedTest.estimate(10_000, 1, 1, true, local));

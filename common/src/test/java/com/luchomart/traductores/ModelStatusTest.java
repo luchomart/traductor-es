@@ -75,4 +75,13 @@ class ModelStatusTest {
         assertNull(ModelStatus.classify(429, msg, 0, NOW));
         assertEquals(22, ModelStatus.parseWait(msg));
     }
+
+    @Test
+    void groqPedidoDemasiadoGrande() {
+        String msg = "(HTTP 429: Request too large for model `qwen/qwen3.8-27b` in organization `org_x` service tier `on_demand` "
+                + "on output tokens per minute (OTPM): Limit 1000, Requested 1024, please reduce your message size and try again.)";
+        ModelStatus.Info i = ModelStatus.classify(429, msg, 0, NOW);
+        assertEquals(ModelStatus.State.TOO_SMALL, i.state());
+        assertEquals("1000 tokens por minuto", i.limit());
+    }
 }

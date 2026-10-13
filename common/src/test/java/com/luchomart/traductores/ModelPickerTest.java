@@ -65,4 +65,19 @@ class ModelPickerTest {
         assertFalse(ranked.contains("deep-research-preview-04-2026"));
         assertEquals("gemini-3.9-flash-preview-09-2026", ranked.get(ranked.size() - 1));
     }
+
+    @Test
+    void modelosQueNoSirvenParaTraducir() {
+        assertNotNull(ModelPicker.weakReason("allam-2-7b"));
+        assertNotNull(ModelPicker.weakReason("qwen/qwen-2.5-coder-32b-instruct"));
+        assertNotNull(ModelPicker.weakReason("gemma3:1b"));
+        assertNotNull(ModelPicker.weakReason("llama-3.2-3b-preview"));
+        assertNull(ModelPicker.weakReason("gemma3:4b"));
+        assertNull(ModelPicker.weakReason("openai/gpt-oss-120b"));
+        assertNull(ModelPicker.weakReason("llama-3.1-8b-instant"));
+        // Nunca se elige solo, y en la lista va al final.
+        assertNotEquals("allam-2-7b", ModelPicker.recommend(Preset.GROQ, List.of("allam-2-7b", "llama-3.1-8b-instant")));
+        List<String> ranked = ModelPicker.ranked(Preset.GROQ, GROQ);
+        assertEquals("allam-2-7b", ranked.get(ranked.size() - 1));
+    }
 }

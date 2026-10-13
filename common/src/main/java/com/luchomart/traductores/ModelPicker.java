@@ -18,6 +18,10 @@ public final class ModelPicker {
             + "|deep-research|antigravity|robotics");
     /** Versiones de prueba: se pueden elegir, pero se listan al final. */
     private static final Pattern EXPERIMENTAL = Pattern.compile("preview|exp|beta|latest");
+    /** Modelos entrenados sobre todo para otro idioma (ALLaM: árabe; Jais: árabe; Swallow: japonés…). */
+    private static final Pattern OTHER_LANGUAGE = Pattern.compile("allam|jais|swallow|sailor|typhoon|sea-?lion|sabia|bielik");
+    /** Modelos para programar o para matemática: traducen peor que uno de uso general del mismo tamaño. */
+    private static final Pattern CODE = Pattern.compile("coder|codestral|starcoder|codellama|devstral|-math");
     private static final Pattern SIZE = Pattern.compile("[-_:](\\d{1,4})b(?![a-z])");
     private static final Pattern VERSION = Pattern.compile("(\\d+(?:\\.\\d+)*)");
     /** Gemini sugiere el reemplazo en el error: "Please update your code to use models/gemini-x-flash". */
@@ -32,9 +36,29 @@ public final class ModelPicker {
         return out;
     }
 
+    /**
+     * Por qué un modelo no conviene para traducir al español, o null si sirve. Se puede elegir igual, pero
+     * nunca se elige solo y en la lista va al final.
+     */
+    public static String weakReason(String model) {
+        String m = model.toLowerCase(Locale.ROOT);
+        if (OTHER_LANGUAGE.matcher(m).find()) return "hecho para otro idioma";
+        if (CODE.matcher(m).find()) return "pensado para programar";
+        int s = size(m);
+        if (s > 0 && s < 4) return "muy chico, traduce mal";
+        return null;
+    }
+
+    /** Los modelos de chat que sirven para traducir; si ninguno sirve, todos los de chat. */
+    private static List<String> usable(List<String> available) {
+        List<String> chat = chatModels(available);
+        List<String> good = chat.stream().filter(m -> weakReason(m) == null).toList();
+        return good.isEmpty() ? chat : new ArrayList<>(good);
+    }
+
     /** El modelo recomendado para el servicio, o null si no hay ninguno de chat. */
     public static String recommend(Preset preset, List<String> available) {
-        List<String> chat = chatModels(available);
+        List<String> chat = usable(available);
         if (chat.isEmpty()) return null;
         String pick = switch (preset) {
             // El "flash" más nuevo: rápido, barato y con plan gratis. Sin las variantes lite/preview/thinking.
@@ -50,7 +74,7 @@ public final class ModelPicker {
 
     /** El modelo gratis recomendado de OpenRouter (los que terminan en ":free"), o null si no hay. */
     public static String recommendFree(List<String> available) {
-        List<String> free = chatModels(available).stream().filter(m -> m.endsWith(":free")).toList();
+        List<String> free = usable(available).stream().filter(m -> m.endsWith(":free")).toList();
         if (free.isEmpty()) return null;
         // Los que mejor traducen al español entre los gratis, y si no, cualquiera.
         return firstNonNull(newest(free, "^google/gemma"), newest(free, "^google/gemini"), newest(free, "^meta-llama/llama-[\\d.]+-70b"),
@@ -60,8 +84,9 @@ public final class ModelPicker {
     /** Modelos de chat con el recomendado primero (para mostrarlos en el panel). */
     public static List<String> ranked(Preset preset, List<String> available) {
         List<String> chat = chatModels(available);
-        // Estables primero, versiones de prueba al final (el orden entre ellos se mantiene).
-        chat.sort(Comparator.comparing(m -> EXPERIMENTAL.matcher(m.toLowerCase(Locale.ROOT)).find()));
+        // Estables primero, después las versiones de prueba y al final los que no sirven para traducir.
+        chat.sort(Comparator.comparing((String m) -> weakReason(m) != null)
+                .thenComparing(m -> EXPERIMENTAL.matcher(m.toLowerCase(Locale.ROOT)).find()));
         String best = recommend(preset, available);
         if (best != null) {
             chat.remove(best);

@@ -81,7 +81,12 @@ public class ModelSelectScreen extends BaseScreen {
             // En OpenRouter conviven modelos gratis y de pago: se marca cada uno.
             if (openRouter) text.append(m.endsWith(":free") ? Component.literal("  GRATIS").withStyle(net.minecraft.ChatFormatting.GREEN)
                     : Component.literal("  DE PAGO").withStyle(net.minecraft.ChatFormatting.GOLD));
-            Button b = Button.builder(text, btn -> pick(m)).bounds(left, y, W, 20).build();
+            String weak = ModelPicker.weakReason(m);
+            if (weak != null) text.append(Component.literal("  NO RECOMENDADO").withStyle(net.minecraft.ChatFormatting.RED));
+            Button.Builder bb = Button.builder(text, btn -> pick(m)).bounds(left, y, W, 20);
+            if (weak != null) bb.tooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.literal("No conviene para traducir al español: " + weak + ".")));
+            Button b = bb.build();
             rows.add(addRenderableWidget(b));
             y += 22;
         }
@@ -90,6 +95,11 @@ public class ModelSelectScreen extends BaseScreen {
     private void pick(String m) {
         parent.setModel(Config.get(), m);
         TraductorES.LOG.info("[Traductor ES] Panel: modelo elegido a mano: {}", m);
+        String weak = ModelPicker.weakReason(m);
+        if (weak != null) {
+            parent.report(Component.literal("Ojo: «" + m + "» no conviene para traducir al español (" + weak
+                    + "). Si traduce mal, en Herramientas → «Rehacer» se vuelve a traducir lo que hizo.").withStyle(net.minecraft.ChatFormatting.GOLD));
+        }
         minecraft.setScreen(parent);
     }
 

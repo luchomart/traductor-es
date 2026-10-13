@@ -860,7 +860,7 @@ public class TranslationJob implements Runnable {
     private synchronized void accept(Item it, String translation) {
         for (Target t : it.targets) {
             failureLog.succeeded(t.ns(), t.key());
-            cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation));
+            cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation), cfg.model);
             output.computeIfAbsent(t.ns(), k -> new TreeMap<>()).put(t.key(), translation);
             if (it.isName) glossary.addModName(t.ns(), t.key(), it.text, translation);
         }

@@ -209,6 +209,16 @@ public class ConfigScreen extends BaseScreen {
             Config.get().save();
             minecraft.setScreen(new CorrectionScreen(this, ""));
         }).bounds(x2 + 6, by1, 96, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Rehacer…"), b -> {
+            Config.get().save();
+            String target = SpanishTarget.resolve(Config.get().targetLanguage, minecraft.options.languageCode);
+            if (target == null) {
+                report(Component.literal("Elegí un idioma español en Opciones → Idioma.").withStyle(ChatFormatting.YELLOW));
+                return;
+            }
+            minecraft.setScreen(new RedoScreen(this, target));
+        }).bounds(x2 + 106, by1, 70, 20)
+                .tooltip(Tooltip.create(Component.literal("Volver a traducir todo lo que hizo un modelo (si tradujo mal)."))).build());
         addRenderableWidget(Button.builder(Component.literal("Ver informe"), b -> Util.getPlatform().openFile(Config.DIR.resolve("informe.txt").toFile()))
                 .bounds(x1 + 6, by2, 86, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
@@ -332,7 +342,7 @@ public class ConfigScreen extends BaseScreen {
     }
 
     /** Muestra un resultado en el panel y lo deja también en el log (para poder diagnosticar después). */
-    private void report(Component msg) {
+    void report(Component msg) {
         testResult = msg;
         TraductorES.LOG.info("[Traductor ES] Panel: {}", msg.getString());
     }

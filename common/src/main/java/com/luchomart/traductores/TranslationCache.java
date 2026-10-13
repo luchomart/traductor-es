@@ -32,8 +32,15 @@ public class TranslationCache {
         public String t;
         /** true si se aceptó sin cambios a propósito (nombre propio confirmado en un reintento). */
         public Boolean r;
+        /** Modelo que la tradujo (para poder rehacer lo de un modelo que tradujo mal). Falta en las anteriores. */
+        public String m;
         public Entry() {}
-        public Entry(String o, String t, boolean confirmed) { this.o = o; this.t = t; this.r = confirmed ? Boolean.TRUE : null; }
+        public Entry(String o, String t, boolean confirmed, String model) {
+            this.o = o;
+            this.t = t;
+            this.r = confirmed ? Boolean.TRUE : null;
+            this.m = model == null || model.isBlank() ? null : model;
+        }
     }
 
     private final Map<String, Map<String, Entry>> data = new ConcurrentHashMap<>();
@@ -70,9 +77,48 @@ public class TranslationCache {
         return e != null && Boolean.TRUE.equals(e.r);
     }
 
-    public void put(String ns, String key, String source, String translation, boolean confirmed) {
-        namespace(ns).put(key, new Entry(source, translation, confirmed));
+    public void put(String ns, String key, String source, String translation, boolean confirmed, String model) {
+        namespace(ns).put(key, new Entry(source, translation, confirmed, model));
         dirty.add(ns);
+    }
+
+    /**
+     * Saca del caché todo lo que tradujo ese modelo (así se vuelve a traducir) y lo guarda en un archivo de
+     * respaldo dentro de config/traductor_es/respaldos. Devuelve cuántas traducciones sacó.
+     */
+    public int removeByModel(String model) throws IOException {
+        Map<String, Map<String, Entry>> removed = new TreeMap<>();
+        for (Map.Entry<String, Map<String, Entry>> ns : loadAll().entrySet()) {
+            Map<String, Entry> out = new TreeMap<>();
+            ns.getValue().entrySet().removeIf(e -> {
+                if (!model.equals(e.getValue().m)) return false;
+                out.put(e.getKey(), e.getValue());
+                return true;
+            });
+            if (!out.isEmpty()) {
+                removed.put(ns.getKey(), out);
+                dirty.add(ns.getKey());
+            }
+        }
+        if (removed.isEmpty()) return 0;
+        Path backups = Config.DIR.resolve("respaldos");
+        Files.createDirectories(backups);
+        String stamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm"));
+        Path f = backups.resolve(dir.getFileName() + "_" + model.replaceAll("[^A-Za-z0-9._-]", "_") + "_" + stamp + ".json");
+        Files.writeString(f, GSON.toJson(removed), StandardCharsets.UTF_8);
+        flush();
+        int n = removed.values().stream().mapToInt(Map::size).sum();
+        TraductorES.LOG.info("[Traductor ES] Se sacaron {} traducciones de {} (respaldo en {})", n, model, f.getFileName());
+        return n;
+    }
+
+    /** Cuántas traducciones hizo cada modelo ("" = de antes de que se guardara el modelo). */
+    public Map<String, Integer> countByModel() {
+        Map<String, Integer> out = new TreeMap<>();
+        for (Map<String, Entry> ns : loadAll().values()) {
+            for (Entry e : ns.values()) out.merge(e.m == null ? "" : e.m, 1, Integer::sum);
+        }
+        return out;
     }
 
     private Map<String, Entry> namespace(String ns) {

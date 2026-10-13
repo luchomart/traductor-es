@@ -367,7 +367,8 @@ public final class Traductor {
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
                 String quota = j.quota();
                 if (quota != null) out.add(Component.literal(quota).withStyle(ChatFormatting.DARK_AQUA));
-                if (j.isSlow()) out.add(Component.literal(j.usesLocalAi() ? "Va lento: probá un modelo más chico o la nube (pestaña Conexión)"
+                if (j.isSlow()) out.add(Component.literal(j.willAutoSwitch() ? "Va lento: si sigue así, cambia solo de modelo o servicio"
+                        : j.usesLocalAi() ? "Va lento: probá un modelo más chico o la nube (pestaña Conexión)"
                         : "Va lento: probá otro modelo o servicio (pestaña Conexión)").withStyle(ChatFormatting.GOLD));
             }
             case DONE -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.GREEN)));

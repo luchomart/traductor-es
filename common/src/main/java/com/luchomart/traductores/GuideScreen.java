@@ -21,7 +21,6 @@ public class GuideScreen extends BaseScreen {
     /** Una página: una sección entera o una parte de sus pasos (si no entran en la pantalla). */
     private record Page(int section, String intro, List<Step> steps, String tip, boolean continued) {}
 
-    private static final int HELP = 9; // índice de la sección "Ayuda con una IA"
 
     private static final List<Section> SECTIONS = List.of(
             new Section("¿Qué hace?",
@@ -38,27 +37,33 @@ public class GuideScreen extends BaseScreen {
                     "¿Sin placa de video potente? Mirá «IA en la nube»."),
             new Section("Cómo se usa",
                     "Al abrir el juego traduce solo lo que falta mientras estás en el menú principal.",
-                    List.of(new Step("1", "Mirá el progreso", "Arriba a la derecha: barra, mod actual y tiempo restante."),
+                    List.of(new Step("1", "Mirá el progreso", "Arriba a la derecha: barra, mod actual y tiempo restante. El color de la barra dice la velocidad."),
                             new Step("2", "Podés jugar", "Con IA en la nube sigue traduciendo; con IA en tu PC se pausa para no bajar los FPS (Traducción → Mientras juego)."),
                             new Step("3", "Al terminar", "Los textos se actualizan solos. Con Alt sobre un objeto ves su texto original en inglés.")),
                     "Comandos en el chat: /traductor estado, panel, corregir, iniciar, pausar, reanudar, cancelar."),
             new Section("El panel",
                     "Mods → Traductor ES → Configurar (en Fabric, con Mod Menu), o /traductor panel en el chat. Tiene tres pestañas.",
                     List.of(new Step("1", "Conexión", "Servicio de IA, clave, modelo y «Probar conexión»."),
-                            new Step("2", "Traducción", "Español de destino, traducir al abrir, mientras juego, libros y misiones, original con Alt, lote y peticiones a la vez."),
-                            new Step("3", "Herramientas", "Exportar el pack para amigos, ver el informe, abrir la carpeta y el asistente.")),
+                            new Step("2", "Traducción", "Español de destino, al abrir, mientras juego, libros y misiones, original con Alt, claves compartidas, cambio automático, lote y peticiones a la vez."),
+                            new Step("3", "Herramientas", "Editor de correcciones, «Rehacer» lo de un modelo, exportar el pack, el informe, la carpeta y el asistente.")),
                     "Pasá el mouse sobre cualquier opción para ver qué hace."),
             new Section("IA en la nube",
                     "Si tu PC no tiene una placa de video potente, podés usar un servicio por internet. Varios tienen planes gratis con límites.",
                     List.of(new Step("1", "Elegí el servicio", "Gemini, Groq u OpenRouter, con las flechas de «Servicio»."),
                             new Step("2", "Conseguí una clave", "El botón «Conseguir» abre la página para crearla."),
-                            new Step("3", "Probá la conexión", "El mod elige solo el mejor modelo disponible.")),
+                            new Step("3", "Probá la conexión", "Elige solo el mejor modelo, mide la velocidad y muestra cuánto cupo te queda (Groq, OpenRouter).")),
                     "Ojo: los textos de tus mods se envían a ese servicio, y la clave queda guardada en config.json y en la carpeta .traductor_es de tu usuario (para todos tus modpacks)."),
             new Section("¿Cuál conviene?",
                     "Tiempos aproximados para 1.000 y 10.000 textos (un modpack grande tiene unos 10.000 sin español).",
                     ServiceGuide.OPTIONS.stream().map(o -> new Step(o.free() ? "✓" : "$", o.name() + " · " + o.cost(),
                             "1.000: " + o.duration(1000) + " · 10.000: " + o.duration(10000) + ". " + o.note())).toList(),
                     "El asistente y el panel («¿Cuál conviene?») calculan el tiempo para tu modpack. Tocá una opción para usarla."),
+            new Section("Velocidad y cambios",
+                    "La barra cambia de color según la velocidad: celeste muy rápida, verde rápida, amarillo normal, naranja lenta y rojo muy lenta.",
+                    List.of(new Step("1", "Cambio automático", "Si se acaba el cupo o va muy lenta, pasa sola a otro modelo gratis o a otro servicio gratis del que tengas clave. Nunca a uno de pago ni de tu PC a la nube."),
+                            new Step("2", "Usar este servicio", "Si elegís otro servicio mientras traduce, este botón sigue con el nuevo sin perder lo hecho."),
+                            new Step("3", "Elegir un modelo", "«Elegir…» los agrupa por tipo y marca los agotados, retirados o que no sirven para español.")),
+                    "Las claves y lo que se aprende de cada modelo valen para todos tus modpacks (se apaga en Traducción → Claves compartidas)."),
             new Section("Conseguir una clave",
                     "Una clave (API key) es como una contraseña que le dice al servicio que sos vos.",
                     List.of(new Step("G", "Google Gemini", "aistudio.google.com/apikey · entrá con tu cuenta de Google y tocá «Create API key»."),
@@ -67,7 +72,7 @@ public class GuideScreen extends BaseScreen {
                     "La clave se muestra una sola vez: copiala enseguida y no se la pases a nadie."),
             new Section("Corregir textos",
                     "La IA a veces se equivoca. Las correcciones tienen prioridad sobre todo y no se pierden al volver a traducir.",
-                    List.of(new Step("1", "Abrí el editor", "Herramientas → Abrir editor, o /traductor corregir en el chat (podés escribir el texto: /traductor corregir lingote)."),
+                    List.of(new Step("1", "Abrí el editor", "Herramientas → Abrir editor, o /traductor corregir en el chat (podés escribir el texto: /traductor corregir lingote). Si un modelo tradujo todo mal, «Rehacer…»."),
                             new Step("2", "Buscá el texto", "En inglés o en español: objetos, libros y misiones."),
                             new Step("3", "Corregí y guardá", "Se aplica enseguida. Las misiones, al volver a entrar al mundo. «Volver a la de la IA» deshace.")),
                     "Para que una palabra se traduzca siempre igual, agregala en glosario.json (Herramientas → Abrir carpeta)."),
@@ -75,7 +80,7 @@ public class GuideScreen extends BaseScreen {
                     "Los problemas más comunes y cómo resolverlos.",
                     List.of(new Step("!", "No se pudo conectar con la IA", "Ollama no está abierto: abrilo y tocá «Probar conexión»."),
                             new Step("!", "La clave falta o no es válida", "Creala de nuevo con «Conseguir» y pegala en Clave."),
-                            new Step("!", "Va muy lento", "Usá gemma3:4b o un servicio en la nube, y cerrá videos del navegador."),
+                            new Step("!", "Va muy lento", "En la nube cambia solo de modelo; en tu PC usá gemma3:4b y cerrá videos del navegador."),
                             new Step("!", "Textos en inglés", "Mirá el informe (Herramientas). Se reintentan cada vez que abrís el juego.")),
                     "El asistente (Herramientas → Asistente) revisa todo y te dice qué falta."),
             new Section("Ayuda con una IA",
@@ -175,7 +180,7 @@ public class GuideScreen extends BaseScreen {
     private void updateButtons() {
         prev.active = page > 0;
         next.active = page < pages.size() - 1;
-        copy.visible = pages.get(page).section() == HELP;
+        copy.visible = pages.get(page).section() == SECTIONS.size() - 1; // "Ayuda con una IA" es la última
     }
 
     @Override

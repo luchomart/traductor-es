@@ -51,12 +51,16 @@ public final class Shared {
         if (!changed) return;
         try {
             Files.createDirectories(DIR);
-            Files.writeString(KEYS, GSON.toJson(all), StandardCharsets.UTF_8);
-            // Solo el usuario puede leerlas (en Linux y Mac; en Windows la carpeta del usuario ya es privada).
-            try {
-                Files.setPosixFilePermissions(KEYS, PosixFilePermissions.fromString("rw-------"));
-            } catch (UnsupportedOperationException ignored) {
+            // Solo el usuario puede leerlas (en Linux y Mac). El archivo nace así, para que no haya un instante en que
+            // otros lo puedan leer. En Windows la carpeta del usuario ya es privada.
+            if (!Files.exists(KEYS)) {
+                try {
+                    Files.setPosixFilePermissions(DIR, PosixFilePermissions.fromString("rwx------"));
+                    Files.createFile(KEYS, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+                } catch (UnsupportedOperationException ignored) {
+                }
             }
+            Files.writeString(KEYS, GSON.toJson(all), StandardCharsets.UTF_8);
         } catch (Exception e) {
             TraductorES.LOG.warn("[Traductor ES] No se pudo guardar {}: {}", KEYS, e.toString());
         }

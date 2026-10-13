@@ -413,11 +413,8 @@ public class ConfigScreen extends BaseScreen {
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
                 report(ok.copy().append(Component.literal(" Midiendo la velocidad…").withStyle(ChatFormatting.GRAY)));
-                SpeedTest.Result measured = speedTestAllowed() ? SpeedTest.lastResult() : null;
-                String speed = speedLine(client, cfg);
-                SpeedTest.Result now = SpeedTest.lastResult();
-                int speedColor = now != null && now != measured ? SpeedLevel.of(now.effective()).color & 0xFFFFFF : 0x55FFFF;
-                if (speed != null) ok.append(Component.literal(" " + speed).withStyle(st -> st.withColor(speedColor)));
+                Component speed = speedLine(client, cfg);
+                if (speed != null) ok.append(Component.literal(" ")).append(speed);
                 String quota = client.quota(cfg);
                 if (quota != null) ok.append(Component.literal(" " + quota + ".").withStyle(ChatFormatting.YELLOW));
                 List<String> others = ModelPicker.ranked(preset, models);
@@ -450,9 +447,15 @@ public class ConfigScreen extends BaseScreen {
         return j == null || j.state != TranslationJob.State.TRANSLATING || j.isPaused();
     }
 
-    /** Minitest de velocidad y cuánto tardaría lo que falta: "Velocidad: ~85 textos/min → faltan 3.891 textos: ~45 min." */
-    private static String speedLine(LlmClient client, Config cfg) {
-        if (!speedTestAllowed()) return "La velocidad real se ve abajo, en el progreso (para medirla aparte, pausá la traducción).";
+    /**
+     * Minitest de velocidad y cuánto tardaría lo que falta ("Velocidad: Rápida (~95 textos/min) → faltan 3.891
+     * textos: ~41 min."), con el color de la velocidad. Null si no se pudo medir.
+     */
+    private static Component speedLine(LlmClient client, Config cfg) {
+        if (!speedTestAllowed()) {
+            return Component.literal("La velocidad real se ve abajo, en el progreso (para medirla aparte, pausá la traducción).")
+                    .withStyle(ChatFormatting.GRAY);
+        }
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
         SpeedTest.Result speed = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");
@@ -467,11 +470,20 @@ public class ConfigScreen extends BaseScreen {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
             }
         }
-        return line + ".";
+        int color = SpeedLevel.of(speed.effective()).color & 0xFFFFFF;
+        return Component.literal(line + ".").withStyle(st -> st.withColor(color));
     }
 
     /** Prueba la conexión reintentando si el servicio está saturado (503) o pide esperar (429). */
     private void pingRetrying(LlmClient client, Config cfg) throws Exception {
+        pingPatiently(client, cfg, msg -> report(Component.literal(msg).withStyle(ChatFormatting.YELLOW)));
+    }
+
+    /**
+     * Prueba la conexión esperando lo que pida el servicio si es un límite por minuto (hasta 3 intentos). status
+     * recibe el mensaje de espera. Lo usa también el asistente.
+     */
+    static void pingPatiently(LlmClient client, Config cfg, java.util.function.Consumer<String> status) throws Exception {
         for (int attempt = 1; ; attempt++) {
             try {
                 client.ping(cfg);
@@ -482,8 +494,8 @@ public class ConfigScreen extends BaseScreen {
                 // Se espera lo que pide el servicio ("retry in 22s" o Retry-After), hasta 30 s.
                 long asked = Math.max(ModelStatus.parseWait(e.getMessage()), e.retryAfterSeconds);
                 long wait = asked > 0 ? Math.min(asked + 1, 30) : 4;
-                report(Component.literal((e.status == 429 ? "El servicio pide esperar " + wait + " s (límite por minuto)" : "El servicio está saturado")
-                        + ", reintentando (" + attempt + "/2)…").withStyle(ChatFormatting.YELLOW));
+                status.accept((e.status == 429 ? "El servicio pide esperar " + wait + " s (límite por minuto)" : "El servicio está saturado")
+                        + ", reintentando (" + attempt + "/2)…");
                 Thread.sleep(wait * 1000);
             }
         }
@@ -599,7 +611,7 @@ public class ConfigScreen extends BaseScreen {
                 } else {
                     TranslationJob j = Traductor.job();
                     if (j != null && j.isRunning() && j.isSlow()) {
-                        my = UiKit.wrapped(g, font, Component.literal("Va lento: ~" + Math.round(j.ratePerMinute()) + " textos/min con "
+                        my = UiKit.wrapped(g, font, Component.literal("Va lento: ~" + Math.round(j.displayRate()) + " textos/min con "
                                 + j.aiLabel() + ". " + j.slowAdvice()).withStyle(ChatFormatting.GOLD), innerX, my, innerW, UiKit.WHITE) + 4;
                     }
                 }

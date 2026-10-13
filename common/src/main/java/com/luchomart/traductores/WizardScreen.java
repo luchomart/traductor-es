@@ -332,12 +332,12 @@ public class WizardScreen extends BaseScreen {
         String switched = null;
         for (int attempt = 0; ; attempt++) {
             try {
-                client.ping(cfg);
+                ConfigScreen.pingPatiently(client, cfg, msg -> cAi.set(Status.PENDING, "Comprobando…", msg));
                 ModelStatus.ok(cfg.apiUrl, cfg.model);
                 break;
             } catch (LlmClient.LlmException e) {
                 // Retirado, sin plan gratis o agotado: se prueba con otro modelo que pueda andar.
-                ModelStatus.Info info = ModelStatus.learn(cfg.apiUrl, cfg.model, e);
+                ModelStatus.Info info = ModelStatus.get(cfg.apiUrl, cfg.model); // ya lo aprendió pingPatiently
                 List<String> usable = ModelStatus.usable(cfg.apiUrl, models);
                 usable.remove(cfg.model);
                 String alt = info == null || attempt >= 3 ? null : ModelPicker.recommend(preset, usable);

@@ -144,11 +144,10 @@ public class TranslationJob implements Runnable {
     public boolean usesLocalAi() { return cfg.isLocalAi(); }
 
     private long pauseStartMs;
-
-    /** La pausa vale desde que se pide: las peticiones que estaban esperando ya no reintentan hasta reanudar. */
     /** Candado propio de la pausa del jugador (no el de la traducción: se consulta desde cualquier hilo). */
     private final Object pauseStateLock = new Object();
 
+    /** La pausa vale desde que se pide: las peticiones que estaban esperando ya no reintentan hasta reanudar. */
     public void pause() {
         synchronized (pauseStateLock) {
             if (pauseRequested) return;
@@ -179,15 +178,28 @@ public class TranslationJob implements Runnable {
     public boolean isSlow() {
         if (state != State.TRANSLATING || isPaused() || translateStartMs == 0) return false;
         if (System.currentTimeMillis() - translateStartMs - totalPausedMs() < 180_000) return false;
-        double rate = ratePerMinute();
+        double rate = displayRate();
         int left = total - done;
         if (rate <= 0) return left > 0;
         return rate < ServiceGuide.current(cfg).perMinute() * 0.5 && left / rate > 30;
     }
 
+    /**
+     * El cambio automático se lee de la configuración del panel (no de la copia de esta traducción): si el jugador
+     * lo apaga a mitad de camino, vale enseguida.
+     */
+    private boolean autoSwitchOn() {
+        return Config.get().autoSwitch && !cfg.isLocalAi();
+    }
+
+    /** Si va lento, ¿lo va a resolver el cambio automático? */
+    public boolean willAutoSwitch() {
+        return autoSwitchOn() && !noAlternative;
+    }
+
     /** Qué probar cuando va lento (para el panel y el aviso). */
     public String slowAdvice() {
-        if (cfg.autoSwitch && !cfg.isLocalAi() && !noAlternative) {
+        if (willAutoSwitch()) {
             return "Si sigue así, en unos minutos pasa sola a otro modelo o servicio gratis con clave.";
         }
         return usesLocalAi()
@@ -200,9 +212,9 @@ public class TranslationJob implements Runnable {
     /** Avisa una sola vez por traducción si va lento. */
     private void checkSlow() {
         if (slowNotified || applyOnly || !isSlow()) return;
-        if (cfg.autoSwitch && !cfg.isLocalAi() && !noAlternative) return; // lo resuelve el cambio automático
+        if (willAutoSwitch()) return; // lo resuelve el cambio automático
         slowNotified = true;
-        String msg = "Va lento (~" + Math.round(ratePerMinute()) + " textos/min). "
+        String msg = "Va lento (~" + Math.round(displayRate()) + " textos/min). "
                 + (usesLocalAi() ? "Probá un modelo más chico o la nube: mirá el panel." : "Probá con otro modelo: mirá el panel.");
         TraductorES.LOG.info("[Traductor ES] {}", msg);
         Minecraft.getInstance().execute(() -> Platform.toast(net.minecraft.network.chat.Component.literal("Traductor ES"),
@@ -240,7 +252,6 @@ public class TranslationJob implements Runnable {
     /** Guarda el caché a disco (por ejemplo, al cerrar el juego). */
     public void flushCache() { cache.flush(); }
 
-    /** Tiempo estimado para esa cantidad de textos según el servicio de esta traducción (antes de tener datos reales). */
     /** Lo que le queda a la clave en el servicio (Groq y OpenRouter), o null si no se sabe. */
     public String quota() {
         return client.lastQuota();
@@ -250,6 +261,7 @@ public class TranslationJob implements Runnable {
     /** Mayúsculas como el oficial (se aprende del Minecraft en español al escanear). */
     private Capitalization caps = Capitalization.DEFAULT;
 
+    /** Tiempo estimado para esa cantidad de textos según el servicio de esta traducción (antes de tener datos reales). */
     public String guessDuration(int texts) {
         return ServiceGuide.estimate(cfg).duration(texts);
     }
@@ -632,11 +644,12 @@ public class TranslationJob implements Runnable {
                 used = c.model;
                 raw = client.translate(c, prompt, masked);
                 ModelStatus.ok(c.apiUrl, used);
-                Traductor.setConnection(Traductor.Connection.OK, cfg.model);
+                lastUsedModel.set(used);
+                Traductor.setConnection(Traductor.Connection.OK, used);
                 // OpenRouter no lo informa en cada respuesta: se consulta cada tanto (Groq se actualiza solo).
-                if (Preset.fromUrl(cfg.apiUrl) == Preset.OPENROUTER && System.currentTimeMillis() - quotaCheckedMs > 120_000) {
+                if (Preset.fromUrl(c.apiUrl) == Preset.OPENROUTER && System.currentTimeMillis() - quotaCheckedMs > 120_000) {
                     quotaCheckedMs = System.currentTimeMillis();
-                    client.quota(cfg);
+                    client.quota(c);
                 }
                 consecutiveFailures.set(0);
                 break;
@@ -663,6 +676,7 @@ public class TranslationJob implements Runnable {
                 if (e.isAuthError()) {
                     throw new FatalException("La IA rechazó la conexión: " + e.getMessage() + ". Revisá el campo Clave", e, true);
                 }
+                if (e.status == 402 && autoSwitchOn() && switchAway("se quedó sin saldo", used)) continue; // a uno gratis
                 if (e.status == 402) {
                     // Sin saldo: reintentar no sirve, y cada intento vuelve a fallar igual.
                     throw new FatalException("El servicio no tiene saldo para seguir: " + e.getMessage()
@@ -690,6 +704,9 @@ public class TranslationJob implements Runnable {
         return out;
     }
 
+    /** Modelo que respondió la última petición de este hilo (la traducción se guarda con el que la hizo de verdad). */
+    private final ThreadLocal<String> lastUsedModel = new ThreadLocal<>();
+
     /** Cambios de modelo automáticos en esta traducción (tope para no dar vueltas si todo falla). */
     private final java.util.concurrent.atomic.AtomicInteger modelSwitches = new java.util.concurrent.atomic.AtomicInteger();
     private static final int MAX_MODEL_SWITCHES = 6;
@@ -711,6 +728,7 @@ public class TranslationJob implements Runnable {
             if (pick == null || pick.equals(old) || (!models.isEmpty() && !models.contains(pick))) {
                 List<String> others = new ArrayList<>(models);
                 others.remove(old);
+                others.removeIf(m -> triedAis.contains(cfg.apiUrl + " " + m)); // no volver a uno ya dejado por lento
                 // Si se usaba un modelo gratis de OpenRouter, se sigue con uno gratis.
                 pick = old.endsWith(":free") ? ModelPicker.recommendFree(others) : ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
                 if (pick != null && pick.equals(failed)) pick = null;
@@ -718,7 +736,7 @@ public class TranslationJob implements Runnable {
             if (pick == null) {
                 ModelStatus.Info why = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
                 // No queda otro modelo en este servicio: se prueba con otro servicio gratis con clave.
-                if (why != null && cfg.autoSwitch && switchAway("se acabó el cupo de " + failed, failed)) return;
+                if (why != null && autoSwitchOn() && switchAway("se acabó el cupo de " + failed, failed)) return;
                 if (why != null) {
                     throw new FatalException(why.explain(failed) + " No queda otro modelo disponible en este servicio: cambiá de servicio en el panel («¿Cuál conviene?»)", cause, true);
                 }
@@ -806,8 +824,7 @@ public class TranslationJob implements Runnable {
             if (last == null || now - last[0] >= 10_000) samples.addLast(new long[]{now, done});
             while (samples.size() > 2 && now - samples.peekFirst()[0] > SWITCH_WINDOW_MS + 30_000) samples.removeFirst();
         }
-        Config c = cfg;
-        if (!c.autoSwitch || c.isLocalAi()) return; // con la IA en la PC no se cambia sola (sería mandar los textos a internet)
+        if (!autoSwitchOn()) return; // apagado, o la IA está en la PC (cambiar sería mandar los textos a internet)
         double r = recentRate();
         if (r < 0) return;
         int left = total - done;
@@ -882,9 +899,11 @@ public class TranslationJob implements Runnable {
     private Config otherServiceAlternative(Config cur) {
         Preset from = Preset.fromUrl(cur.apiUrl);
         Config live = Config.get();
+        // Las claves compartidas al día: pudieron cargarse en otro modpack después de abrir este.
+        Map<String, String> shared = live.shareKeys ? Shared.loadKeys() : Map.of();
         for (Preset p : new Preset[]{Preset.GROQ, Preset.GEMINI, Preset.OPENROUTER}) {
             if (p == from) continue;
-            String key = live.apiKeys.getOrDefault(p.name(), cur.apiKeys.getOrDefault(p.name(), ""));
+            String key = shared.getOrDefault(p.name(), live.apiKeys.getOrDefault(p.name(), cur.apiKeys.getOrDefault(p.name(), "")));
             if (key == null || key.isBlank()) continue;
             Config next = cur.snapshot();
             next.apiUrl = p.url;
@@ -1069,7 +1088,8 @@ public class TranslationJob implements Runnable {
         translation = caps.apply(it.text, translation);
         for (Target t : it.targets) {
             failureLog.succeeded(t.ns(), t.key());
-            cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation), cfg.model);
+            String model = lastUsedModel.get();
+            cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation), model != null ? model : cfg.model);
             output.computeIfAbsent(t.ns(), k -> new TreeMap<>()).put(t.key(), translation);
             if (it.isName) glossary.addModName(t.ns(), t.key(), it.text, translation);
         }

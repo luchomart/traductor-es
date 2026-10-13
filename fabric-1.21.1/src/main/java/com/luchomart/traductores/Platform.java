@@ -22,7 +22,9 @@ public final class Platform {
     }
 
     public static void toast(Component title, Component message) {
-        SystemToast.addOrUpdate(Minecraft.getInstance().getToasts(), TOAST, title, message);
+        // Varias líneas con ancho fijo: con addOrUpdate un texto largo estira el aviso a lo ancho de la pantalla.
+        Minecraft mc = Minecraft.getInstance();
+        mc.getToasts().addToast(SystemToast.multiline(mc, TOAST, title, message));
     }
 
     /** En 1.21 Screen.render ya dibuja el fondo: no hay que hacer nada. */

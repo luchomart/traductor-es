@@ -80,9 +80,9 @@ public final class Traductor {
                 mc.reloadResourcePacks();
             } else if (j.packChanged) {
                 reloadOnMenu = Config.get().autoReload;
-                toast("Traductor ES", j.message + " — se aplica al volver al menú (o pulsa F3+T)");
+                toast("Traductor ES", shortResult(j) + " Lo traducido se aplica al volver al menú (o con F3+T).");
             } else if (j.state != TranslationJob.State.DONE) {
-                toast("Traductor ES", j.message);
+                toast("Traductor ES", shortResult(j));
             }
             // Falló por algo de configuración y el jugador está en el menú: el asistente lo ayuda a arreglarlo.
             Config cfg = Config.get();
@@ -90,6 +90,16 @@ public final class Traductor {
                 mc.setScreen(new WizardScreen(mc.screen));
             }
         });
+    }
+
+    /** Resultado en pocas palabras para el aviso: el detalle del error (a veces largo y en inglés) queda en el panel y el log. */
+    private static String shortResult(TranslationJob j) {
+        return switch (j.state) {
+            case ERROR -> j.setupProblem ? "Se detuvo: hay que revisar la configuración. Abrí el panel para ver el motivo."
+                    : "Se detuvo por un error. Abrí el panel para ver el motivo.";
+            case CANCELLED -> "Traducción cancelada.";
+            default -> "¡Traducción terminada!";
+        };
     }
 
     private static void toast(String title, String msg) {

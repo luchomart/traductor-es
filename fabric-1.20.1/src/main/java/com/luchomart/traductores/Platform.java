@@ -21,7 +21,9 @@ public final class Platform {
     }
 
     public static void toast(Component title, Component message) {
-        SystemToast.addOrUpdate(Minecraft.getInstance().getToasts(), SystemToast.SystemToastIds.PERIODIC_NOTIFICATION, title, message);
+        // Varias líneas con ancho fijo: con addOrUpdate un texto largo estira el aviso a lo ancho de la pantalla.
+        Minecraft mc = Minecraft.getInstance();
+        mc.getToasts().addToast(SystemToast.multiline(mc, SystemToast.SystemToastIds.PERIODIC_NOTIFICATION, title, message));
     }
 
     /** En 1.20.1 cada pantalla tiene que dibujar su fondo antes que los widgets. */

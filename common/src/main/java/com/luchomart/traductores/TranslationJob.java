@@ -459,6 +459,11 @@ public class TranslationJob implements Runnable {
                 if (e.isAuthError()) {
                     throw new FatalException("La IA rechazó la conexión: " + e.getMessage() + ". Revisá el campo Clave", e, true);
                 }
+                if (e.status == 402) {
+                    // Sin saldo: reintentar no sirve, y cada intento vuelve a fallar igual.
+                    throw new FatalException("El servicio no tiene saldo para seguir: " + e.getMessage()
+                            + ". Elegí un modelo gratis (en OpenRouter terminan en \":free\") o cambiá de servicio", e, true);
+                }
                 if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
                     long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));
                     backoff(wait, e.status == 429 ? "Límite de la IA" : "IA ocupada");

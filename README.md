@@ -1,6 +1,6 @@
 # Traductor ES
 
-Mod de Minecraft que **traduce al español todos los textos de tus mods**: nombres de objetos, descripciones, menús y manuales del juego. Traduce al español que tengas elegido en el juego: **España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador**, cada uno con sus palabras ("cubo" o "balde", "tienes" o "tenés").
+Mod de Minecraft que **traduce al español todos los textos de tus mods**: nombres de objetos, descripciones, menús, manuales del juego y misiones. Traduce al español que tengas elegido en el juego: **España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador**, cada uno con sus palabras ("cubo" o "balde", "tienes" o "tenés").
 
 Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuentas y sin mandar nada a internet) o, si tu PC no da, un **servicio en la nube**.
 

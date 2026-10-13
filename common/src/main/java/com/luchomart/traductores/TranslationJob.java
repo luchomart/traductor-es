@@ -127,6 +127,9 @@ public class TranslationJob implements Runnable {
         this.onFinish = onFinish;
     }
 
+    /** La IA de esta traducción corre en esta PC (con la configuración con la que empezó). */
+    public boolean usesLocalAi() { return cfg.isLocalAi(); }
+
     public void pause() { pauseRequested = true; }
     public void resume() { pauseRequested = false; }
     public void cancel() { cancelRequested = true; pauseRequested = false; }
@@ -503,10 +506,11 @@ public class TranslationJob implements Runnable {
                 waitingMessage = null;
                 consecutiveFailures.set(0);
                 break;
-            } catch (ConnectException | HttpConnectTimeoutException e) {
-                // Ollama cerrado o reiniciándose: se espera un rato antes de rendirse.
+            } catch (ConnectException | HttpConnectTimeoutException | java.net.UnknownHostException e) {
+                // Ollama cerrado o reiniciándose, o se cortó internet: se espera un rato antes de rendirse.
                 if (++connectFails > CONNECT_RETRIES) {
-                    throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e, true);
+                    throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl
+                            + (cfg.isLocalAi() ? ". ¿Está abierto Ollama (o LM Studio)?" : ". ¿Hay conexión a internet?"), e, true);
                 }
                 backoff(Math.min(30, 5L << (connectFails - 1)), "Sin conexión");
             } catch (InterruptedException e) {
@@ -699,10 +703,12 @@ public class TranslationJob implements Runnable {
             if (!seg.isBlank() && !Validator.isTrivial(seg)) req.put("linea" + (i + 1), seg.strip());
         }
         Map<String, String> res = new HashMap<>();
-        try {
-            res.putAll(request(req, it.modNs, "Cada valor es un renglón de un mismo texto. Tradúcelos sin unirlos ni agregar saltos de línea."));
-        } catch (IOException ignored) {
-            // se reintenta renglón por renglón abajo
+        if (!req.isEmpty()) {
+            try {
+                res.putAll(request(req, it.modNs, "Cada valor es un renglón de un mismo texto. Tradúcelos sin unirlos ni agregar saltos de línea."));
+            } catch (IOException ignored) {
+                // se reintenta renglón por renglón abajo
+            }
         }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < segments.size(); i++) {

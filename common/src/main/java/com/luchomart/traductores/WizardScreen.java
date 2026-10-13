@@ -314,8 +314,12 @@ public class WizardScreen extends BaseScreen {
         String where = cloud ? preset.label.replace(" (nube)", "") : cfg.apiUrl.replaceFirst("^https?://", "").replaceFirst("/v1/.*$", "");
         if (models.isEmpty() && !cloud) {
             cAi.set(Status.OK, "La IA responde", "en " + where);
-            cModel.set(Status.FAIL, "No hay ningún modelo instalado", "en una terminal: ollama pull gemma3:12b");
-            cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull gemma3:12b"));
+            if (preset == Preset.LM_STUDIO) {
+                cModel.set(Status.FAIL, "No hay ningún modelo cargado", "en LM Studio: bajá un modelo (por ejemplo Gemma 3 12B) y cargalo");
+            } else {
+                cModel.set(Status.FAIL, "No hay ningún modelo instalado", "en una terminal: ollama pull gemma3:12b");
+                cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull gemma3:12b"));
+            }
             return;
         }
         if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {

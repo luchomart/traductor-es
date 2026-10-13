@@ -166,10 +166,12 @@ public final class Traductor {
     /** Al entrar a un mundo o servidor. */
     public static void onWorldJoin() {
         TranslationJob j = job;
-        if (j == null || !j.isRunning() || j.isPauseRequested()) return;
+        if (j == null || !j.isRunning() || j.isPauseRequested() || j.applyOnly) return;
+        // La opción es la del panel; si la IA es local o no, la de la traducción en curso (puede haber cambiado de servicio).
         Config cfg = Config.get();
-        if (cfg.translateWhilePlaying()) {
-            toast("Traductor ES", cfg.isLocalAi()
+        boolean keep = switch (cfg.whilePlaying) { case "si" -> true; case "no" -> false; default -> !j.usesLocalAi(); };
+        if (keep) {
+            toast("Traductor ES", j.usesLocalAi()
                     ? "La traducción sigue mientras jugás (la IA de tu PC comparte la placa de video: puede bajar los FPS)"
                     : "La traducción sigue mientras jugás");
             return;

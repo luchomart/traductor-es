@@ -45,7 +45,6 @@ public final class Validator {
         return n;
     }
 
-    /** Un texto de varias palabras devuelto sin cambios probablemente quedó sin traducir. */
     /**
      * Un "español oficial" que en realidad es el inglés copiado (muchos mods traen es_es.json sin traducir).
      * Los nombres de una sola palabra cuentan como traducidos: suelen ser nombres propios.
@@ -54,6 +53,7 @@ public final class Validator {
         return spanish != null && looksUntranslated(english, spanish);
     }
 
+    /** Un texto de varias palabras devuelto sin cambios probablemente quedó sin traducir. */
     public static boolean looksUntranslated(String source, String translated) {
         if (!source.equals(translated)) return false;
         String words = PATCHOULI.matcher(FORMAT.matcher(PRINTF.matcher(source).replaceAll(" ")).replaceAll(" ")).replaceAll(" ");

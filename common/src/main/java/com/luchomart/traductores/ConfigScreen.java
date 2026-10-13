@@ -426,7 +426,8 @@ public class ConfigScreen extends BaseScreen {
             Path zip = PackExporter.export();
             Platform.toast(Component.literal("Traductor ES"), Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()));
             report(Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()
-                    + ". Quien juegue el mismo modpack lo activa como cualquier paquete de recursos, sin IA.")
+                    + ". Quien juegue el mismo modpack lo activa como cualquier paquete de recursos, sin IA."
+                    + " Las misiones de FTB Quests no van en el pack: están en config/ftbquests/quests/lang.")
                     .withStyle(ChatFormatting.GREEN));
         } catch (Exception e) {
             TraductorES.LOG.error("[Traductor ES] Error al exportar el pack", e);
@@ -501,11 +502,11 @@ public class ConfigScreen extends BaseScreen {
             }
             case TRADUCCION -> {
                 g.drawString(font, "Español de destino", innerX, y + 6, UiKit.MUTED, false);
-                int ry = y + ROW * 3 + 8 + 6;
+                int ry = y + ROW * 4 + 8 + 6; // misma fila que los campos de lote y a la vez
                 g.drawString(font, "Textos por lote", innerX, ry, UiKit.MUTED, false);
                 String vez = "A la vez";
                 g.drawString(font, vez, innerX + innerW - 46 - font.width(vez), ry, UiKit.MUTED, false);
-                drawMessage(g, y + ROW * 4 + 18);
+                drawMessage(g, y + ROW * 5 + 18);
             }
             case HERRAMIENTAS -> {
                 int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
@@ -565,7 +566,7 @@ public class ConfigScreen extends BaseScreen {
             }
             case SCANNING -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
             case DONE -> {
-                String done = j.total == 0 ? "✓ Todo traducido" : "✓ Terminado: " + Traductor.fmt(j.done - j.failed) + " nuevos";
+                String done = j.applyOnly ? "✓ Correcciones aplicadas" : j.total == 0 ? "✓ Todo traducido" : "✓ Terminado: " + Traductor.fmt(j.done - j.failed) + " nuevos";
                 g.drawString(font, font.plainSubstrByWidth(done, w), x, y + 6, UiKit.GREEN, false);
             }
             default -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6,

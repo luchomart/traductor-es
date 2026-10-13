@@ -31,7 +31,7 @@ public class GuideScreen extends BaseScreen {
                             new Step("✓", "Traduce lo que falta", "Con una IA en tu PC o en la nube, y lo guarda para la próxima.")),
                     ""),
             new Section("Antes de empezar",
-                    "Necesitás tres cosas. El asistente (Herramientas → Asistente) las comprueba por vos.",
+                    "Para la IA en tu PC necesitás tres cosas (en la nube, solo una clave: mirá «IA en la nube»). El asistente (Herramientas → Asistente) las comprueba por vos.",
                     List.of(new Step("1", "Ollama instalado y abierto", "Descargalo con el botón «Descargar» del panel (ollama.com/download)."),
                             new Step("2", "El modelo de traducción", "En una terminal: ollama pull gemma3:12b (o gemma3:4b con menos de 12 GB de VRAM)."),
                             new Step("3", "El juego en español", "Opciones → Idioma: cualquier país.")),

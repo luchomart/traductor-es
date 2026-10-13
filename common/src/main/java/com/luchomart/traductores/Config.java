@@ -105,6 +105,8 @@ public class Config {
     }
 
     private void sanitize() {
+        if (apiUrl == null || apiUrl.isBlank()) apiUrl = Preset.OLLAMA.url;
+        if (model == null) model = "";
         if (apiKeys == null) apiKeys = new java.util.HashMap<>();
         if (apiKey == null) apiKey = "";
         if (!"si".equals(whilePlaying) && !"no".equals(whilePlaying)) whilePlaying = "auto";
@@ -132,7 +134,12 @@ public class Config {
 
     /** La IA corre en esta misma PC (comparte la placa de video con el juego). */
     public boolean isLocalAi() {
-        String host = java.net.URI.create(LlmClient.normalizeUrl(apiUrl)).getHost();
+        String host;
+        try {
+            host = java.net.URI.create(LlmClient.normalizeUrl(apiUrl)).getHost();
+        } catch (IllegalArgumentException e) {
+            return false; // URL a medio escribir en el panel
+        }
         if (host == null) return false;
         host = host.toLowerCase(java.util.Locale.ROOT);
         return host.equals("localhost") || host.startsWith("127.") || host.equals("::1") || host.equals("[::1]") || host.equals("0.0.0.0");

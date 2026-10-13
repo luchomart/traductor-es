@@ -233,6 +233,8 @@ public class TranslationJob implements Runnable {
     }
 
     private volatile long quotaCheckedMs;
+    /** Mayúsculas como el oficial (se aprende del Minecraft en español al escanear). */
+    private Capitalization caps = Capitalization.DEFAULT;
 
     public String guessDuration(int texts) {
         return ServiceGuide.estimate(cfg).duration(texts);
@@ -290,6 +292,7 @@ public class TranslationJob implements Runnable {
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
         glossary = Glossary.create();
         glossary.addVanilla(vanilla.getOrDefault("en_us", Map.of()), vanilla.getOrDefault(target, Map.of()));
+        caps = Capitalization.learn(vanilla.getOrDefault(target, Map.of()));
 
         Set<String> excluded = new HashSet<>(cfg.excludedNamespaces);
         for (Map.Entry<String, Map<String, Map<String, String>>> nsEntry : all.entrySet()) {
@@ -407,7 +410,10 @@ public class TranslationJob implements Runnable {
         String cached = cache.get(ns, key, text);
         if (cached == null || Validator.check(text, cached) != null) return null;
         if (cfg.retryUnchanged && Validator.looksUntranslated(text, cached) && !cache.isConfirmed(ns, key)) return null;
-        return cached;
+        // Traducciones anteriores con mayúsculas al estilo inglés: se corrigen sin volver a traducir.
+        String fixed = caps.apply(text, cached);
+        if (!fixed.equals(cached)) cache.updateText(ns, key, fixed);
+        return fixed;
     }
 
     private void enqueue(String ns, String modNs, String key, String requestKey, String text, boolean isName) {
@@ -858,6 +864,7 @@ public class TranslationJob implements Runnable {
     }
 
     private synchronized void accept(Item it, String translation) {
+        translation = caps.apply(it.text, translation);
         for (Target t : it.targets) {
             failureLog.succeeded(t.ns(), t.key());
             cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation), cfg.model);

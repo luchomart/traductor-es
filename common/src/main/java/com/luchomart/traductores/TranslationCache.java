@@ -82,6 +82,14 @@ public class TranslationCache {
         dirty.add(ns);
     }
 
+    /** Cambia solo el texto de una traducción guardada (conserva el modelo y la marca). */
+    public void updateText(String ns, String key, String translation) {
+        Entry e = namespace(ns).get(key);
+        if (e == null || translation.equals(e.t)) return;
+        e.t = translation;
+        dirty.add(ns);
+    }
+
     /**
      * Saca del caché todo lo que tradujo ese modelo (así se vuelve a traducir) y lo guarda en un archivo de
      * respaldo dentro de config/traductor_es/respaldos. Devuelve cuántas traducciones sacó.

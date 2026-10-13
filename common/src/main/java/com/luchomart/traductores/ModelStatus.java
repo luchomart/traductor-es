@@ -134,6 +134,10 @@ public final class ModelStatus {
         if ("0".equals(limitNum) && low.contains("free")) return new Info(State.NO_FREE, 0, null);
         long wait = parseWait(msg) * 1000;
         if (wait == 0) wait = retryAfterSeconds * 1000;
+        // Cupo diario casi gastado (Groq: "tokens per day (TPD) … try again in 5m"): se libera de a poco y en la
+        // práctica va lentísimo. Se da por agotado al menos una hora para pasar a otro modelo.
+        boolean daily = low.contains("per day") || low.contains("(tpd)") || low.contains("(rpd)") || low.contains("perday");
+        if (daily) wait = Math.max(wait, 60 * 60_000L);
         // OpenRouter con modelos ":free": "free-models-per-day" sin decir cuánto falta; se vuelve a la medianoche UTC.
         if (wait == 0 && low.contains("per-day")) {
             long day = 86_400_000L;

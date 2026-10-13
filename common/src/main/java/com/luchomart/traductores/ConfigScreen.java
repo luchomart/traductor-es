@@ -479,8 +479,12 @@ public class ConfigScreen extends BaseScreen {
             } catch (LlmClient.LlmException e) {
                 // Si es algo del modelo (retirado, sin plan gratis, cupo de horas), reintentar no sirve.
                 if (ModelStatus.learn(cfg.apiUrl, cfg.model, e) != null || !e.isTransient() || attempt >= 3) throw e;
-                report(Component.literal("El servicio está saturado, reintentando (" + attempt + "/2)…").withStyle(ChatFormatting.YELLOW));
-                Thread.sleep(e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 10) * 1000 : 4000);
+                // Se espera lo que pide el servicio ("retry in 22s" o Retry-After), hasta 30 s.
+                long asked = Math.max(ModelStatus.parseWait(e.getMessage()), e.retryAfterSeconds);
+                long wait = asked > 0 ? Math.min(asked + 1, 30) : 4;
+                report(Component.literal((e.status == 429 ? "El servicio pide esperar " + wait + " s (límite por minuto)" : "El servicio está saturado")
+                        + ", reintentando (" + attempt + "/2)…").withStyle(ChatFormatting.YELLOW));
+                Thread.sleep(wait * 1000);
             }
         }
     }

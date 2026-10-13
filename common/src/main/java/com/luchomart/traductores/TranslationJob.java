@@ -669,7 +669,9 @@ public class TranslationJob implements Runnable {
                             + ". Elegí un modelo gratis (en OpenRouter terminan en \":free\") o cambiá de servicio", e, true);
                 }
                 if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
-                    long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));
+                    // Lo que pide el servicio (Retry-After o "retry in 22s" en el mensaje); si no dice, cada vez más.
+                    long asked = Math.max(e.retryAfterSeconds, ModelStatus.parseWait(e.getMessage()));
+                    long wait = asked > 0 ? Math.min(asked + 1, 120) : Math.min(60, 5L << (transientFails - 1));
                     backoff(wait, e.status == 429 ? "Límite de la IA" : "IA ocupada");
                     continue;
                 }

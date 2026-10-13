@@ -58,4 +58,21 @@ class ModelStatusTest {
         assertEquals("5 min", ModelStatus.inWords(5 * 60_000 - 10));
         assertEquals("19 h", ModelStatus.inWords((19 * 60 + 24) * 60_000L));
     }
+
+    @Test
+    void groqCupoDiarioCasiGastadoConEsperaCorta() {
+        String msg = "(HTTP 429: Rate limit reached for model `openai/gpt-oss-120b` in organization `org_x` service tier `on_demand` "
+                + "on tokens per day (TPD): Limit 200000, Used 199647, Requested 1088. Please try again in 5m17.52s.)";
+        ModelStatus.Info i = ModelStatus.classify(429, msg, 0, NOW);
+        assertEquals(ModelStatus.State.EXHAUSTED, i.state());
+        assertEquals(NOW + 3_600_000L, i.until());
+    }
+
+    @Test
+    void geminiLimitePorMinutoNoEsAgotado() {
+        String msg = "(HTTP 429: Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, "
+                + "model: gemini-3.5-flash-lite\nPlease retry in 22.222804178s.)";
+        assertNull(ModelStatus.classify(429, msg, 0, NOW));
+        assertEquals(22, ModelStatus.parseWait(msg));
+    }
 }

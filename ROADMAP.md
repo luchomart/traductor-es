@@ -45,7 +45,7 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 
 ## Fase 4: FTB Quests
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta
-- [ ] Probar en el juego (OceanBlock)
+- [x] Probar en el juego (OceanBlock: 17 textos que faltaban en el español oficial, 0 fallidos)
 - [ ] Formato viejo (textos dentro de los capítulos), si aparece un modpack que lo use
 
 ## Extras

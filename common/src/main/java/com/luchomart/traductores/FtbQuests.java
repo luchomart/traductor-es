@@ -351,7 +351,12 @@ public final class FtbQuests {
             StringBuilder sb = new StringBuilder();
             while (!eof()) {
                 char c = s.charAt(i++);
-                if (c == '\\' && !eof()) sb.append(s.charAt(i++));
+                if (c == '\\' && !eof()) {
+                    // Solo \" y \\ son escapes; "\&" (un & literal de FTB Quests) se conserva tal cual.
+                    char n = s.charAt(i++);
+                    if (n != '"' && n != '\'' && n != '\\') sb.append('\\');
+                    sb.append(n);
+                }
                 else if (c == q) return sb.toString();
                 else sb.append(c);
             }

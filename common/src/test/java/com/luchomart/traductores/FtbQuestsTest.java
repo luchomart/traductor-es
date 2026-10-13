@@ -37,6 +37,14 @@ class FtbQuestsTest {
     }
 
     @Test
+    void conservaElAmpersandEscapadoSinDoblarlo() {
+        // Así lo escribió a mano el traductor oficial de OceanBlock: \& sin duplicar la barra.
+        Map<String, Object> m = FtbQuests.parse("{\n\tq.title: \"Slice \\&\\ Splice\"\n}");
+        assertEquals("Slice \\&\\ Splice", m.get("q.title"));
+        assertEquals(m, FtbQuests.parse(FtbQuests.format(m)));
+    }
+
+    @Test
     void escribirYLeerDaLoMismo() {
         Map<String, Object> m = FtbQuests.parse(SAMPLE);
         assertEquals(m, FtbQuests.parse(FtbQuests.format(m)));

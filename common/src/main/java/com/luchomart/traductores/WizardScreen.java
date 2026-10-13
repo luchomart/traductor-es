@@ -124,6 +124,8 @@ public class WizardScreen extends BaseScreen {
             key.setMaxLength(256);
             key.setValue(cfg.apiKey);
             key.setResponder(s -> cfg.apiKey = s.trim());
+            ConfigScreen.hideSecret(key);
+            key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
             addRenderableWidget(key);
             addRenderableWidget(Button.builder(Component.literal("Conseguir"), b -> {
                 Preset p = Preset.fromUrl(cfg.apiUrl);
@@ -152,17 +154,22 @@ public class WizardScreen extends BaseScreen {
     private void initStep3(int by) {
         Config cfg = Config.get();
         int y = height - 62;
+        int half = (W - 4) / 2;
+        addRenderableWidget(Button.builder(ConfigScreen.whilePlayingLabel(cfg), b -> {
+            cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
+            b.setMessage(ConfigScreen.whilePlayingLabel(cfg));
+        }).bounds(left + half + 4, y, half, 20).build());
         addRenderableWidget(Button.builder(autoStartLabel(cfg), b -> {
             cfg.autoStart = !cfg.autoStart;
             b.setMessage(autoStartLabel(cfg));
-        }).bounds(left, y, W, 20).build());
+        }).bounds(left, y, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Atrás"), b -> goTo(2)).bounds(left, by, 70, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
                 .bounds(left + W - 140, by, 140, 20).build());
     }
 
     private static Component autoStartLabel(Config cfg) {
-        return Component.literal("Traducir cada vez que abro el juego: ").append(cfg.autoStart
+        return Component.literal("Al abrir el juego: ").append(cfg.autoStart
                 ? Component.literal("Sí").withStyle(ChatFormatting.GREEN) : Component.literal("No").withStyle(ChatFormatting.RED));
     }
 
@@ -193,12 +200,7 @@ public class WizardScreen extends BaseScreen {
     }
 
     private static void applyPreset(Preset p) {
-        Config cfg = Config.get();
-        cfg.apiUrl = p.url;
-        cfg.model = p.model;
-        if (p.parallel > 0) cfg.parallelRequests = p.parallel;
-        if (p.isCloud() && cfg.apiKey.trim().equalsIgnoreCase("ollama")) cfg.apiKey = "";
-        cfg.save();
+        Config.get().applyPreset(p);
     }
 
     /** Comprueba IA, modelo, idioma y cuánto falta traducir. Lo lento va en otro hilo. */
@@ -372,7 +374,7 @@ public class WizardScreen extends BaseScreen {
                 String[][] cards = {
                         {"IA", p.label.replaceFirst(" \\(.*\\)", "") + " · " + cfg.model},
                         {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
-                        {"Por traducir", r == null ? "—" : Traductor.fmt(r.texts()) + " textos · " + r.duration(p.isCloud())}};
+                        {"Por traducir", r == null ? "—" : r.texts() == 0 ? "Nada pendiente" : Traductor.fmt(r.texts()) + " textos · " + r.duration(p.isCloud())}};
                 int cw = (W - 12) / 3;
                 for (int i = 0; i < 3; i++) {
                     int cx = left + i * (cw + 6);
@@ -380,8 +382,12 @@ public class WizardScreen extends BaseScreen {
                     g.drawString(font, font.plainSubstrByWidth(cards[i][1], cw - 12), cx + 6, 64, UiKit.WHITE, false);
                 }
                 int y = 92;
+                String playing = cfg.translateWhilePlaying()
+                        ? (cfg.isLocalAi() ? "• Sigue traduciendo mientras jugás. Ojo: con la IA en tu PC bajan los FPS y va más lento."
+                                           : "• Sigue traduciendo mientras jugás: la IA está en la nube y no usa tu placa de video.")
+                        : "• Traduce mientras estás en el menú. Al entrar a un mundo se pausa, y sigue al volver.";
                 for (String line : new String[]{
-                        "• Traduce mientras estás en el menú. Al entrar a un mundo se pausa, y sigue al volver.",
+                        playing,
                         "• Si cerrás el juego, lo traducido queda guardado.",
                         "• Las próximas veces solo traduce lo nuevo, en segundos."}) {
                     y = UiKit.wrapped(g, font, Component.literal(line), left, y, W, UiKit.MUTED) + 4;

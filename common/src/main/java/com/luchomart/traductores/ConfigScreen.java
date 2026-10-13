@@ -91,13 +91,13 @@ public class ConfigScreen extends BaseScreen {
 
         // Barra inferior: traducir/pausar, cancelar y salir.
         int by = height - 30;
-        runBtn = addRenderableWidget(Button.builder(Component.empty(), b -> toggleRun()).bounds(left + W - 228, by, 76, 20).build());
+        runBtn = addRenderableWidget(Button.builder(Component.empty(), b -> toggleRun()).bounds(left + W - 266, by, 92, 20).build());
         cancelBtn = addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> {
             TranslationJob j = Traductor.job();
             if (j != null) j.cancel();
-        }).bounds(left + W - 148, by, 62, 20).build());
+        }).bounds(left + W - 170, by, 66, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Guardar y volver"), b -> onClose())
-                .bounds(left + W - 82, by, 82, 20).build());
+                .bounds(left + W - 100, by, 100, 20).build());
         updateButtons();
     }
 
@@ -111,7 +111,16 @@ public class ConfigScreen extends BaseScreen {
         url.setTooltip(Tooltip.create(Component.literal("Dónde está la IA. Con un servicio elegido no hace falta tocarla.")));
         y += ROW;
         EditBox key = field(fieldX, y, fieldW - HELP_W - 4, cfg.apiKey, 256, s -> cfg.apiKey = s.trim());
-        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Queda guardada en config.json.")));
+        hideSecret(key);
+        Preset current = Preset.fromUrl(cfg.apiUrl);
+        if (current.isLocal()) {
+            key.setValue("");
+            key.setEditable(false);
+            key.setHint(Component.literal("No hace falta con " + current.label.replace(" (en tu PC)", "")).withStyle(ChatFormatting.DARK_GRAY));
+        } else {
+            key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en config.json (no compartas ese archivo).")));
         helpBtn = addRenderableWidget(Button.builder(Component.empty(), b -> openHelpPage())
                 .bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20).build());
         y += ROW;
@@ -138,8 +147,17 @@ public class ConfigScreen extends BaseScreen {
         int half = (innerW - 4) / 2;
         toggle(innerX, y, half, "Al abrir el juego", () -> cfg.autoStart, v -> cfg.autoStart = v,
                 "Traducir solo lo nuevo cada vez que llegás al menú principal.");
-        toggle(innerX + half + 4, y, half, "Pausar en un mundo", () -> cfg.pauseInWorld, v -> cfg.pauseInWorld = v,
-                "Libera la placa de video mientras jugás; sigue al volver al menú.");
+        addRenderableWidget(Button.builder(whilePlayingLabel(cfg), b -> {
+            cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
+            b.setMessage(whilePlayingLabel(cfg));
+            if ("si".equals(cfg.whilePlaying) && cfg.isLocalAi()) {
+                report(Component.literal("Ojo: la IA corre en tu PC. Mientras jugás, el juego y la IA comparten la placa de video: "
+                        + "bajan los FPS y la traducción va más lenta.").withStyle(ChatFormatting.YELLOW));
+            } else {
+                testResult = null;
+            }
+        }).bounds(innerX + half + 4, y, half, 20).tooltip(Tooltip.create(Component.literal(
+                "Automático: sigue traduciendo si la IA está en la nube; pausa si está en tu PC (para no bajar los FPS)."))).build());
         y += ROW;
         toggle(innerX, y, half, "Traducir libros", () -> cfg.translateBooks, v -> cfg.translateBooks = v,
                 "También los manuales de Patchouli que hay dentro del juego.");
@@ -194,6 +212,21 @@ public class ConfigScreen extends BaseScreen {
                 : Component.literal("No").withStyle(ChatFormatting.RED));
     }
 
+    static Component whilePlayingLabel(Config cfg) {
+        Component value = switch (cfg.whilePlaying) {
+            case "si" -> Component.literal("Sí").withStyle(ChatFormatting.GREEN);
+            case "no" -> Component.literal("No").withStyle(ChatFormatting.RED);
+            default -> Component.literal("Auto").withStyle(ChatFormatting.AQUA);
+        };
+        return Component.literal("Mientras juego: ").append(value);
+    }
+
+    /** Muestra la clave como •••• (que no quede en capturas ni en streams). */
+    static void hideSecret(EditBox box) {
+        box.setFormatter((text, offset) -> net.minecraft.util.FormattedCharSequence.forward(
+                "•".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY));
+    }
+
     private Component targetLabel(Config cfg) {
         if ("auto".equals(cfg.targetLanguage)) {
             String game = minecraft.options.languageCode;
@@ -220,11 +253,7 @@ public class ConfigScreen extends BaseScreen {
     /** Pasa a otro servicio y completa URL, modelo y peticiones simultáneas. La clave de relleno se vacía en la nube. */
     private void applyPreset(Preset p) {
         Config cfg = Config.get();
-        cfg.apiUrl = p.url;
-        cfg.model = p.model;
-        if (p.parallel > 0) cfg.parallelRequests = p.parallel;
-        if (p.isCloud() && cfg.apiKey.trim().equalsIgnoreCase("ollama")) cfg.apiKey = "";
-        cfg.save();
+        cfg.applyPreset(p);
         TraductorES.LOG.info("[Traductor ES] Panel: servicio cambiado a {}", p.label);
         testResult = p.isCloud()
                 ? Component.literal((cfg.apiKey.isBlank() ? "Este servicio necesita una clave (API key). " : "")
@@ -498,7 +527,7 @@ public class ConfigScreen extends BaseScreen {
 
     /** Estado de la traducción abajo a la izquierda: texto y barra. */
     private void drawProgress(GuiGraphics g) {
-        int x = left, y = height - 30, w = W - 236;
+        int x = left, y = height - 30, w = W - 274;
         TranslationJob j = Traductor.job();
         if (j == null) {
             g.drawString(font, "Listo para traducir", x, y + 6, UiKit.MUTED, false);

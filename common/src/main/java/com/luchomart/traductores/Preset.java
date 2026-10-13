@@ -57,4 +57,9 @@ public enum Preset {
     public boolean isCloud() {
         return needsKey;
     }
+
+    /** Servicio que corre en la PC del jugador (Ollama, LM Studio). */
+    public boolean isLocal() {
+        return this == OLLAMA || this == LM_STUDIO;
+    }
 }

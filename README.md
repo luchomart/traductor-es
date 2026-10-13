@@ -55,7 +55,7 @@ Cada vez que abras el juego, el mod revisa si hay textos sin traducir y los trad
 
 ## Mientras traduce
 
-- **Podés jugar.** Al entrar a un mundo la traducción se pausa para no ponerle el juego lento, y sigue sola cuando volvés al menú.
+- **Podés jugar.** Con la opción **Mientras juego** en *Automático*: si la IA está en la nube, sigue traduciendo; si está en tu PC, se pausa al entrar a un mundo (para no bajar los FPS) y sigue sola al volver al menú. Podés forzar *Sí* o *No* en la pestaña Traducción.
 - **Podés cerrar el juego.** Lo que ya tradujo queda guardado y la próxima vez sigue desde ahí.
 - **Si estás jugando cuando termina**, apretá **F3 + T** para ver los textos nuevos.
 
@@ -160,8 +160,8 @@ Datos del mod (no inventes opciones que no estén acá):
 - Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq. El botón "Conseguir" (al lado del campo Clave) abre la página para crear la clave: Gemini en aistudio.google.com/apikey, Groq en console.groq.com/keys, OpenRouter en openrouter.ai/settings/keys. La clave se muestra una sola vez y va en el campo Clave. Los textos de los mods se envían a ese servicio.
 - Modelo recomendado: "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más). Con menos VRAM: "ollama pull gemma3:4b". "ollama list" muestra los modelos instalados.
 - El juego tiene que estar en algún español: Opciones → Idioma.
-- Configuración en el juego: Mods → Traductor ES → Configurar. Campos: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL de la API, Clave (no importa con Ollama), Modelo, Textos por lote (20 por defecto) y A la vez (peticiones simultáneas: 1 local, 2 a 4 en la nube). Botones: Probar conexión (muestra los modelos disponibles), Traducir ahora/Pausar, Cancelar, Exportar pack, Abrir carpeta y Guía.
-- Traduce solo en el menú principal al abrir el juego y muestra el progreso arriba a la izquierda. La primera vez puede tardar horas. Se pausa al entrar a un mundo. F3 + T recarga los textos.
+- Configuración en el juego: Mods → Traductor ES → Configurar. Tiene tres pestañas. Conexión: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL, Clave (oculta; no hace falta con Ollama), Modelo (botón Elegir… con la lista del servicio) y Probar conexión. Traducción: español de destino, al abrir el juego, mientras juego, libros, otras variantes, textos por lote (20) y a la vez (1 local, 2 a 4 en la nube). Herramientas: exportar pack, informe, abrir carpeta y asistente. Botón Guía arriba a la derecha.
+- Traduce solo en el menú principal al abrir el juego y muestra el progreso arriba a la izquierda. La primera vez puede tardar horas. Mientras se juega: con IA en la nube sigue traduciendo; con IA en la PC se pausa para no bajar los FPS (opción "Mientras juego": Auto/Sí/No en la pestaña Traducción). F3 + T recarga los textos.
 - Comandos: /traductor estado, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 

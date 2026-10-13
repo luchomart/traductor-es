@@ -18,8 +18,10 @@ public class Config {
     public static final Path FILE = DIR.resolve("config.json");
 
     public String apiUrl = "http://localhost:11434/v1/chat/completions";
-    /** Solo para servicios en la nube; Ollama y LM Studio no la necesitan. */
+    /** Solo para servicios en la nube; Ollama y LM Studio no la necesitan. Es la del servicio elegido. */
     public String apiKey = "";
+    /** Clave de cada servicio en la nube, para no perderla al cambiar de uno a otro. */
+    public java.util.Map<String, String> apiKeys = new java.util.HashMap<>();
     public String model = "gemma3:12b";
     /** Máximo de textos por petición. */
     public int batchSize = 20;
@@ -39,8 +41,11 @@ public class Config {
     public boolean autoStart = true;
     /** Recargar los recursos al terminar si se está en el menú principal. */
     public boolean autoReload = true;
-    /** Pausar la traducción al entrar a un mundo (libera la GPU) y reanudarla al volver al menú. */
-    public boolean pauseInWorld = true;
+    /**
+     * Traducir mientras se juega: "auto" (sigue si la IA está en la nube; pausa si está en esta PC,
+     * porque compartiría la placa de video con el juego), "si" o "no".
+     */
+    public String whilePlaying = "auto";
     /** Traducir también los libros de Patchouli (manuales dentro del juego). */
     public boolean translateBooks = true;
     /** Si la IA devuelve sin cambios un texto de varias palabras, pedirle una vez más que lo traduzca. */
@@ -78,6 +83,9 @@ public class Config {
     }
 
     public void save() {
+        // La clave escrita queda guardada para su servicio.
+        Preset p = Preset.fromUrl(apiUrl);
+        if (p.isCloud()) apiKeys.put(p.name(), apiKey);
         try {
             Files.createDirectories(DIR);
             Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8);
@@ -87,6 +95,11 @@ public class Config {
     }
 
     private void sanitize() {
+        if (apiKeys == null) apiKeys = new java.util.HashMap<>();
+        if (apiKey == null) apiKey = "";
+        if (!"si".equals(whilePlaying) && !"no".equals(whilePlaying)) whilePlaying = "auto";
+        // Una IA en la PC no usa clave: si quedó una de otro servicio, no se muestra ni se manda.
+        if (Preset.fromUrl(apiUrl).isLocal()) apiKey = "";
         if (batchSize < 1) batchSize = 1;
         if (parallelRequests < 1) parallelRequests = 1;
         if (parallelRequests > 16) parallelRequests = 16;
@@ -95,6 +108,33 @@ public class Config {
         if (targetLanguage == null || targetLanguage.isBlank()) targetLanguage = "auto";
         if (excludedNamespaces == null) excludedNamespaces = new ArrayList<>();
         if (systemPrompt == null) systemPrompt = "";
+    }
+
+    /** Cambia de servicio: URL, modelo y peticiones a la vez; trae la clave guardada de ese servicio. */
+    public void applyPreset(Preset p) {
+        save(); // guarda la clave del servicio actual antes de cambiar
+        apiUrl = p.url;
+        model = p.model;
+        if (p.parallel > 0) parallelRequests = p.parallel;
+        apiKey = p.isCloud() ? apiKeys.getOrDefault(p.name(), "") : "";
+        save();
+    }
+
+    /** La IA corre en esta misma PC (comparte la placa de video con el juego). */
+    public boolean isLocalAi() {
+        String host = java.net.URI.create(LlmClient.normalizeUrl(apiUrl)).getHost();
+        if (host == null) return false;
+        host = host.toLowerCase(java.util.Locale.ROOT);
+        return host.equals("localhost") || host.startsWith("127.") || host.equals("::1") || host.equals("[::1]") || host.equals("0.0.0.0");
+    }
+
+    /** Si la traducción sigue mientras se juega, según la opción y dónde corre la IA. */
+    public boolean translateWhilePlaying() {
+        return switch (whilePlaying) {
+            case "si" -> true;
+            case "no" -> false;
+            default -> !isLocalAi();
+        };
     }
 
     public String effectivePrompt(String target) {

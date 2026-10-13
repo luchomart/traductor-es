@@ -133,10 +133,17 @@ public final class Traductor {
     /** Al entrar a un mundo o servidor. */
     public static void onWorldJoin() {
         TranslationJob j = job;
-        if (!Config.get().pauseInWorld || j == null || !j.isRunning() || j.isPauseRequested()) return;
+        if (j == null || !j.isRunning() || j.isPauseRequested()) return;
+        Config cfg = Config.get();
+        if (cfg.translateWhilePlaying()) {
+            toast("Traductor ES", cfg.isLocalAi()
+                    ? "La traducción sigue mientras jugás (la IA de tu PC comparte la placa de video: puede bajar los FPS)"
+                    : "La traducción sigue mientras jugás");
+            return;
+        }
         j.pause();
         autoPaused = true;
-        toast("Traductor ES", "Traducción en pausa mientras juegas. Se reanuda al volver al menú");
+        toast("Traductor ES", "En pausa mientras jugás. Sigue al volver al menú");
     }
 
     /** Al salir de un mundo o servidor. */

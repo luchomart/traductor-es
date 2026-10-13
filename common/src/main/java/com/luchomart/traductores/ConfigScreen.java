@@ -184,7 +184,7 @@ public class ConfigScreen extends BaseScreen {
                 "Automático: sigue traduciendo si la IA está en la nube; pausa si está en tu PC (para no bajar los FPS)."))).build());
         y += ROW;
         toggle(innerX, y, half, "Libros y misiones", () -> cfg.translateBooks, v -> cfg.translateBooks = v,
-                "También los manuales de Patchouli y las misiones de FTB Quests (las misiones se ven al volver a entrar al mundo).");
+                "También los manuales (Patchouli y los de Tinkers' Construct) y las misiones de FTB Quests (las misiones se ven al volver a entrar al mundo).");
         toggle(innerX + half + 4, y, half, "Otras variantes", () -> cfg.useSpanishVariants, v -> cfg.useSpanishVariants = v,
                 "Si un mod no trae tu español pero sí otro (México, Argentina…), usarlo en vez de traducir.");
         y += ROW;

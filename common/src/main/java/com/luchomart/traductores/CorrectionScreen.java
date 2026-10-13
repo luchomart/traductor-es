@@ -320,7 +320,7 @@ public class CorrectionScreen extends BaseScreen {
     /** "Misiones", "Libro: nombre" o el mod. */
     static String sourceLabel(String ns) {
         if (ns.equals(FtbQuests.NS)) return "Misiones";
-        if (ns.startsWith(PatchouliBooks.PREFIX)) return "Libro: " + ns.substring(ns.lastIndexOf('/') + 1);
+        if (ns.startsWith(Books.PREFIX)) return "Libro: " + ns.substring(ns.lastIndexOf('/') + 1);
         return ns;
     }
 

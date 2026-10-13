@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -28,18 +29,45 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Libros de Patchouli: assets/<ns>/patchouli_books/<libro>/<idioma>/....json.
+ * Libros dentro del juego, en dos formatos:
+ * <ul>
+ *   <li>Patchouli: assets/&lt;ns&gt;/patchouli_books/&lt;libro&gt;/&lt;idioma&gt;/....json.</li>
+ *   <li>Mantle (los de Tinkers' Construct): assets/&lt;ns&gt;/book/&lt;libro&gt;/&lt;idioma&gt;/....json, más un language.lang
+ *       con los nombres de las secciones. El libro tiene un index.json fuera de las carpetas de idioma.</li>
+ * </ul>
  * Cada texto se traduce como una clave "archivo#/puntero/json" dentro de un namespace propio del libro.
+ * Los dos buscan cada archivo primero en el idioma del juego y si no está, en inglés: alcanza con escribir los archivos
+ * traducidos.
  */
-public final class PatchouliBooks {
-    public static final String PREFIX = "@patchouli/";
-    private static final Pattern PATH = Pattern.compile("patchouli_books/([^/]+)/([a-z0-9_]+)/(.+\\.json)");
-    private static final Set<String> TEXT_FIELDS = Set.of("name", "title", "text", "description", "subtitle", "link_text", "header");
-    /** Valores que son claves de traducción (libros con i18n): ya se traducen por los archivos de idioma. */
+public final class Books {
+    /** Lo que distingue a cada formato. arrayFields: campos que son listas de textos (["Mucho daño", "Poca durabilidad"]). */
+    public enum Format {
+        PATCHOULI("patchouli_books", "@patchouli/", Set.of("name", "title", "text", "description", "subtitle", "link_text", "header"), Set.of()),
+        MANTLE("book", "@mantle/", Set.of("title", "text", "description", "subText"), Set.of("effects", "properties", "entity", "block", "tooltip"));
+
+        final String folder, prefix;
+        final Set<String> textFields, arrayFields;
+        final Pattern path;
+
+        Format(String folder, String prefix, Set<String> textFields, Set<String> arrayFields) {
+            this.folder = folder;
+            this.prefix = prefix;
+            this.textFields = textFields;
+            this.arrayFields = arrayFields;
+            this.path = Pattern.compile(folder + "/([^/]+)/([a-z0-9_]+)/(.+\\.(?:json|lang))");
+        }
+    }
+
+    /** Todos los namespaces de libros empiezan con "@". */
+    public static final String PREFIX = "@";
+    /** Archivo de Mantle con los nombres de las secciones (clave=valor). Se guarda como un JSON plano. */
+    static final String MANTLE_LANG = "language.lang";
+    /** Valores que son claves de traducción (libros con i18n) o identificadores ("tconstruct:pickaxe"). */
     private static final Pattern KEY_LIKE = Pattern.compile("^[a-z0-9_.:/-]+$");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     public static final class Book {
+        public final Format format;
         public final String ns, book;
         /** Archivos en inglés que necesitan traducción (ruta relativa → contenido). */
         public final Map<String, JsonObject> english = new TreeMap<>();
@@ -47,12 +75,12 @@ public final class PatchouliBooks {
         public final Map<String, JsonElement> fromVariant = new TreeMap<>();
         public int official;
 
-        Book(String ns, String book) { this.ns = ns; this.book = book; }
+        Book(Format format, String ns, String book) { this.format = format; this.ns = ns; this.book = book; }
 
-        public String pseudoNamespace() { return PREFIX + ns + "/" + book; }
+        public String pseudoNamespace() { return format.prefix + ns + "/" + book; }
     }
 
-    private PatchouliBooks() {}
+    private Books() {}
 
     private static final Pattern DATA_BOOK = Pattern.compile("data/([a-z0-9_.-]+)/patchouli_books/[^/]+/book\\.json");
     /** Textos de book.json que Patchouli pasa por el traductor del juego cuando el libro tiene "i18n": true. */
@@ -98,19 +126,36 @@ public final class PatchouliBooks {
     }
 
     public static List<Book> scan(ResourceManager rm, String target, List<String> variants) {
-        Map<ResourceLocation, List<Resource>> stacks = rm.listResourceStacks("patchouli_books", rl -> rl.getPath().endsWith(".json"));
+        List<Book> books = new ArrayList<>();
+        for (Format f : Format.values()) books.addAll(scan(rm, f, target, variants));
+        return books;
+    }
+
+    private static List<Book> scan(ResourceManager rm, Format format, String target, List<String> variants) {
+        Map<ResourceLocation, List<Resource>> stacks = rm.listResourceStacks(format.folder,
+                rl -> rl.getPath().endsWith(".json") || rl.getPath().endsWith(".lang"));
+        // Mantle: "book" es un nombre muy común; solo cuentan las carpetas con index.json (las de Mantle).
+        Set<String> mantleBooks = new HashSet<>();
+        if (format == Format.MANTLE) {
+            Pattern index = Pattern.compile("book/([^/]+)/index\\.json");
+            for (ResourceLocation rl : stacks.keySet()) {
+                Matcher m = index.matcher(rl.getPath());
+                if (m.matches()) mantleBooks.add(rl.getNamespace() + "/" + m.group(1));
+            }
+        }
         // ns/libro → idioma → archivo → recurso de más arriba (sin contar nuestro pack)
         Map<String, Map<String, Map<String, Resource>>> index = new TreeMap<>();
         for (Map.Entry<ResourceLocation, List<Resource>> e : stacks.entrySet()) {
-            Matcher m = PATH.matcher(e.getKey().getPath());
+            Matcher m = format.path.matcher(e.getKey().getPath());
             if (!m.matches()) continue;
+            String id = e.getKey().getNamespace() + "/" + m.group(1);
+            if (format == Format.MANTLE ? !mantleBooks.contains(id) : m.group(3).endsWith(".lang")) continue;
             String lang = m.group(2);
             if (!lang.equals("en_us") && !lang.startsWith("es_")) continue;
             Resource top = null;
             for (Resource r : e.getValue()) if (!PackWriter.PACK_ID.equals(r.sourcePackId())) top = r;
             if (top == null) continue;
-            index.computeIfAbsent(e.getKey().getNamespace() + "/" + m.group(1), k -> new TreeMap<>())
-                    .computeIfAbsent(lang, k -> new TreeMap<>()).put(m.group(3), top);
+            index.computeIfAbsent(id, k -> new TreeMap<>()).computeIfAbsent(lang, k -> new TreeMap<>()).put(m.group(3), top);
         }
 
         List<Book> books = new ArrayList<>();
@@ -118,7 +163,7 @@ public final class PatchouliBooks {
             Map<String, Resource> en = e.getValue().get("en_us");
             if (en == null) continue;
             String[] parts = e.getKey().split("/", 2);
-            Book book = new Book(parts[0], parts[1]);
+            Book book = new Book(format, parts[0], parts[1]);
             Map<String, Resource> es = e.getValue().getOrDefault(target, Map.of());
             for (Map.Entry<String, Resource> file : en.entrySet()) {
                 String rel = file.getKey();
@@ -128,7 +173,7 @@ public final class PatchouliBooks {
                     variant = e.getValue().getOrDefault(v, Map.of()).get(rel);
                     if (variant != null) break;
                 }
-                JsonElement parsed = read(variant != null ? variant : file.getValue());
+                JsonElement parsed = read(variant != null ? variant : file.getValue(), rel);
                 if (parsed == null) continue;
                 if (variant != null) book.fromVariant.put(rel, parsed);
                 else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
@@ -138,31 +183,78 @@ public final class PatchouliBooks {
         return books;
     }
 
-    private static JsonElement read(Resource r) {
+    private static JsonElement read(Resource r, String rel) {
         try (Reader reader = r.openAsReader()) {
-            return JsonParser.parseReader(reader);
+            // El lector de Gson acepta los comentarios // y /* */ que usan algunos libros de Mantle.
+            return rel.endsWith(".lang") ? parseLang(reader) : JsonParser.parseReader(reader);
         } catch (Exception e) {
             return null;
         }
     }
 
-    /** Recorre el JSON y entrega (puntero, texto) por cada campo traducible. */
-    public static void extract(JsonElement el, String pointer, BiConsumer<String, String> out) {
+    /** language.lang de Mantle: "clave=valor" por línea; se saltean las vacías y las que empiezan con "//". */
+    static JsonObject parseLang(Reader reader) throws IOException {
+        JsonObject out = new JsonObject();
+        BufferedReader r = new BufferedReader(reader);
+        for (String line; (line = r.readLine()) != null; ) {
+            if (line.startsWith("//")) continue;
+            int eq = line.indexOf('=');
+            if (eq < 0) continue;
+            out.addProperty(line.substring(0, eq), line.substring(eq + 1));
+        }
+        return out;
+    }
+
+    static String toLang(JsonElement el) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, JsonElement> e : el.getAsJsonObject().entrySet()) {
+            sb.append(e.getKey()).append('=').append(e.getValue().getAsString().replace("\n", " ")).append('\n');
+        }
+        return sb.toString();
+    }
+
+    /** Recorre el archivo y entrega (puntero, texto) por cada campo traducible. */
+    public static void extract(Format format, String file, JsonElement el, BiConsumer<String, String> out) {
+        if (file.endsWith(".lang")) {
+            // Todos los valores son textos; las claves con "/" romperían el puntero (no se usan en la práctica).
+            for (Map.Entry<String, JsonElement> e : el.getAsJsonObject().entrySet()) {
+                String s = e.getValue().getAsString();
+                if (!e.getKey().contains("/") && !s.isBlank()) out.accept("/" + e.getKey(), s);
+            }
+            return;
+        }
+        extract(format, el, "", out);
+    }
+
+    private static void extract(Format format, JsonElement el, String pointer, BiConsumer<String, String> out) {
         if (el.isJsonObject()) {
             for (Map.Entry<String, JsonElement> e : el.getAsJsonObject().entrySet()) {
                 String p = pointer + "/" + e.getKey();
                 JsonElement v = e.getValue();
-                if (TEXT_FIELDS.contains(e.getKey()) && v.isJsonPrimitive() && v.getAsJsonPrimitive().isString()) {
-                    String s = v.getAsString();
-                    if (!s.isBlank() && !KEY_LIKE.matcher(s).matches()) out.accept(p, s);
+                if (format.textFields.contains(e.getKey()) && isString(v)) {
+                    accept(p, v.getAsString(), out);
+                } else if (format.arrayFields.contains(e.getKey()) && v.isJsonArray()) {
+                    JsonArray a = v.getAsJsonArray();
+                    for (int i = 0; i < a.size(); i++) {
+                        if (isString(a.get(i))) accept(p + "/" + i, a.get(i).getAsString(), out);
+                        else extract(format, a.get(i), p + "/" + i, out);
+                    }
                 } else {
-                    extract(v, p, out);
+                    extract(format, v, p, out);
                 }
             }
         } else if (el.isJsonArray()) {
             JsonArray a = el.getAsJsonArray();
-            for (int i = 0; i < a.size(); i++) extract(a.get(i), pointer + "/" + i, out);
+            for (int i = 0; i < a.size(); i++) extract(format, a.get(i), pointer + "/" + i, out);
         }
+    }
+
+    private static boolean isString(JsonElement v) {
+        return v.isJsonPrimitive() && v.getAsJsonPrimitive().isString();
+    }
+
+    private static void accept(String pointer, String s, BiConsumer<String, String> out) {
+        if (!s.isBlank() && !KEY_LIKE.matcher(s).matches()) out.accept(pointer, s);
     }
 
     /** Copia del JSON con los textos reemplazados (puntero → traducción). */
@@ -190,9 +282,9 @@ public final class PatchouliBooks {
         boolean changed = false;
         Set<Path> written = new HashSet<>();
         for (Book book : books) {
-            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve("patchouli_books").resolve(book.book).resolve(target);
+            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve(book.format.folder).resolve(book.book).resolve(target);
             for (Map.Entry<String, JsonElement> v : book.fromVariant.entrySet()) {
-                changed |= writeIfChanged(base.resolve(v.getKey()), GSON.toJson(v.getValue()), written);
+                changed |= writeIfChanged(base.resolve(v.getKey()), serialize(v.getKey(), v.getValue()), written);
             }
             Map<String, String> done = output.getOrDefault(book.pseudoNamespace(), Map.of());
             for (Map.Entry<String, JsonObject> file : book.english.entrySet()) {
@@ -202,17 +294,19 @@ public final class PatchouliBooks {
                     if (t.getKey().startsWith(prefix)) perPointer.put(t.getKey().substring(prefix.length()), t.getValue());
                 }
                 if (perPointer.isEmpty()) continue;
-                changed |= writeIfChanged(base.resolve(file.getKey()), GSON.toJson(apply(file.getValue(), perPointer)), written);
+                // language.lang reemplaza entero al inglés: lo que falta traducir queda en inglés dentro del mismo archivo.
+                changed |= writeIfChanged(base.resolve(file.getKey()), serialize(file.getKey(), apply(file.getValue(), perPointer)), written);
             }
         }
         // Borra lo que quedó de libros o archivos que ya no se generan.
         Path assets = PackWriter.DIR.resolve("assets");
         if (Files.isDirectory(assets)) {
+            Pattern ours = Pattern.compile("[^/]+/(?:patchouli_books|book)/[^/]+/" + Pattern.quote(target) + "/.+");
             try (Stream<Path> files = Files.walk(assets)) {
                 for (Path p : files.filter(Files::isRegularFile).toList()) {
                     String s = assets.relativize(p).toString().replace('\\', '/');
                     // Solo los del idioma actual: los de otras variantes del español se conservan.
-                    if (s.contains("/patchouli_books/") && s.contains("/" + target + "/") && !written.contains(p)) {
+                    if (ours.matcher(s).matches() && !written.contains(p)) {
                         Files.delete(p);
                         changed = true;
                     }
@@ -220,6 +314,10 @@ public final class PatchouliBooks {
             }
         }
         return changed;
+    }
+
+    private static String serialize(String file, JsonElement el) {
+        return file.endsWith(".lang") ? toLang(el) : GSON.toJson(el);
     }
 
     private static boolean writeIfChanged(Path file, String json, Set<Path> written) throws IOException {

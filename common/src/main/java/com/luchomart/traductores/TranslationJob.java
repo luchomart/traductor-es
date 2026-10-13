@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -42,7 +43,7 @@ public class TranslationJob implements Runnable {
     private static final String UNCHANGED = "devolvió el texto sin traducir";
     private static final Pattern LINE_BREAK = Pattern.compile("\\\\n|\\n");
 
-    /** Una clave concreta que recibe una traducción. ns puede ser un mod o un libro ("@patchouli/mod/libro"). */
+    /** Una clave concreta que recibe una traducción. ns puede ser un mod o un libro ("@patchouli/mod/libro", "@mantle/mod/libro"). */
     private record Target(String ns, String key) {}
 
     /** Un texto único a traducir (puede servir a varias claves con el mismo texto). */
@@ -70,7 +71,7 @@ public class TranslationJob implements Runnable {
     private static final int MAX_CONSECUTIVE_FAILURES = 10;
 
     /** Lo que se escaneó de los recursos del juego. */
-    private record Scan(Map<String, Map<String, Map<String, String>>> lang, List<PatchouliBooks.Book> books) {}
+    private record Scan(Map<String, Map<String, Map<String, String>>> lang, List<Books.Book> books) {}
 
     // Estado visible desde la interfaz.
     public volatile State state = State.SCANNING;
@@ -111,7 +112,7 @@ public class TranslationJob implements Runnable {
     private final Map<String, Map<String, String>> output = new TreeMap<>();
     private final List<String> failures = new ArrayList<>();
     private final Map<String, int[]> perMod = new TreeMap<>(); // [traducidos, fallidos]
-    private List<PatchouliBooks.Book> books = List.of();
+    private List<Books.Book> books = List.of();
     /** Misiones de FTB Quests del modpack, o null si no tiene (o no en el formato con archivos de idioma). */
     private volatile FtbQuests.Quests quests;
     public volatile int questTexts;
@@ -376,23 +377,23 @@ public class TranslationJob implements Runnable {
         return pending;
     }
 
-    private void prepareBooks(List<PatchouliBooks.Book> scanned) {
+    private void prepareBooks(List<Books.Book> scanned) {
         books = scanned;
-        for (PatchouliBooks.Book book : books) {
+        for (Books.Book book : books) {
             String pseudo = book.pseudoNamespace();
             Map<String, String> bookOut = output.computeIfAbsent(pseudo, k -> new TreeMap<>());
             fromVariants += book.fromVariant.size();
             official += book.official;
             bookFiles += book.english.size();
             for (Map.Entry<String, com.google.gson.JsonObject> file : book.english.entrySet()) {
-                PatchouliBooks.extract(file.getValue(), "", (pointer, text) -> {
+                Books.extract(book.format, file.getKey(), file.getValue(), (pointer, text) -> {
                     if (Validator.isTrivial(text)) return;
                     String key = file.getKey() + "#" + pointer;
                     if (corrections.getOrDefault(pseudo, Map.of()).containsKey(key)) return; // ya está en la salida
                     String cached = usableCache(pseudo, key, text);
                     if (cached != null) { bookOut.put(key, cached); fromCache++; return; }
                     String field = pointer.substring(pointer.lastIndexOf('/') + 1);
-                    enqueue(pseudo, book.ns, key, "patchouli." + book.book + "." + field + "." + (++bookCounter), text, false);
+                    enqueue(pseudo, book.ns, key, book.format.name().toLowerCase(Locale.ROOT) + "." + book.book + "." + field + "." + (++bookCounter), text, false);
                 });
             }
         }
@@ -403,7 +404,7 @@ public class TranslationJob implements Runnable {
      * claves en inglés del mod, salvo que ya existan.
      */
     private void addBookTexts(Map<String, Map<String, Map<String, String>>> all) {
-        PatchouliBooks.bookTexts(Minecraft.getInstance().gameDirectory.toPath().resolve("mods")).forEach((ns, texts) -> {
+        Books.bookTexts(Minecraft.getInstance().gameDirectory.toPath().resolve("mods")).forEach((ns, texts) -> {
             Map<String, Map<String, String>> langs = all.computeIfAbsent(ns, k -> new LinkedHashMap<>());
             // Si el mod no tiene inglés pero sí otro idioma de origen, no se agrega: taparía ese idioma.
             if (!langs.isEmpty() && !langs.containsKey("en_us")) return;
@@ -475,7 +476,7 @@ public class TranslationJob implements Runnable {
                     if (mc.getOverlay() != null) { f.complete(null); return; } // recargando recursos
                     ResourceManager rm = mc.getResourceManager();
                     f.complete(new Scan(LangScanner.scan(rm),
-                            cfg.translateBooks ? PatchouliBooks.scan(rm, target, cfg.useSpanishVariants ? fallbacks : List.of()) : List.of()));
+                            cfg.translateBooks ? Books.scan(rm, target, cfg.useSpanishVariants ? fallbacks : List.of()) : List.of()));
                 } catch (Throwable t) {
                     f.completeExceptionally(t);
                 }
@@ -513,7 +514,7 @@ public class TranslationJob implements Runnable {
     /** Sincronizado: con peticiones simultáneas, accept/fail modifican output desde varios hilos. */
     private synchronized boolean writePack() throws IOException {
         boolean changed = PackWriter.write(output, target);
-        changed |= PatchouliBooks.write(books, output, target);
+        changed |= Books.write(books, output, target);
         if (quests != null) {
             // Las misiones no están en el pack: FTB Quests las lee de su carpeta al cargar el mundo.
             questsChanged |= FtbQuests.write(quests, output.getOrDefault(FtbQuests.NS, Map.of()));

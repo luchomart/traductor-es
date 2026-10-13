@@ -96,6 +96,21 @@ public class TranslationCache {
         return new ConcurrentHashMap<>();
     }
 
+    /** Todo lo traducido para esta variante: namespace → clave → entrada (para el editor de correcciones). */
+    public Map<String, Map<String, Entry>> loadAll() {
+        Map<String, Map<String, Entry>> out = new TreeMap<>();
+        try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+            for (Path p : files.filter(p -> p.toString().endsWith(".json")).toList()) {
+                String name = p.getFileName().toString();
+                String ns = name.substring(0, name.length() - ".json".length()).replace("__", "/");
+                out.put(ns, namespace(ns));
+            }
+        } catch (IOException e) {
+            if (Files.isDirectory(dir)) TraductorES.LOG.error("[Traductor ES] No se pudo leer el caché", e);
+        }
+        return out;
+    }
+
     /** Los libros usan namespaces con "/" ("@patchouli/mod/libro"): se aplanan para el nombre de archivo. */
     private Path fileFor(String ns) {
         return dir.resolve(ns.replace("/", "__") + ".json");

@@ -110,7 +110,16 @@ public class TranslationJob implements Runnable {
 
     private final AtomicInteger consecutiveFailures = new AtomicInteger();
 
+    /** Solo rearma el pack (por ejemplo, después de guardar una corrección): no le pide nada a la IA. */
+    public final boolean applyOnly;
+    private Map<String, Map<String, String>> corrections = Map.of();
+
     public TranslationJob(Config cfg, String target, Consumer<TranslationJob> onFinish) {
+        this(cfg, target, onFinish, false);
+    }
+
+    public TranslationJob(Config cfg, String target, Consumer<TranslationJob> onFinish, boolean applyOnly) {
+        this.applyOnly = applyOnly;
         this.cfg = cfg;
         this.target = target;
         this.fallbacks = SpanishTarget.fallbacks(target);
@@ -136,9 +145,10 @@ public class TranslationJob implements Runnable {
     @Override
     public void run() {
         try {
-            if (cfg.model.isBlank()) chooseModel(null);
+            if (cfg.model.isBlank() && !applyOnly) chooseModel(null);
             List<Item> pending = prepare();
             if (cancelRequested) { finish(State.CANCELLED, "Cancelado"); return; }
+            if (applyOnly) { finish(State.DONE, "Correcciones aplicadas"); return; }
             if (pending.isEmpty()) {
                 finish(State.DONE, "Todo traducido: no había textos nuevos");
                 return;
@@ -171,7 +181,7 @@ public class TranslationJob implements Runnable {
         message = "Buscando textos en los mods…";
         Scan scan = scanOnMainThread();
         Map<String, Map<String, Map<String, String>>> all = scan.lang();
-        Map<String, Map<String, String>> corrections = Corrections.load();
+        corrections = Corrections.load();
 
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
         glossary = Glossary.create();
@@ -236,6 +246,7 @@ public class TranslationJob implements Runnable {
                 PatchouliBooks.extract(file.getValue(), "", (pointer, text) -> {
                     if (Validator.isTrivial(text)) return;
                     String key = file.getKey() + "#" + pointer;
+                    if (corrections.getOrDefault(pseudo, Map.of()).containsKey(key)) return; // ya está en la salida
                     String cached = usableCache(pseudo, key, text);
                     if (cached != null) { bookOut.put(key, cached); fromCache++; return; }
                     String field = pointer.substring(pointer.lastIndexOf('/') + 1);
@@ -263,6 +274,7 @@ public class TranslationJob implements Runnable {
         FtbQuests.extract(q, (key, text) -> {
             if (Validator.isTrivial(text)) return;
             questTexts++;
+            if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
             String cached = usableCache(FtbQuests.NS, key, text);
             if (cached != null) { questOut.put(key, cached); fromCache++; return; }
             enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
@@ -735,7 +747,7 @@ public class TranslationJob implements Runnable {
         } catch (IOException e) {
             TraductorES.LOG.error("[Traductor ES] No se pudo escribir el pack", e);
         }
-        writeReport(msg);
+        if (!applyOnly) writeReport(msg); // el informe es de la última traducción, no de aplicar correcciones
         message = msg;
         currentNamespace = "";
         state = end;

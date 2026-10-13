@@ -192,8 +192,10 @@ public class ConfigScreen extends BaseScreen {
         int x1 = innerX, x2 = innerX + cw + 6, y1 = contentTop + 8, y2 = y1 + ch + 6;
         int by1 = y1 + ch - 26, by2 = y2 + ch - 26;
         addRenderableWidget(Button.builder(Component.literal("Exportar"), b -> exportPack()).bounds(x1 + 6, by1, 80, 20).build());
-        Button editor = addRenderableWidget(Button.builder(Component.literal("Próximamente"), b -> {}).bounds(x2 + 6, by1, 96, 20).build());
-        editor.active = false;
+        addRenderableWidget(Button.builder(Component.literal("Abrir editor"), b -> {
+            Config.get().save();
+            minecraft.setScreen(new CorrectionScreen(this, ""));
+        }).bounds(x2 + 6, by1, 96, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Ver informe"), b -> Util.getPlatform().openFile(Config.DIR.resolve("informe.txt").toFile()))
                 .bounds(x1 + 6, by2, 86, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
@@ -506,7 +508,7 @@ public class ConfigScreen extends BaseScreen {
                 int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
                 int y1 = contentTop + 8, y2 = y1 + ch + 6, x2 = innerX + cw + 6;
                 card(g, innerX, y1, cw, "Exportar pack", "Un .zip para amigos con el mismo modpack. Lo usan sin IA.");
-                card(g, x2, y1, cw, "Corregir traducciones", "Buscá un texto y cambiá su traducción.");
+                card(g, x2, y1, cw, "Corregir traducciones", "Buscá un texto (objeto, libro o misión) y cambiá su traducción.");
                 card(g, innerX, y2, cw, "Última traducción", lastReport);
                 card(g, x2, y2, cw, "Archivos y asistente", "Configuración, glosario e informe. El asistente comprueba todo de nuevo.");
             }

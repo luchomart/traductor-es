@@ -63,12 +63,29 @@ public final class Traductor {
             return false;
         }
         TranslationJob j = new TranslationJob(Config.get(), target, Traductor::onFinish);
+        launch(j);
+        return true;
+    }
+
+    /**
+     * Rearma el pack con las correcciones guardadas, sin usar la IA, y recarga los textos al terminar (también
+     * dentro de un mundo). Devuelve false si hay una traducción en curso: la corrección se aplica cuando termine.
+     */
+    public static synchronized boolean applyCorrections() {
+        if (isRunning()) return false;
+        Minecraft mc = Minecraft.getInstance();
+        String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
+        if (target == null) return false;
+        launch(new TranslationJob(Config.get(), target, Traductor::onFinish, true));
+        return true;
+    }
+
+    private static void launch(TranslationJob j) {
         job = j;
         Thread t = new Thread(j, "Traductor ES");
         t.setDaemon(true);
         t.setPriority(Thread.MIN_PRIORITY);
         t.start();
-        return true;
     }
 
     private static void onFinish(TranslationJob j) {
@@ -76,6 +93,12 @@ public final class Traductor {
         mc.execute(() -> {
             finishedAtMs = System.currentTimeMillis();
             boolean inMenu = mc.level == null;
+            if (j.applyOnly) {
+                // El jugador acaba de corregir algo: se recarga ya, aunque esté en un mundo.
+                if (j.packChanged) mc.reloadResourcePacks();
+                if (j.questsChanged && !inMenu) toast("Traductor ES", "Corrección guardada. Las misiones se ven al volver a entrar al mundo.");
+                return;
+            }
             if (j.packChanged && inMenu && Config.get().autoReload) {
                 mc.reloadResourcePacks();
             } else if (j.packChanged) {
@@ -174,7 +197,7 @@ public final class Traductor {
     public static void onScreenRender(Screen screen, GuiGraphics g) {
         if (!(screen instanceof TitleScreen)) return;
         TranslationJob j = job;
-        if (j == null) return;
+        if (j == null || j.applyOnly) return;
         if (!j.isRunning() && System.currentTimeMillis() - finishedAtMs > SHOW_RESULT_MS) return;
         Font font = Minecraft.getInstance().font;
         int w = 176, h = 38, x = screen.width - w - 4, y = 4;
@@ -228,6 +251,11 @@ public final class Traductor {
         return LiteralArgumentBuilder.<S>literal("traductor")
                 .executes(Traductor::cmdStatus)
                 .then(LiteralArgumentBuilder.<S>literal("estado").executes(Traductor::cmdStatus))
+                .then(LiteralArgumentBuilder.<S>literal("corregir")
+                        .executes(ctx -> openCorrections(""))
+                        .then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("texto",
+                                com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                                .executes(ctx -> openCorrections(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "texto")))))
                 .then(LiteralArgumentBuilder.<S>literal("panel").executes(ctx -> {
                     // Al tick siguiente: el chat se cierra después de ejecutar el comando y taparía el panel.
                     Minecraft mc = Minecraft.getInstance();
@@ -254,6 +282,13 @@ public final class Traductor {
                     j.cancel();
                     return reply(ctx, "Cancelando… lo ya traducido se guarda");
                 }));
+    }
+
+    /** El editor de correcciones, con la búsqueda ya escrita. Al tick siguiente, como el panel. */
+    private static int openCorrections(String query) {
+        Minecraft mc = Minecraft.getInstance();
+        mc.tell(() -> mc.setScreen(new CorrectionScreen(mc.screen, query)));
+        return Command.SINGLE_SUCCESS;
     }
 
     private static <S> int cmdStatus(CommandContext<S> ctx) {

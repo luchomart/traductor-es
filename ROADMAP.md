@@ -49,7 +49,7 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [ ] Formato viejo (textos dentro de los capítulos), si aparece un modpack que lo use
 
 ## Extras
-- [ ] Editor de correcciones dentro del juego (buscador)
+- [x] Editor de correcciones dentro del juego (buscador + editor; /traductor corregir)
 - [ ] Ver el texto original manteniendo Alt
 - [ ] Forge 1.19.2
 

@@ -96,7 +96,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 
 **Pestaña Herramientas**: exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
 
-También podés usar comandos en el chat: `/traductor estado`, `/traductor panel`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
+También podés usar comandos en el chat: `/traductor estado`, `/traductor panel`, `/traductor corregir`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
 
 ## IA en la nube
 
@@ -139,24 +139,15 @@ Una clave es como una contraseña que le dice al servicio que sos vos. Los tres 
 
 ## Corregir una traducción
 
-La IA a veces se equivoca. Para arreglar un texto a mano, abrí la carpeta del mod (botón **Abrir carpeta**) y editá `correcciones.json`:
+La IA a veces se equivoca. Para arreglar un texto, abrí el editor: **Herramientas → Abrir editor**, o escribí `/traductor corregir` en el chat. También podés buscar directo: `/traductor corregir lingote`.
 
-```json
-{
-  "pneumaticcraft:block.pneumaticcraft.solar_compressor": "Compresor solar"
-}
-```
+1. Buscá el texto en inglés o en español. Aparecen los objetos, los libros y las misiones que tradujo la IA.
+2. Tocá el texto, corregilo y tocá **Guardar**.
+3. Se aplica enseguida. Las misiones se ven al volver a entrar al mundo.
 
-El formato es `"mod:clave": "texto"`. Para encontrar la clave, abrí la carpeta `cache`, entrá a la carpeta de tu idioma (por ejemplo `es_es`), abrí el archivo del mod (por ejemplo `pneumaticcraft.json`) y buscá (Ctrl + F) la traducción que querés cambiar. Cada texto aparece así, y la clave es lo que encabeza el bloque:
+Si tu corrección rompe un color o un marcador (`%s`, `{0}`, `&a`…), el editor te avisa antes de guardar. **Volver a la de la IA** deshace la corrección.
 
-```json
-"block.pneumaticcraft.solar_compressor": {
-  "o": "Solar Compressor",
-  "t": "Compresor Solar"
-}
-```
-
-`o` es el original y `t` la traducción. Las correcciones tienen prioridad sobre todo y se aplican la próxima vez que abras el juego.
+Las correcciones se guardan en `correcciones.json`, con el formato `"mod:clave": "texto"`, tienen prioridad sobre todo (incluso sobre el español oficial) y no se pierden al volver a traducir. También podés editar ese archivo a mano.
 
 Si querés que una palabra se traduzca **siempre igual** en todos los mods, agregala en `glosario.json`:
 
@@ -202,9 +193,10 @@ Primer uso:
 Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para ese botón; en cualquier versión también con /traductor panel en el chat), con un botón Guía arriba a la derecha y tres pestañas:
 - Conexión: Servicio (flechas para elegir Ollama, LM Studio, Gemini, Groq u OpenRouter), URL (se completa sola), Clave (se ve oculta; cada servicio guarda la suya; no hace falta con Ollama), botón "Conseguir"/"Descargar", Modelo (vacío = el mod elige el recomendado del servicio; botón "Elegir…" con la lista y un buscador) y "Probar conexión".
 - Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros y misiones (manuales de Patchouli y misiones de FTB Quests; las misiones se ven al volver a entrar al mundo y solo en mundos de un jugador), otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
-- Herramientas: exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
+- Herramientas: editor de correcciones, exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
 - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
-- Comandos en el chat: /traductor estado, panel, iniciar, pausar, reanudar, cancelar.
+- Corregir una traducción: Herramientas → Abrir editor (o /traductor corregir en el chat): buscar el texto en inglés o español, corregirlo y Guardar. Se aplica enseguida (las misiones, al volver a entrar al mundo).
+- Comandos en el chat: /traductor estado, panel, corregir, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 
 Problemas conocidos:

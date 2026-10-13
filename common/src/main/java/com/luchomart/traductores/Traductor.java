@@ -218,14 +218,14 @@ public final class Traductor {
                 g.drawString(font, paused ? "En pausa" : "Traduciendo mods…", tx, y + 6, paused ? UiKit.YELLOW : UiKit.YELLOW, false);
                 String p = pct + " %";
                 g.drawString(font, p, x + w - 6 - font.width(p), y + 6, UiKit.WHITE, false);
-                UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total);
                 String waiting = j.waitingMessage;
+                UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
                 String sub;
                 int color = UiKit.MUTED;
                 if (waiting != null) { sub = waiting; color = UiKit.YELLOW; }
                 else {
-                    double rate = j.ratePerMinute();
-                    sub = j.currentNamespace + (rate > 0 ? " · quedan " + duration((long) ((j.total - j.done) / rate * 60_000)) : "");
+                    String left = remaining(j);
+                    sub = j.currentNamespace + (left != null ? " · quedan " + left : "");
                 }
                 g.drawString(font, font.plainSubstrByWidth(sub, tw), tx, y + 26, color, false);
             }
@@ -326,7 +326,8 @@ public final class Traductor {
                         j.state == TranslationJob.State.PAUSED ? ChatFormatting.YELLOW : ChatFormatting.WHITE)));
                 double rate = j.ratePerMinute();
                 String detail = j.currentNamespace + " · " + Math.round(rate) + " textos/min";
-                if (rate > 0) detail += " · quedan " + duration((long) ((j.total - j.done) / rate * 60_000));
+                String left = remaining(j);
+                if (left != null) detail += " · quedan " + left;
                 out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
                 String waiting = j.waitingMessage;
                 if (waiting != null) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
@@ -341,6 +342,19 @@ public final class Traductor {
 
     static String fmt(int n) {
         return String.format(Locale.ROOT, "%,d", n).replace(',', '.');
+    }
+
+    /**
+     * Cuánto falta: con el ritmo real cuando ya hay datos (un minuto o 40 textos), y antes con el estimado del
+     * servicio. Null si no falta nada.
+     */
+    static String remaining(TranslationJob j) {
+        int left = j.total - j.done;
+        if (left <= 0) return null;
+        double rate = j.ratePerMinute();
+        long elapsed = System.currentTimeMillis() - j.translateStartMs - j.pausedMs;
+        if (rate > 0 && (j.done >= 40 || elapsed > 60_000)) return duration((long) (left / rate * 60_000));
+        return j.guessDuration(left);
     }
 
     static String duration(long ms) {

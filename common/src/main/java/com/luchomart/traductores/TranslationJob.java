@@ -146,6 +146,11 @@ public class TranslationJob implements Runnable {
     /** Guarda el caché a disco (por ejemplo, al cerrar el juego). */
     public void flushCache() { cache.flush(); }
 
+    /** Tiempo estimado para esa cantidad de textos según el servicio de esta traducción (antes de tener datos reales). */
+    public String guessDuration(int texts) {
+        return ServiceGuide.current(cfg).duration(texts);
+    }
+
     /** Textos por minuto desde que empezó la traducción, sin contar pausas. */
     public double ratePerMinute() {
         long elapsed = System.currentTimeMillis() - translateStartMs - pausedMs;

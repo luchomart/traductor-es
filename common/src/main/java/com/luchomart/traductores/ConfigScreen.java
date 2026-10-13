@@ -518,6 +518,11 @@ public class ConfigScreen extends BaseScreen {
             }
         }
         drawProgress(g);
+        // Mouse sobre el progreso: el detalle (mod actual, textos por minuto, fallidos).
+        TranslationJob j = Traductor.job();
+        if (j != null && j.isRunning() && !j.applyOnly && mouseX >= left && mouseX < left + W - 274 && mouseY >= height - 32 && mouseY < height - 10) {
+            g.renderComponentTooltip(font, Traductor.statusLines(j), mouseX, mouseY);
+        }
     }
 
     private void card(GuiGraphics g, int x, int y, int w, String title, String text) {
@@ -557,12 +562,23 @@ public class ConfigScreen extends BaseScreen {
         }
         switch (j.state) {
             case TRANSLATING, PAUSED -> {
+                boolean paused = j.state == TranslationJob.State.PAUSED;
                 int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
-                String head = (j.state == TranslationJob.State.PAUSED ? "En pausa " : "Traduciendo ") + Traductor.fmt(j.done) + "/" + Traductor.fmt(j.total);
-                g.drawString(font, font.plainSubstrByWidth(head, w - 30), x, y, j.state == TranslationJob.State.PAUSED ? UiKit.YELLOW : UiKit.GOLD, false);
+                String waiting = j.waitingMessage;
+                // Siempre algo que se mueve: el tiempo que falta, o por qué está esperando.
+                String head;
+                int color;
+                if (paused) { head = "En pausa · " + Traductor.fmt(j.done) + "/" + Traductor.fmt(j.total); color = UiKit.YELLOW; }
+                else if (waiting != null) { head = waiting; color = UiKit.YELLOW; }
+                else {
+                    String left = Traductor.remaining(j);
+                    head = Traductor.fmt(j.done) + "/" + Traductor.fmt(j.total) + (left != null ? " · quedan " + left : "");
+                    color = UiKit.GOLD;
+                }
                 String right = pct + " %";
+                g.drawString(font, font.plainSubstrByWidth(head, w - font.width(right) - 4), x, y, color, false);
                 g.drawString(font, right, x + w - font.width(right), y, UiKit.MUTED, false);
-                UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total);
+                UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
             }
             case SCANNING -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
             case DONE -> {

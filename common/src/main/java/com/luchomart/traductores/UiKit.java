@@ -41,12 +41,24 @@ public final class UiKit {
 
     /** Barra de progreso verde, como la de experiencia. fraction entre 0 y 1. */
     public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction) {
+        progressBar(g, x, y, w, h, fraction, false);
+    }
+
+    /** Con active, un brillo recorre la barra: se ve que sigue trabajando aunque el número tarde en cambiar. */
+    public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active) {
         g.fill(x, y, x + w, y + h, 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF262626);
         int fw = (int) Math.round((w - 2) * Math.max(0, Math.min(1, fraction)));
         if (fw > 0) {
             g.fill(x + 1, y + 1, x + 1 + fw, y + h - 1, 0xFF7FF23A);
             if (h > 4) g.fill(x + 1, y + h - 3, x + 1 + fw, y + h - 1, 0xFF4CAF1A);
+        }
+        if (active) {
+            int inner = w - 2, band = Math.max(8, inner / 8);
+            long period = 1800;
+            int pos = (int) ((System.currentTimeMillis() % period) * (inner + band) / period) - band;
+            int from = Math.max(0, pos), to = Math.min(inner, pos + band);
+            if (to > from) g.fill(x + 1 + from, y + 1, x + 1 + to, y + h - 1, 0x40FFFFFF);
         }
     }
 

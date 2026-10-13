@@ -62,7 +62,7 @@ public final class Traductor {
             toast("Traductor ES", "Elegí un idioma español en Opciones → Idioma (o un destino en config.json)");
             return false;
         }
-        TranslationJob j = new TranslationJob(Config.get(), target, Traductor::onFinish);
+        TranslationJob j = new TranslationJob(Config.get().snapshot(), target, Traductor::onFinish);
         launch(j);
         return true;
     }
@@ -76,7 +76,7 @@ public final class Traductor {
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
         if (target == null) return false;
-        launch(new TranslationJob(Config.get(), target, Traductor::onFinish, true));
+        launch(new TranslationJob(Config.get().snapshot(), target, Traductor::onFinish, true));
         return true;
     }
 

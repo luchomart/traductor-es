@@ -63,6 +63,14 @@ public class Config {
 
     private static Config instance;
 
+    /**
+     * Copia independiente: la usa cada traducción, para que cambiar el servicio en el panel no la afecte a mitad
+     * de camino (sigue con lo que tenía al empezar; lo nuevo se usa en la próxima).
+     */
+    public Config snapshot() {
+        return GSON.fromJson(GSON.toJson(this), Config.class);
+    }
+
     public static Config get() {
         if (instance == null) instance = load();
         return instance;

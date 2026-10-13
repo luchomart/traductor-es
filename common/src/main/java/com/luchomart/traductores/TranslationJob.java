@@ -566,7 +566,13 @@ public class TranslationJob implements Runnable {
             }
             if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
             cfg.model = pick;
-            cfg.save();
+            // cfg es la copia de esta traducción: el modelo elegido se guarda en la configuración real solo si
+            // el jugador no cambió de servicio ni de modelo mientras tanto.
+            Config live = Config.get();
+            if (live.apiUrl.equals(cfg.apiUrl) && (live.model.isBlank() || live.model.equals(old))) {
+                live.model = pick;
+                live.save();
+            }
             TraductorES.LOG.info("[Traductor ES] Modelo elegido automáticamente: {}{}", pick, old.isBlank() ? "" : " (antes: " + old + ")");
         } catch (FatalException e) {
             throw e;

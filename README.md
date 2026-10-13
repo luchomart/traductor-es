@@ -47,11 +47,17 @@ Copiá el archivo del mod en la carpeta `mods` de tu modpack. Usá el que corres
 
 Abrí el juego → **Opciones → Idioma** y elegí tu español (España, México, Argentina…). El mod traduce a ese.
 
-### 5. ¡Listo!
+### 5. El asistente
 
-Cada vez que abras el juego, el mod revisa si hay textos sin traducir y los traduce solo mientras estás en el **menú principal**. Arriba a la izquierda vas a ver el progreso y el tiempo que falta. Al terminar, los textos se actualizan solos.
+La primera vez que abras el juego aparece un **asistente de 3 pasos**:
 
-> La primera vez tarda bastante (de 30 minutos a varias horas, según la cantidad de mods y tu placa de video). Las siguientes veces solo traduce lo nuevo y tarda segundos.
+1. Elegís dónde trabaja la IA: **en tu PC** (Ollama) o **en la nube**.
+2. Comprueba solo que todo esté listo: que la IA responda, el modelo, el idioma y cuántos textos faltan. Si algo falla, te da el botón para arreglarlo (Descargar, Conseguir clave, Copiar comando, Cambiar idioma).
+3. Te muestra un resumen y tocás **Empezar a traducir**.
+
+Desde ahí, cada vez que abras el juego el mod traduce solo lo que falta. Mientras trabaja vas a ver un **aviso arriba a la derecha** del menú principal con el progreso y el tiempo restante. Al terminar, los textos se actualizan solos.
+
+> La primera vez tarda bastante (de 30 minutos a varias horas, según la cantidad de mods y tu placa de video o el servicio). Las siguientes veces solo traduce lo nuevo y tarda segundos.
 
 ## Mientras traduce
 
@@ -61,22 +67,30 @@ Cada vez que abras el juego, el mod revisa si hay textos sin traducir y los trad
 
 ## Panel de configuración
 
-En el menú principal: **Mods → Traductor ES → Configurar**.
+En el menú principal: **Mods → Traductor ES → Configurar**. Arriba tiene un indicador de conexión y el botón **Guía**, y abajo el progreso con **Traducir ahora / Pausar / Cancelar**. Pasá el mouse sobre cualquier opción para ver qué hace.
+
+**Pestaña Conexión**
 
 | Opción | Para qué sirve |
 |---|---|
-| Servicio | Elegí Ollama, LM Studio o un servicio en la nube (Gemini, OpenRouter, Groq). Completa la URL y el modelo. |
-| URL de la API | Dónde está la IA. Con Ollama no hace falta tocarla. |
-| Clave (API key) | Solo para servicios en la nube. |
-| Modelo | El modelo de IA. Cambialo si bajaste otro (por ejemplo `gemma3:4b`). |
-| Textos por lote | Cuántos textos manda juntos. Si ves errores de "respuesta cortada", bajalo a 10. |
-| A la vez | Cuántas peticiones manda al mismo tiempo. 1 para una IA en tu PC; 2 a 4 en la nube. |
-| Traducir al iniciar | Si está en "No", solo traduce cuando apretás "Traducir ahora". |
-| Probar conexión | Comprueba que la IA responde y muestra los modelos disponibles. |
-| Traducir ahora / Pausar / Cancelar | Arranca, pausa, reanuda o corta la traducción. |
-| Exportar pack | Crea `resourcepacks/TraductorES-traducciones.zip` para pasárselo a amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod. |
-| Abrir carpeta | Abre la carpeta del mod (configuración, informe y correcciones). |
-| Guía | Esta guía, dentro del juego. |
+| Servicio | Elegí con las flechas: Ollama, LM Studio (en tu PC), Gemini, Groq u OpenRouter (en la nube). Completa la URL solo. |
+| Clave (API key) | Solo para la nube. Se ve oculta y cada servicio guarda la suya. Con Ollama no hace falta. |
+| Conseguir / Descargar | Abre la página para crear la clave (nube) o para descargar el programa (PC). |
+| Modelo | Vacío = el mod elige el recomendado del servicio. **Elegir…** muestra la lista con buscador. |
+| Probar conexión | Comprueba que la IA responde y elige el modelo si hace falta. |
+
+**Pestaña Traducción**
+
+| Opción | Para qué sirve |
+|---|---|
+| Español de destino | *Automático* usa el idioma del juego; también podés fijar uno. |
+| Al abrir el juego | Traducir solo lo nuevo cada vez que llegás al menú. |
+| Mientras juego | *Auto*: con IA en la nube sigue; con IA en tu PC se pausa para no bajar los FPS. También *Sí* o *No*. |
+| Traducir libros | Los manuales de Patchouli dentro del juego. |
+| Otras variantes | Si un mod no trae tu español pero sí otro, usarlo en vez de traducir. |
+| Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |
+
+**Pestaña Herramientas**: exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
 
 También podés usar comandos en el chat: `/traductor estado`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
 
@@ -151,24 +165,35 @@ Si querés que una palabra se traduzca **siempre igual** en todos los mods, agre
 Copiá este texto y pegalo en la IA que uses (ChatGPT, Claude, Gemini…). Te va a guiar paso a paso, con los datos correctos del mod. También podés copiarlo desde el juego: **Configurar → Guía → ¿Necesitás ayuda? → Copiar prompt**.
 
 ```text
-Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Dame un paso por vez y esperá a que te confirme antes de seguir.
+Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Con eso, recomendame IA en mi PC o en la nube. Dame un paso por vez y esperá a que te confirme antes de seguir.
 
 Datos del mod (no inventes opciones que no estén acá):
-- Traduce los textos de los mods al español que el jugador tenga elegido en el juego (es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec) usando una IA. Es un mod solo de cliente.
+- Traduce los textos de los mods al español que el jugador tenga elegido en el juego (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador) usando una IA. Respeta las traducciones oficiales. Es un mod solo de cliente.
 - Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
-- Lo recomendado es una IA local con Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes). El mod se conecta a http://localhost:11434/v1/chat/completions.
-- Sin placa de video potente puede usar un servicio en la nube compatible con OpenAI. El botón "Servicio" del panel trae Gemini, OpenRouter y Groq. El botón "Conseguir" (al lado del campo Clave) abre la página para crear la clave: Gemini en aistudio.google.com/apikey, Groq en console.groq.com/keys, OpenRouter en openrouter.ai/settings/keys. La clave se muestra una sola vez y va en el campo Clave. Los textos de los mods se envían a ese servicio.
-- Modelo recomendado: "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más). Con menos VRAM: "ollama pull gemma3:4b". "ollama list" muestra los modelos instalados.
 - El juego tiene que estar en algún español: Opciones → Idioma.
-- Configuración en el juego: Mods → Traductor ES → Configurar. Tiene tres pestañas. Conexión: Servicio (Ollama, LM Studio, Gemini, OpenRouter, Groq), URL, Clave (oculta; no hace falta con Ollama), Modelo (botón Elegir… con la lista del servicio) y Probar conexión. Traducción: español de destino, al abrir el juego, mientras juego, libros, otras variantes, textos por lote (20) y a la vez (1 local, 2 a 4 en la nube). Herramientas: exportar pack, informe, abrir carpeta y asistente. Botón Guía arriba a la derecha.
-- Traduce solo en el menú principal al abrir el juego y muestra el progreso arriba a la izquierda. La primera vez puede tardar horas. Mientras se juega: con IA en la nube sigue traduciendo; con IA en la PC se pausa para no bajar los FPS (opción "Mientras juego": Auto/Sí/No en la pestaña Traducción). F3 + T recarga los textos.
-- Comandos: /traductor estado, iniciar, pausar, reanudar, cancelar.
+
+Dos formas de usarlo:
+- IA en la PC (gratis, sin internet): Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes) y un modelo bajado con "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más) o "ollama pull gemma3:4b" con menos VRAM. "ollama list" muestra los modelos instalados.
+- IA en la nube (sin placa de video potente): Gemini, Groq u OpenRouter, con una clave (API key) gratis. Se crean en aistudio.google.com/apikey (Gemini), console.groq.com/keys (Groq) y openrouter.ai/settings/keys (OpenRouter). La clave se muestra una sola vez. Los textos de los mods se envían a ese servicio.
+
+Primer uso:
+- Al abrir el juego aparece un asistente de 3 pasos: elegir "En mi PC" o "En la nube", una comprobación automática (que la IA responda, el modelo, el idioma y cuántos textos faltan, con botones para arreglar lo que falte: Descargar, Conseguir, Copiar comando, Cambiar idioma) y "Empezar a traducir". También se abre desde el panel (Herramientas → Asistente) y vuelve a aparecer si una traducción falla por la configuración.
+
+Panel (Mods → Traductor ES → Configurar), con un botón Guía arriba a la derecha y tres pestañas:
+- Conexión: Servicio (flechas para elegir Ollama, LM Studio, Gemini, Groq u OpenRouter), URL (se completa sola), Clave (se ve oculta; cada servicio guarda la suya; no hace falta con Ollama), botón "Conseguir"/"Descargar", Modelo (vacío = el mod elige el recomendado del servicio; botón "Elegir…" con la lista y un buscador) y "Probar conexión".
+- Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros del juego, otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
+- Herramientas: exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
+- Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
+- Comandos en el chat: /traductor estado, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 
 Problemas conocidos:
-- "No se pudo conectar con la IA": Ollama no está abierto.
-- "No encuentra el modelo": el campo Modelo no coincide con "ollama list".
+- "No hay ninguna IA respondiendo en esa dirección": Ollama no está abierto (o LM Studio, si se eligió ese).
+- "La clave falta o no es válida": crear una clave nueva con "Conseguir" y pegarla en Clave.
+- "No existe ese modelo": dejar Modelo vacío o usar "Elegir…"; el mod también cambia solo si el servicio retiró el modelo.
+- "El servicio está saturado" o pide bajar el ritmo: el mod espera y reintenta solo.
 - "Respuesta cortada": bajar Textos por lote a 10, o subir el contexto de Ollama con la variable de entorno OLLAMA_CONTEXT_LENGTH=8192.
+- Va muy lento: usar gemma3:4b o un servicio en la nube, y cerrar videos del navegador.
 - El juego se cierra por falta de memoria mientras traduce: Ollama puede usar varios GB de RAM. Se soluciona con las variables de entorno LLAMA_ARG_CACHE_RAM=0 y LLAMA_ARG_CTX_CHECKPOINTS=2 en el servicio de Ollama (después hay que reiniciarlo), cerrando otros programas o usando gemma3:4b.
 ```
 

@@ -321,7 +321,9 @@ public class ConfigScreen extends BaseScreen {
                     .withStyle(ChatFormatting.YELLOW));
             return;
         }
-        testResult = Component.literal("Probando…").withStyle(ChatFormatting.GRAY);
+        testResult = Component.literal(cfg.isLocalAi()
+                ? "Probando… (la primera vez puede tardar unos segundos mientras la IA carga el modelo)"
+                : "Probando… (algunos servicios tardan en responder la primera vez)").withStyle(ChatFormatting.GRAY);
         testing = true;
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();
@@ -543,7 +545,10 @@ public class ConfigScreen extends BaseScreen {
                 UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total);
             }
             case SCANNING -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
-            case DONE -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.GREEN, false);
+            case DONE -> {
+                String done = j.total == 0 ? "✓ Todo traducido" : "✓ Terminado: " + Traductor.fmt(j.done - j.failed) + " nuevos";
+                g.drawString(font, font.plainSubstrByWidth(done, w), x, y + 6, UiKit.GREEN, false);
+            }
             default -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6,
                     j.state == TranslationJob.State.ERROR ? UiKit.RED : UiKit.YELLOW, false);
         }

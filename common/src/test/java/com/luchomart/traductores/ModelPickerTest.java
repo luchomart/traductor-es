@@ -54,4 +54,15 @@ class ModelPickerTest {
     void sinModelosDeChatNoRecomiendaNada() {
         assertNull(ModelPicker.recommend(Preset.GROQ, List.of("whisper-large-v3")));
     }
+
+    @Test
+    void lasVersionesDePruebaVanAlFinalYLasRarasNoAparecen() {
+        List<String> gemini = List.of("antigravity-preview-05-2026", "deep-research-preview-04-2026", "gemini-3.9-flash-preview-09-2026",
+                "gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.8-pro");
+        List<String> ranked = ModelPicker.ranked(Preset.GEMINI, gemini);
+        assertEquals("gemini-3.8-flash", ranked.get(0));
+        assertFalse(ranked.contains("antigravity-preview-05-2026"));
+        assertFalse(ranked.contains("deep-research-preview-04-2026"));
+        assertEquals("gemini-3.9-flash-preview-09-2026", ranked.get(ranked.size() - 1));
+    }
 }

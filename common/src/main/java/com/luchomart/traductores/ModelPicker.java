@@ -14,7 +14,10 @@ import java.util.regex.Pattern;
 public final class ModelPicker {
     /** Modelos que no sirven para traducir texto: voz, filtros de seguridad, imágenes, embeddings… */
     private static final Pattern NOT_CHAT = Pattern.compile(
-            "guard|safeguard|orpheus|tts|whisper|embed|image|imagen|audio|speech|moderation|rerank|veo|aqa|learnlm|live|transcribe|vision-preview|computer-use");
+            "guard|safeguard|orpheus|tts|whisper|embed|image|imagen|audio|speech|moderation|rerank|veo|aqa|learnlm|live|transcribe|vision-preview|computer-use"
+            + "|deep-research|antigravity|robotics");
+    /** Versiones de prueba: se pueden elegir, pero se listan al final. */
+    private static final Pattern EXPERIMENTAL = Pattern.compile("preview|exp|beta|latest");
     private static final Pattern VERSION = Pattern.compile("(\\d+(?:\\.\\d+)*)");
     /** Gemini sugiere el reemplazo en el error: "Please update your code to use models/gemini-x-flash". */
     private static final Pattern SUGGESTION = Pattern.compile("use (?:models/)?([A-Za-z0-9._:/-]+[A-Za-z0-9])");
@@ -47,6 +50,8 @@ public final class ModelPicker {
     /** Modelos de chat con el recomendado primero (para mostrarlos en el panel). */
     public static List<String> ranked(Preset preset, List<String> available) {
         List<String> chat = chatModels(available);
+        // Estables primero, versiones de prueba al final (el orden entre ellos se mantiene).
+        chat.sort(Comparator.comparing(m -> EXPERIMENTAL.matcher(m.toLowerCase(Locale.ROOT)).find()));
         String best = recommend(preset, available);
         if (best != null) {
             chat.remove(best);

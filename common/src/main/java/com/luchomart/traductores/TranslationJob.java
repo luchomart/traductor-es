@@ -152,8 +152,15 @@ public class TranslationJob implements Runnable {
     public void flushCache() { cache.flush(); }
 
     /** Tiempo estimado para esa cantidad de textos según el servicio de esta traducción (antes de tener datos reales). */
+    /** Lo que le queda a la clave en el servicio (Groq y OpenRouter), o null si no se sabe. */
+    public String quota() {
+        return client.lastQuota();
+    }
+
+    private volatile long quotaCheckedMs;
+
     public String guessDuration(int texts) {
-        return ServiceGuide.current(cfg).duration(texts);
+        return ServiceGuide.estimate(cfg).duration(texts);
     }
 
     /** Textos por minuto desde que empezó la traducción, sin contar pausas. */
@@ -524,6 +531,11 @@ public class TranslationJob implements Runnable {
                 awaitPause();
                 raw = client.translate(cfg, prompt, masked);
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
+                // OpenRouter no lo informa en cada respuesta: se consulta cada tanto (Groq se actualiza solo).
+                if (Preset.fromUrl(cfg.apiUrl) == Preset.OPENROUTER && System.currentTimeMillis() - quotaCheckedMs > 120_000) {
+                    quotaCheckedMs = System.currentTimeMillis();
+                    client.quota(cfg);
+                }
                 consecutiveFailures.set(0);
                 break;
             } catch (ConnectException | HttpConnectTimeoutException | java.net.UnknownHostException e) {

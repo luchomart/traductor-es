@@ -24,6 +24,8 @@ public class LlmClient {
             .build();
     private volatile boolean jsonModeUnsupported = false;
     private volatile boolean reasoningUnsupported = false;
+    /** Lo que le queda a la clave según la última respuesta (solo Groq lo informa en cada respuesta), o null. */
+    private volatile String lastQuota;
 
     public static class LlmException extends IOException {
         /** Código HTTP, o 0 si el error no vino de una respuesta HTTP. */
@@ -97,6 +99,42 @@ public class LlmClient {
         return out;
     }
 
+    /**
+     * Cuánto le queda a la clave, en una línea, o null si el servicio no lo informa.
+     * Groq: lo de la última respuesta (hace falta haber hecho una petición). OpenRouter: se consulta.
+     */
+    public String quota(Config cfg) {
+        Preset p = Preset.fromUrl(cfg.apiUrl);
+        if (p == Preset.OPENROUTER) {
+            String base = normalizeUrl(cfg.apiUrl).replaceFirst("/chat/completions/?$", "");
+            String key = get(base + "/key", cfg), credits = get(base + "/credits", cfg);
+            String q = Quota.fromOpenRouter(key, credits, cfg.model != null && cfg.model.endsWith(":free"));
+            if (q != null) lastQuota = q;
+            return q;
+        }
+        return p == Preset.GROQ ? lastQuota : null;
+    }
+
+    /** GET con la clave; null si falla (es información opcional). */
+    private String get(String url, Config cfg) {
+        try {
+            HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).GET();
+            if (cfg.apiKey != null && !cfg.apiKey.isBlank()) req.header("Authorization", "Bearer " + cfg.apiKey);
+            HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            return res.statusCode() / 100 == 2 ? res.body() : null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (IOException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** Lo último que se supo del límite, sin hacer peticiones. */
+    public String lastQuota() {
+        return lastQuota;
+    }
+
     /** Petición corta para comprobar que el servidor y el modelo responden. */
     public String ping(Config cfg) throws IOException, InterruptedException {
         // Margen amplio: los modelos que razonan gastan tokens pensando antes de contestar.
@@ -144,6 +182,10 @@ public class LlmClient {
         if (cfg.apiKey != null && !cfg.apiKey.isBlank()) req.header("Authorization", "Bearer " + cfg.apiKey);
 
         HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (Preset.fromUrl(cfg.apiUrl) == Preset.GROQ) {
+            String q = Quota.fromGroqHeaders(res.headers());
+            if (q != null) lastQuota = q;
+        }
         if (res.statusCode() == 400) {
             // Parámetros opcionales que algunos servidores no aceptan: se sigue sin ellos y no se vuelven a pedir.
             String err = res.body() == null ? "" : res.body().toLowerCase(java.util.Locale.ROOT);

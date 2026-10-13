@@ -332,6 +332,8 @@ public final class Traductor {
                 String waiting = j.waitingMessage();
                 if (waiting != null) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
+                String quota = j.quota();
+                if (quota != null) out.add(Component.literal(quota).withStyle(ChatFormatting.DARK_AQUA));
             }
             case DONE -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.GREEN)));
             case CANCELLED -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.YELLOW)));

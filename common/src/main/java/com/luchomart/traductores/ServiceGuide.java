@@ -1,6 +1,8 @@
 package com.luchomart.traductores;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Comparación de servicios para "¿Cuál conviene?": velocidad aproximada y costo de cada opción.
@@ -17,6 +19,11 @@ public final class ServiceGuide {
      */
     public record Option(String name, Preset preset, boolean free, boolean freeModel, int perMinute, int perDay,
                          String cost, String note) {
+        /** La misma opción con otra velocidad (la medida con el minitest). */
+        public Option withSpeed(int textsPerMinute) {
+            return new Option(name, preset, free, freeModel, Math.max(1, textsPerMinute), perDay, cost, note);
+        }
+
         /** Tiempo aproximado para traducir esa cantidad de textos. */
         public String duration(int texts) {
             if (texts <= 0) return "nada";
@@ -45,6 +52,20 @@ public final class ServiceGuide {
                     "Gratis", "Lento: el plan gratis permite unos 1.000 textos por día."),
             new Option("En tu PC (Ollama)", Preset.OLLAMA, true, false, 60, 0,
                     "Gratis", "Sin internet ni cuentas. Depende de tu placa de video (gemma3:12b)."));
+
+    /** Velocidad medida con el minitest en esta sesión, por servicio y modelo. */
+    private static final Map<String, Integer> MEASURED = new ConcurrentHashMap<>();
+
+    static void measured(String apiUrl, String model, int textsPerMinute) {
+        MEASURED.put(apiUrl + " " + model, textsPerMinute);
+    }
+
+    /** La opción actual con la velocidad medida, si se midió; si no, con la aproximada. */
+    public static Option estimate(Config cfg) {
+        Option o = current(cfg);
+        Integer m = MEASURED.get(cfg.apiUrl + " " + cfg.model);
+        return m == null ? o : o.withSpeed(m);
+    }
 
     /** La opción que corresponde a la configuración actual. */
     public static Option current(Config cfg) {

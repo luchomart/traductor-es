@@ -74,7 +74,7 @@ public class WizardScreen extends BaseScreen {
     }
 
     /** Leer los recursos va en el hilo del juego; el resto, en el hilo que llama. */
-    private static Map<String, Map<String, Map<String, String>>> scanResources(Minecraft mc) {
+    static Map<String, Map<String, Map<String, String>>> scanResources(Minecraft mc) {
         CompletableFuture<Map<String, Map<String, Map<String, String>>>> scan = new CompletableFuture<>();
         mc.execute(() -> {
             try {
@@ -336,7 +336,13 @@ public class WizardScreen extends BaseScreen {
             return;
         }
         Traductor.setConnection(Traductor.Connection.OK, cfg.model);
-        cAi.set(Status.OK, "La IA responde", "en " + where);
+        cAi.set(Status.OK, "La IA responde", "en " + where + " · midiendo la velocidad…");
+        // Minitest: con la velocidad medida, el tiempo de "textos sin traducir" sale más preciso.
+        String target = SpanishTarget.resolve(cfg.targetLanguage, Minecraft.getInstance().options.languageCode);
+        Integer speed = ConfigScreen.speedTestAllowed() ? SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es") : null;
+        String quota = client.quota(cfg);
+        cAi.set(Status.OK, "La IA responde" + (speed != null ? " · ~" + speed + " textos/min" : ""),
+                quota != null ? quota : "en " + where);
         cModel.set(Status.OK, "Modelo: " + cfg.model, cloud ? "elegido automáticamente" : "instalado en tu PC");
     }
 

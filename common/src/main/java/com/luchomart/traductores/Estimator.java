@@ -12,7 +12,7 @@ public final class Estimator {
     public record Result(int texts, int mods) {
         /** Tiempo aproximado con el servicio configurado (ver ServiceGuide). */
         public String duration(Config cfg) {
-            return texts == 0 ? "nada" : ServiceGuide.current(cfg).duration(texts);
+            return texts == 0 ? "nada" : ServiceGuide.estimate(cfg).duration(texts);
         }
     }
 

@@ -26,7 +26,7 @@ public class ConfigScreen extends BaseScreen {
     }
 
     private static final int ROW = 22, LABEL_W = 100, HELP_W = 74;
-    private static final int MAX_MODELS_SHOWN = 8;
+    private static final int MAX_MODELS_SHOWN = 4;
     private static final List<String> TARGETS = new ArrayList<>();
     static {
         TARGETS.add("auto");
@@ -377,6 +377,11 @@ public class ConfigScreen extends BaseScreen {
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
+                report(ok.copy().append(Component.literal(" Midiendo la velocidad…").withStyle(ChatFormatting.GRAY)));
+                String speed = speedLine(client, cfg);
+                if (speed != null) ok.append(Component.literal(" " + speed).withStyle(ChatFormatting.AQUA));
+                String quota = client.quota(cfg);
+                if (quota != null) ok.append(Component.literal(" " + quota + ".").withStyle(ChatFormatting.YELLOW));
                 List<String> others = ModelPicker.ranked(preset, models);
                 others.remove(cfg.model);
                 if (!others.isEmpty()) ok.append(Component.literal(" Otros modelos: " + summarize(others)).withStyle(ChatFormatting.GRAY));
@@ -391,6 +396,35 @@ public class ConfigScreen extends BaseScreen {
         }, "Traductor ES - prueba");
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * Mientras traduce no se mide: la prueba competiría con la traducción (y con una IA en la PC haría fila).
+     * Durante la traducción el panel ya muestra el ritmo real.
+     */
+    static boolean speedTestAllowed() {
+        TranslationJob j = Traductor.job();
+        return j == null || j.state != TranslationJob.State.TRANSLATING;
+    }
+
+    /** Minitest de velocidad y cuánto tardaría lo que falta: "Velocidad: ~85 textos/min → faltan 3.891 textos: ~45 min." */
+    private static String speedLine(LlmClient client, Config cfg) {
+        if (!speedTestAllowed()) return "La velocidad real se ve abajo, en el progreso.";
+        Minecraft mc = Minecraft.getInstance();
+        String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
+        Integer perMinute = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");
+        if (perMinute == null) return null;
+        String line = "Velocidad: ~" + perMinute + " textos/min";
+        if (target != null) {
+            try {
+                int texts = Estimator.estimate(WizardScreen.scanResources(mc), target, cfg).texts();
+                line += texts == 0 ? " (no falta traducir nada)" : " → faltan " + Traductor.fmt(texts) + " textos: "
+                        + ServiceGuide.estimate(cfg).duration(texts);
+            } catch (RuntimeException e) {
+                TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
+            }
+        }
+        return line + ".";
     }
 
     /** Prueba la conexión reintentando si el servicio está saturado (503) o pide esperar (429). */

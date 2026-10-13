@@ -121,7 +121,7 @@ public class ConfigScreen extends BaseScreen {
         } else {
             key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
         }
-        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en config.json (no compartas ese archivo).")));
+        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en config.json y, con «Claves compartidas», en ~/.traductor_es (no compartas esos archivos).")));
         helpBtn = addRenderableWidget(Button.builder(Component.empty(), b -> openHelpPage())
                 .bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20).build());
         y += ROW;
@@ -190,6 +190,12 @@ public class ConfigScreen extends BaseScreen {
         y += ROW;
         toggle(innerX, y, half, "Original con Alt", () -> cfg.originalOnAlt, v -> cfg.originalOnAlt = v,
                 "Con Alt apretado sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés.");
+        toggle(innerX + half + 4, y, half, "Claves compartidas", () -> cfg.shareKeys, v -> {
+                    cfg.shareKeys = v;
+                    if (v) cfg.pullSharedKeys();
+                    cfg.save();
+                },
+                "Las claves de los servicios valen para todos tus modpacks (se guardan en " + Shared.DIR + "). Apagado: cada modpack tiene las suyas.");
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));
@@ -442,9 +448,9 @@ public class ConfigScreen extends BaseScreen {
         if (!speedTestAllowed()) return "La velocidad real se ve abajo, en el progreso (para medirla aparte, pausá la traducción).";
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
-        Integer perMinute = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");
-        if (perMinute == null) return null;
-        String line = "Velocidad: ~" + perMinute + " textos/min";
+        SpeedTest.Result speed = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");
+        if (speed == null) return null;
+        String line = "Velocidad: " + speed.describe();
         if (target != null) {
             try {
                 int texts = Estimator.estimate(WizardScreen.scanResources(mc), target, cfg).texts();

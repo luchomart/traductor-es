@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /** Configuración del mod, guardada en config/traductor_es/config.json. */
 public class Config {
@@ -58,6 +59,11 @@ public class Config {
     public boolean useSpanishVariants = true;
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
+    /**
+     * Claves y estado de los modelos compartidos entre todos los modpacks (en ~/.traductor_es). Si está apagado,
+     * cada modpack tiene las suyas.
+     */
+    public boolean shareKeys = true;
     /** Prompt de sistema. Vacío = usar el prompt incorporado. */
     public String systemPrompt = "";
 
@@ -87,6 +93,7 @@ public class Config {
         }
         if (cfg == null) cfg = new Config();
         cfg.sanitize();
+        if (cfg.shareKeys) cfg.pullSharedKeys();
         instance = cfg;
         cfg.save();
         return cfg;
@@ -96,6 +103,7 @@ public class Config {
         // La clave escrita queda guardada para su servicio.
         Preset p = Preset.fromUrl(apiUrl);
         if (p.isCloud()) apiKeys.put(p.name(), apiKey);
+        if (shareKeys) Shared.saveKeys(apiKeys);
         try {
             Files.createDirectories(DIR);
             Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8);
@@ -120,6 +128,15 @@ public class Config {
         if (targetLanguage == null || targetLanguage.isBlank()) targetLanguage = "auto";
         if (excludedNamespaces == null) excludedNamespaces = new ArrayList<>();
         if (systemPrompt == null) systemPrompt = "";
+    }
+
+    /** Trae las claves compartidas por los otros modpacks (mandan las compartidas: son las más recientes). */
+    public void pullSharedKeys() {
+        Map<String, String> shared = Shared.loadKeys();
+        if (shared.isEmpty()) return;
+        apiKeys.putAll(shared);
+        Preset p = Preset.fromUrl(apiUrl);
+        if (p.isCloud() && shared.containsKey(p.name())) apiKey = shared.get(p.name());
     }
 
     /** Cambia de servicio: URL, modelo y peticiones a la vez; trae la clave guardada de ese servicio. */

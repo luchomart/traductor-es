@@ -358,9 +358,9 @@ public class WizardScreen extends BaseScreen {
         cAi.set(Status.OK, "La IA responde", "en " + where + " · midiendo la velocidad…");
         // Minitest: con la velocidad medida, el tiempo de "textos sin traducir" sale más preciso.
         String target = SpanishTarget.resolve(cfg.targetLanguage, Minecraft.getInstance().options.languageCode);
-        Integer speed = ConfigScreen.speedTestAllowed() ? SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es") : null;
+        SpeedTest.Result speed = ConfigScreen.speedTestAllowed() ? SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es") : null;
         String quota = client.quota(cfg);
-        cAi.set(Status.OK, "La IA responde" + (speed != null ? " · ~" + speed + " textos/min" : ""),
+        cAi.set(Status.OK, "La IA responde" + (speed != null ? " · ~" + speed.effective() + " textos/min" + (speed.limited() ? " (tope del plan gratis)" : "") : ""),
                 quota != null ? quota : "en " + where);
         cModel.set(Status.OK, "Modelo: " + cfg.model, switched != null ? "en vez de " + switched
                 : cloud ? "elegido automáticamente" : "instalado en tu PC");

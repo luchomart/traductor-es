@@ -50,7 +50,8 @@ public final class ModelStatus {
 
     /** Se resuelve recién al usarlo (los tests no tienen la carpeta del juego). */
     private static Path file() {
-        return Config.DIR.resolve("modelos.json");
+        // Depende de la cuenta, no del modpack: con las claves compartidas, también se comparte.
+        return (Config.get().shareKeys ? Shared.DIR : Config.DIR).resolve("modelos.json");
     }
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static Map<String, Info> data;

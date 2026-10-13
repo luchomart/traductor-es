@@ -25,21 +25,38 @@ public final class SpeedTest {
         for (int i = 0; i < texts.length; i++) SAMPLE.put("t" + i, texts[i]);
     }
 
+    /**
+     * raw: lo que dio el test (con las peticiones simultáneas); effective: lo que rinde de verdad con el límite
+     * del plan gratis. Si son muy distintos, el servicio es rápido pero el plan gratis lo frena.
+     */
+    public record Result(int raw, int effective) {
+        public boolean limited() {
+            return raw > effective * 3 / 2;
+        }
+
+        /** "~95 textos/min" o "muy rápida (~920 textos/min), con el plan gratis rinde ~60/min". */
+        public String describe() {
+            return limited() ? "muy rápida (~" + raw + " textos/min); con el límite del plan gratis rinde ~" + effective + "/min"
+                    : "~" + effective + " textos/min";
+        }
+    }
+
     /** Textos por minuto estimados con esta configuración (ya contadas las peticiones simultáneas y el límite). */
-    public static int measure(LlmClient client, Config cfg, String target) throws IOException, InterruptedException {
+    public static Result measure(LlmClient client, Config cfg, String target) throws IOException, InterruptedException {
         String prompt = cfg.effectivePrompt(target);
         long t0 = System.nanoTime();
         client.translate(cfg, prompt, SAMPLE);
         double seconds = Math.max(0.2, (System.nanoTime() - t0) / 1e9);
         int perMinute = estimate(seconds, SAMPLE.size(), cfg.parallelRequests, cfg.isLocalAi(), ServiceGuide.current(cfg));
+        int raw = (int) Math.max(1, Math.round(SAMPLE.size() / seconds * 60 * (cfg.isLocalAi() ? 1 : Math.max(1, cfg.parallelRequests))));
         ServiceGuide.measured(cfg.apiUrl, cfg.model, perMinute);
-        TraductorES.LOG.info("[Traductor ES] Minitest: {} textos en {} s → ~{} textos/min", SAMPLE.size(),
-                Math.round(seconds * 10) / 10.0, perMinute);
-        return perMinute;
+        TraductorES.LOG.info("[Traductor ES] Minitest: {} textos en {} s → ~{} textos/min (sin límite: ~{})", SAMPLE.size(),
+                Math.round(seconds * 10) / 10.0, perMinute, raw);
+        return new Result(Math.max(raw, perMinute), perMinute);
     }
 
     /** Como {@link #measure}, pero si falla devuelve null (el minitest es un extra: no debe cortar la prueba). */
-    public static Integer tryMeasure(LlmClient client, Config cfg, String target) {
+    public static Result tryMeasure(LlmClient client, Config cfg, String target) {
         try {
             return measure(client, cfg, target);
         } catch (InterruptedException e) {

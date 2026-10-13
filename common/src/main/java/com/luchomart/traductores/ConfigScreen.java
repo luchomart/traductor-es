@@ -366,34 +366,39 @@ public class ConfigScreen extends BaseScreen {
         testing = true;
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();
+            // Lo que pasó con los modelos probados, para explicarlo en el resultado (bien o mal).
+            StringBuilder note = new StringBuilder();
             try {
                 List<String> models = client.listModels(cfg);
-                String note = "";
                 if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
-                    String pick = ModelPicker.recommend(preset, models);
+                    String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
                     if (pick != null) {
-                        note = cfg.model.isBlank() ? " Se eligió el modelo recomendado." : " «" + cfg.model + "» no estaba; se eligió el recomendado.";
+                        note.append(cfg.model.isBlank() ? " Se eligió el modelo recomendado." : " «" + cfg.model + "» no estaba; se eligió el recomendado.");
                         setModel(cfg, pick);
                     }
                 }
-                long t0 = System.currentTimeMillis();
-                try {
-                    pingRetrying(client, cfg);
-                } catch (LlmClient.LlmException e) {
-                    if (!e.isModelNotFound()) throw e;
-                    // El servicio lista el modelo pero ya no lo da (pasó con Gemini): se prueba con su sugerencia o el recomendado.
-                    String old = cfg.model, alt = ModelPicker.suggestedReplacement(e.getMessage());
-                    if (alt == null || alt.equals(old)) {
-                        List<String> others = new ArrayList<>(models);
-                        others.remove(old);
-                        alt = ModelPicker.recommend(preset, others);
-                    }
-                    if (alt == null) throw e;
-                    setModel(cfg, alt);
-                    note = " «" + old + "» ya no está disponible; se cambió a «" + alt + "».";
+                long t0;
+                for (int attempt = 0; ; attempt++) {
                     t0 = System.currentTimeMillis();
-                    pingRetrying(client, cfg);
+                    try {
+                        pingRetrying(client, cfg);
+                        break;
+                    } catch (LlmClient.LlmException e) {
+                        // Retirado, sin plan gratis o agotado: se dice por qué y se prueba con otro que pueda andar.
+                        String old = cfg.model;
+                        ModelStatus.Info info = ModelStatus.get(cfg.apiUrl, old);
+                        if (info == null || attempt >= 3) throw e;
+                        List<String> usable = ModelStatus.usable(cfg.apiUrl, models);
+                        usable.remove(old);
+                        String alt = ModelPicker.suggestedReplacement(e.getMessage());
+                        if (alt == null || !usable.contains(alt)) alt = ModelPicker.recommend(preset, usable);
+                        note.append(" ").append(info.explain(old));
+                        if (alt == null) throw new LlmClient.LlmException("no queda otro modelo disponible en este servicio: probá otro servicio con «¿Cuál conviene?»");
+                        note.append(" Se probó con «").append(alt).append("».");
+                        setModel(cfg, alt);
+                    }
                 }
+                ModelStatus.ok(cfg.apiUrl, cfg.model);
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
@@ -410,7 +415,11 @@ public class ConfigScreen extends BaseScreen {
             } catch (Exception e) {
                 Traductor.setConnection(Traductor.Connection.FAIL, LlmClient.describe(e));
                 String with = cfg.model.isBlank() ? "" : " con «" + cfg.model + "»";
-                report(Component.literal("Error" + with + ": " + LlmClient.describe(e)).withStyle(ChatFormatting.RED));
+                ModelStatus.Info info = ModelStatus.get(cfg.apiUrl, cfg.model);
+                String why = info != null ? info.explain(cfg.model) : "Error" + with + ": " + LlmClient.describe(e);
+                MutableComponent err = Component.literal(note.toString().strip());
+                if (!err.getString().isEmpty()) err.append(" ");
+                report(err.append(Component.literal(why).withStyle(ChatFormatting.RED)).withStyle(ChatFormatting.GOLD));
             } finally {
                 testing = false;
             }
@@ -455,7 +464,8 @@ public class ConfigScreen extends BaseScreen {
                 client.ping(cfg);
                 return;
             } catch (LlmClient.LlmException e) {
-                if (!e.isTransient() || attempt >= 3) throw e;
+                // Si es algo del modelo (retirado, sin plan gratis, cupo de horas), reintentar no sirve.
+                if (ModelStatus.learn(cfg.apiUrl, cfg.model, e) != null || !e.isTransient() || attempt >= 3) throw e;
                 report(Component.literal("El servicio está saturado, reintentando (" + attempt + "/2)…").withStyle(ChatFormatting.YELLOW));
                 Thread.sleep(e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 10) * 1000 : 4000);
             }

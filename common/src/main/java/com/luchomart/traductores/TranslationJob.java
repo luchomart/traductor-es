@@ -249,7 +249,7 @@ public class TranslationJob implements Runnable {
     @Override
     public void run() {
         try {
-            if (cfg.model.isBlank() && !applyOnly) chooseModel(null);
+            if (cfg.model.isBlank() && !applyOnly) chooseModel(null, null);
             List<Item> pending = prepare();
             if (cancelRequested) { finish(State.CANCELLED, "Cancelado"); return; }
             if (applyOnly) { finish(State.DONE, "Correcciones aplicadas"); return; }
@@ -607,11 +607,14 @@ public class TranslationJob implements Runnable {
         });
 
         Map<String, String> raw;
+        String used = cfg.model;
         int connectFails = 0, transientFails = 0;
         while (true) {
             try {
                 awaitPause();
+                used = cfg.model;
                 raw = client.translate(cfg, prompt, masked);
+                ModelStatus.ok(cfg.apiUrl, used);
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
                 // OpenRouter no lo informa en cada respuesta: se consulta cada tanto (Groq se actualiza solo).
                 if (Preset.fromUrl(cfg.apiUrl) == Preset.OPENROUTER && System.currentTimeMillis() - quotaCheckedMs > 120_000) {
@@ -631,10 +634,10 @@ public class TranslationJob implements Runnable {
                 Thread.currentThread().interrupt();
                 throw new FatalException("Traducción interrumpida", e);
             } catch (LlmClient.LlmException e) {
-                if (e.isModelNotFound() && !modelSwitched) {
-                    // El servicio retiró el modelo: se cambia una vez al que sugiere o al recomendado.
-                    modelSwitched = true;
-                    chooseModel(e);
+                // Retirado, sin plan gratis o sin cupo por horas: esperar no sirve, se sigue con otro modelo.
+                ModelStatus.Info learned = ModelStatus.learn(cfg.apiUrl, used, e);
+                if (learned != null && modelSwitches.get() < MAX_MODEL_SWITCHES) {
+                    chooseModel(e, used);
                     continue;
                 }
                 if (e.isModelNotFound()) {
@@ -668,24 +671,38 @@ public class TranslationJob implements Runnable {
         return out;
     }
 
-    private volatile boolean modelSwitched;
+    /** Cambios de modelo automáticos en esta traducción (tope para no dar vueltas si todo falla). */
+    private final java.util.concurrent.atomic.AtomicInteger modelSwitches = new java.util.concurrent.atomic.AtomicInteger();
+    private static final int MAX_MODEL_SWITCHES = 6;
 
     /**
      * Elige el modelo de la lista real del servicio (campo vacío o modelo retirado) y lo guarda en la configuración.
      * Sincronizado: con peticiones simultáneas, varias pueden descubrir a la vez que el modelo ya no existe.
      */
-    private synchronized void chooseModel(LlmClient.LlmException cause) throws FatalException {
+    private synchronized void chooseModel(LlmClient.LlmException cause, String failed) throws FatalException {
+        // Con peticiones simultáneas, otra ya pudo haber cambiado de modelo.
+        if (failed != null && !failed.equals(cfg.model)) return;
         String old = cfg.model;
+        if (failed != null) modelSwitches.incrementAndGet();
         try {
-            List<String> models = client.listModels(cfg);
+            // Sin los retirados, sin los que no tienen plan gratis y sin los agotados.
+            List<String> models = ModelStatus.usable(cfg.apiUrl, client.listModels(cfg));
             String pick = cause == null ? null : ModelPicker.suggestedReplacement(cause.getMessage());
+            if (pick != null && ModelStatus.get(cfg.apiUrl, pick) != null) pick = null;
             if (pick == null || pick.equals(old) || (!models.isEmpty() && !models.contains(pick))) {
                 List<String> others = new ArrayList<>(models);
                 others.remove(old);
                 // Si se usaba un modelo gratis de OpenRouter, se sigue con uno gratis.
                 pick = old.endsWith(":free") ? ModelPicker.recommendFree(others) : ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
+                if (pick != null && pick.equals(failed)) pick = null;
             }
-            if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
+            if (pick == null) {
+                ModelStatus.Info why = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
+                if (why != null) {
+                    throw new FatalException(why.explain(failed) + " No queda otro modelo disponible en este servicio: cambiá de servicio en el panel («¿Cuál conviene?»)", cause, true);
+                }
+                throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
+            }
             cfg.model = pick;
             // cfg es la copia de esta traducción: el modelo elegido se guarda en la configuración real solo si
             // el jugador no cambió de servicio ni de modelo mientras tanto.
@@ -695,6 +712,12 @@ public class TranslationJob implements Runnable {
                 live.save();
             }
             TraductorES.LOG.info("[Traductor ES] Modelo elegido automáticamente: {}{}", pick, old.isBlank() ? "" : " (antes: " + old + ")");
+            ModelStatus.Info why = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
+            if (why != null) {
+                String msg = (why.state() == ModelStatus.State.EXHAUSTED ? "Se acabó el cupo de " : "No se puede usar ") + failed + ". Sigue con " + pick + ".";
+                Minecraft.getInstance().execute(() -> Platform.toast(net.minecraft.network.chat.Component.literal("Traductor ES"),
+                        net.minecraft.network.chat.Component.literal(msg)));
+            }
         } catch (FatalException e) {
             throw e;
         } catch (InterruptedException e) {

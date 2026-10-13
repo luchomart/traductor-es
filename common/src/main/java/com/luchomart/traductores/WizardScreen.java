@@ -323,17 +323,36 @@ public class WizardScreen extends BaseScreen {
             return;
         }
         if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
-            String pick = !cloud && models.contains("gemma3:12b") ? "gemma3:12b" : ModelPicker.recommend(preset, models);
+            String pick = !cloud && models.contains("gemma3:12b") ? "gemma3:12b" : ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
             if (pick != null) {
                 cfg.model = pick;
                 cfg.save();
             }
         }
-        try {
-            client.ping(cfg);
-        } catch (Exception e) {
-            failAi(preset, e);
-            return;
+        String switched = null;
+        for (int attempt = 0; ; attempt++) {
+            try {
+                client.ping(cfg);
+                ModelStatus.ok(cfg.apiUrl, cfg.model);
+                break;
+            } catch (LlmClient.LlmException e) {
+                // Retirado, sin plan gratis o agotado: se prueba con otro modelo que pueda andar.
+                ModelStatus.Info info = ModelStatus.learn(cfg.apiUrl, cfg.model, e);
+                List<String> usable = ModelStatus.usable(cfg.apiUrl, models);
+                usable.remove(cfg.model);
+                String alt = info == null || attempt >= 3 ? null : ModelPicker.recommend(preset, usable);
+                if (alt == null) {
+                    failAi(preset, e);
+                    if (info != null) cModel.set(Status.FAIL, "Modelo: " + cfg.model, info.tag().toLowerCase(java.util.Locale.ROOT) + " · elegí otro en el panel");
+                    return;
+                }
+                switched = cfg.model + ": " + info.tag().toLowerCase(java.util.Locale.ROOT);
+                cfg.model = alt;
+                cfg.save();
+            } catch (Exception e) {
+                failAi(preset, e);
+                return;
+            }
         }
         Traductor.setConnection(Traductor.Connection.OK, cfg.model);
         cAi.set(Status.OK, "La IA responde", "en " + where + " · midiendo la velocidad…");
@@ -343,7 +362,8 @@ public class WizardScreen extends BaseScreen {
         String quota = client.quota(cfg);
         cAi.set(Status.OK, "La IA responde" + (speed != null ? " · ~" + speed + " textos/min" : ""),
                 quota != null ? quota : "en " + where);
-        cModel.set(Status.OK, "Modelo: " + cfg.model, cloud ? "elegido automáticamente" : "instalado en tu PC");
+        cModel.set(Status.OK, "Modelo: " + cfg.model, switched != null ? "en vez de " + switched
+                : cloud ? "elegido automáticamente" : "instalado en tu PC");
     }
 
     private void failAi(Preset preset, Exception e) {

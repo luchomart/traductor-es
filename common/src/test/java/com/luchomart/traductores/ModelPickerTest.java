@@ -32,7 +32,9 @@ class ModelPickerTest {
     void geminiEligeElFlashMasNuevoSinVariantes() {
         List<String> gemini = List.of("gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.8-pro",
                 "gemini-3.9-flash-preview-09-2026", "gemini-embedding-001", "imagen-4.0-generate");
-        assertEquals("gemini-3.8-flash", ModelPicker.recommend(Preset.GEMINI, gemini));
+        // En el plan gratis el flash-lite tiene mucho más cupo (el flash llegó a dar 20 por día).
+        assertEquals("gemini-3.8-flash-lite", ModelPicker.recommend(Preset.GEMINI, gemini));
+        assertEquals("gemini-3.8-flash", ModelPicker.recommend(Preset.GEMINI, List.of("gemini-3.8-flash", "gemini-2.5-flash")));
     }
 
     @Test
@@ -79,5 +81,17 @@ class ModelPickerTest {
         assertNotEquals("allam-2-7b", ModelPicker.recommend(Preset.GROQ, List.of("allam-2-7b", "llama-3.1-8b-instant")));
         List<String> ranked = ModelPicker.ranked(Preset.GROQ, GROQ);
         assertEquals("allam-2-7b", ranked.get(ranked.size() - 1));
+    }
+
+    @Test
+    void tiposDeModelo() {
+        assertEquals(ModelPicker.Kind.FAST, ModelPicker.kind("gemini-3.1-flash-lite"));
+        assertEquals(ModelPicker.Kind.FAST, ModelPicker.kind("openai/gpt-oss-20b"));
+        assertEquals(ModelPicker.Kind.FAST, ModelPicker.kind("gemma3:12b"));
+        assertEquals(ModelPicker.Kind.BALANCED, ModelPicker.kind("gemini-3.8-flash"));
+        assertEquals(ModelPicker.Kind.QUALITY, ModelPicker.kind("gemini-3.8-pro"));
+        assertEquals(ModelPicker.Kind.QUALITY, ModelPicker.kind("openai/gpt-oss-120b"));
+        assertEquals(ModelPicker.Kind.PREVIEW, ModelPicker.kind("gemini-3.1-pro-preview"));
+        assertEquals(ModelPicker.Kind.WEAK, ModelPicker.kind("allam-2-7b"));
     }
 }

@@ -29,6 +29,36 @@ public final class ModelPicker {
 
     private ModelPicker() {}
 
+    /** Tipos de modelo para ordenar la lista. El orden del enum es el de la lista. */
+    public enum Kind {
+        FAST("Rápidos", "Responden rápido y suelen tener más cupo gratis. Para traducir alcanzan."),
+        BALANCED("Equilibrados", "Un poco mejores que los rápidos, con menos cupo gratis."),
+        QUALITY("Mejor calidad", "Los más capaces: menos cupo gratis o de pago."),
+        PREVIEW("De prueba", "Versiones de prueba: pueden cambiar o desaparecer sin aviso."),
+        WEAK("No sirven para español", "Hechos para otro idioma, para programar o demasiado chicos.");
+
+        public final String label, help;
+
+        Kind(String label, String help) {
+            this.label = label;
+            this.help = help;
+        }
+    }
+
+    private static final Pattern FAST_NAME = Pattern.compile("lite|instant|(?<![a-z])mini|nano|small|haiku|tiny|flash-8b");
+    private static final Pattern QUALITY_NAME = Pattern.compile("(?<![a-z])pro(?![a-z])|large|opus|ultra|sonnet|(?<![a-z])max(?![a-z])");
+
+    /** De qué tipo es el modelo, por su nombre (lite/instant: rápido; pro/120b: calidad…). */
+    public static Kind kind(String model) {
+        String m = model.toLowerCase(Locale.ROOT);
+        if (weakReason(model) != null) return Kind.WEAK;
+        if (EXPERIMENTAL.matcher(m).find()) return Kind.PREVIEW;
+        int s = size(m);
+        if (FAST_NAME.matcher(m).find() || (s > 0 && s <= 20)) return Kind.FAST;
+        if (QUALITY_NAME.matcher(m).find() || s >= 60) return Kind.QUALITY;
+        return Kind.BALANCED;
+    }
+
     /** Solo los modelos de chat, en el orden en que llegaron. */
     public static List<String> chatModels(List<String> all) {
         List<String> out = new ArrayList<>();
@@ -61,8 +91,9 @@ public final class ModelPicker {
         List<String> chat = usable(available);
         if (chat.isEmpty()) return null;
         String pick = switch (preset) {
-            // El "flash" más nuevo: rápido, barato y con plan gratis. Sin las variantes lite/preview/thinking.
-            case GEMINI -> newest(chat, "gemini-[\\d.]+-flash$");
+            // El "flash-lite" más nuevo: en el plan gratis es el que más cupo tiene (el "flash" a veces da 20 por día).
+            // Sin las variantes preview/thinking.
+            case GEMINI -> firstNonNull(newest(chat, "gemini-[\\d.]+-flash-lite$"), newest(chat, "gemini-[\\d.]+-flash$"));
             case OPENROUTER -> firstNonNull(newest(chat, "^google/gemini-[\\d.]+-flash$"), newest(chat, ":free$"));
             // Modelos grandes de chat de uso general.
             case GROQ -> firstNonNull(newest(chat, "^openai/gpt-oss-120b$"), newest(chat, "llama-[\\d.]+-70b"),
@@ -84,9 +115,8 @@ public final class ModelPicker {
     /** Modelos de chat con el recomendado primero (para mostrarlos en el panel). */
     public static List<String> ranked(Preset preset, List<String> available) {
         List<String> chat = chatModels(available);
-        // Estables primero, después las versiones de prueba y al final los que no sirven para traducir.
-        chat.sort(Comparator.comparing((String m) -> weakReason(m) != null)
-                .thenComparing(m -> EXPERIMENTAL.matcher(m.toLowerCase(Locale.ROOT)).find()));
+        // Por tipo: rápidos, equilibrados, calidad, de prueba y al final los que no sirven para traducir.
+        chat.sort(Comparator.comparing(ModelPicker::kind));
         String best = recommend(preset, available);
         if (best != null) {
             chat.remove(best);

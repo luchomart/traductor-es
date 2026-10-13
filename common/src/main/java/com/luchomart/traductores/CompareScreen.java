@@ -114,7 +114,7 @@ public class CompareScreen extends BaseScreen {
         cfg.parallelRequests = 1;
         Thread t = new Thread(() -> {
             try {
-                String pick = ModelPicker.recommendFree(new LlmClient().listModels(cfg));
+                String pick = ModelPicker.recommendFree(ModelStatus.usable(cfg.apiUrl, new LlmClient().listModels(cfg)));
                 if (pick != null) cfg.model = pick;
                 TraductorES.LOG.info("[Traductor ES] Modelo gratis elegido: {}", pick);
             } catch (Exception e) {

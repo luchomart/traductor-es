@@ -41,7 +41,7 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 ## Fase 3: Fabric
 - [x] Fabric 1.20.1 (Loom 1.15, nombres de Mojang, mixin para el pack, Mod Menu opcional)
 - [x] Fabric 1.21.1
-- [ ] Probar en el juego con un modpack de Fabric
+- [x] Probar en el juego con un modpack de Fabric (1.21.1: Farmer's Delight, JEI, Mod Menu)
 
 ## Fase 4: FTB Quests
 - [ ] Traducir misiones cuando el modpack no trae el idioma

@@ -218,7 +218,7 @@ public final class Traductor {
                 g.drawString(font, paused ? "En pausa" : "Traduciendo mods…", tx, y + 6, paused ? UiKit.YELLOW : UiKit.YELLOW, false);
                 String p = pct + " %";
                 g.drawString(font, p, x + w - 6 - font.width(p), y + 6, UiKit.WHITE, false);
-                String waiting = j.waitingMessage;
+                String waiting = j.waitingMessage();
                 UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
                 String sub;
                 int color = UiKit.MUTED;
@@ -329,7 +329,7 @@ public final class Traductor {
                 String left = remaining(j);
                 if (left != null) detail += " · quedan " + left;
                 out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
-                String waiting = j.waitingMessage;
+                String waiting = j.waitingMessage();
                 if (waiting != null) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
             }

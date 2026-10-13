@@ -84,8 +84,13 @@ public class TranslationJob implements Runnable {
     public volatile boolean questsChanged;
     /** Terminó con un error de configuración (lo puede resolver el asistente). */
     public volatile boolean setupProblem;
-    /** Motivo de la espera actual antes de reintentar (null si no se está esperando). */
-    public volatile String waitingMessage;
+    /**
+     * Espera compartida por todas las peticiones simultáneas: si el servicio pide bajar el ritmo, paran todas hasta
+     * que se cumpla la espera más larga (si no, cada una mostraba su propia cuenta y las demás seguían insistiendo).
+     */
+    private volatile long pauseUntil;
+    private volatile String pauseWhy;
+    private final Object pauseLock = new Object();
 
     private volatile boolean pauseRequested, cancelRequested;
 
@@ -516,9 +521,9 @@ public class TranslationJob implements Runnable {
         int connectFails = 0, transientFails = 0;
         while (true) {
             try {
+                awaitPause();
                 raw = client.translate(cfg, prompt, masked);
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
-                waitingMessage = null;
                 consecutiveFailures.set(0);
                 break;
             } catch (ConnectException | HttpConnectTimeoutException | java.net.UnknownHostException e) {
@@ -608,7 +613,6 @@ public class TranslationJob implements Runnable {
 
     /** Si la IA falla una y otra vez sin que sea algo pasajero, se corta en vez de mandar miles de peticiones inútiles. */
     private IOException countFailure(IOException e) throws FatalException {
-        waitingMessage = null;
         int fails = consecutiveFailures.incrementAndGet();
         if (fails >= MAX_CONSECUTIVE_FAILURES) {
             throw new FatalException("La IA falló " + fails + " veces seguidas. Último error: " + LlmClient.describe(e), e);
@@ -618,14 +622,29 @@ public class TranslationJob implements Runnable {
 
     /** Espera antes de reintentar, mostrando el motivo (corto: entra en el aviso de la esquina). Se puede cancelar mientras tanto. */
     private void backoff(long seconds, String why) {
-        TraductorES.LOG.info("[Traductor ES] {}: se reintenta en {} s", why, seconds);
         long until = System.currentTimeMillis() + seconds * 1000;
-        while (System.currentTimeMillis() < until) {
+        synchronized (pauseLock) {
+            if (until > pauseUntil) {
+                TraductorES.LOG.info("[Traductor ES] {}: se reintenta en {} s", why, seconds);
+                pauseWhy = why;
+                pauseUntil = until;
+            }
+        }
+        awaitPause();
+    }
+
+    /** Espera a que termine la pausa compartida, si hay una. */
+    private void awaitPause() {
+        while (System.currentTimeMillis() < pauseUntil) {
             if (cancelRequested) throw new Cancelled();
-            waitingMessage = why + " · " + Math.max(1, (until - System.currentTimeMillis() + 999) / 1000) + " s";
             sleepQuietly(250);
         }
-        waitingMessage = null;
+    }
+
+    /** Motivo y segundos de la espera actual antes de reintentar, o null si no se está esperando. */
+    public String waitingMessage() {
+        long left = pauseUntil - System.currentTimeMillis();
+        return left > 0 ? pauseWhy + " · " + (left + 999) / 1000 + " s" : null;
     }
 
     private static void sleepQuietly(long ms) {

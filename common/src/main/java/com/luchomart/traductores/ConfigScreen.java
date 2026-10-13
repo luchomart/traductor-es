@@ -564,7 +564,7 @@ public class ConfigScreen extends BaseScreen {
             case TRANSLATING, PAUSED -> {
                 boolean paused = j.state == TranslationJob.State.PAUSED;
                 int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
-                String waiting = j.waitingMessage;
+                String waiting = j.waitingMessage();
                 // Siempre algo que se mueve: el tiempo que falta, o por qué está esperando.
                 String head;
                 int color;

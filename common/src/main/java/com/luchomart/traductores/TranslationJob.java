@@ -442,7 +442,7 @@ public class TranslationJob implements Runnable {
                 if (++connectFails > CONNECT_RETRIES) {
                     throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e, true);
                 }
-                backoff(Math.min(30, 5L << (connectFails - 1)), "No hay conexión con la IA, reintentando");
+                backoff(Math.min(30, 5L << (connectFails - 1)), "Sin conexión");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new FatalException("Traducción interrumpida", e);
@@ -461,7 +461,7 @@ public class TranslationJob implements Runnable {
                 }
                 if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
                     long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));
-                    backoff(wait, e.status == 429 ? "La IA pidió bajar el ritmo" : "La IA está ocupada");
+                    backoff(wait, e.status == 429 ? "Límite de la IA" : "IA ocupada");
                     continue;
                 }
                 throw countFailure(e);
@@ -519,12 +519,13 @@ public class TranslationJob implements Runnable {
         return e;
     }
 
-    /** Espera antes de reintentar, mostrando el motivo. Se puede cancelar mientras tanto. */
+    /** Espera antes de reintentar, mostrando el motivo (corto: entra en el aviso de la esquina). Se puede cancelar mientras tanto. */
     private void backoff(long seconds, String why) {
+        TraductorES.LOG.info("[Traductor ES] {}: se reintenta en {} s", why, seconds);
         long until = System.currentTimeMillis() + seconds * 1000;
         while (System.currentTimeMillis() < until) {
             if (cancelRequested) throw new Cancelled();
-            waitingMessage = why + " (" + Math.max(1, (until - System.currentTimeMillis() + 999) / 1000) + " s)";
+            waitingMessage = why + " · " + Math.max(1, (until - System.currentTimeMillis() + 999) / 1000) + " s";
             sleepQuietly(250);
         }
         waitingMessage = null;

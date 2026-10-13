@@ -8,9 +8,18 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="luchomart"
 description='''
-Traduce automáticamente al español de España todos los textos de los mods usando una IA local (Ollama, LM Studio o cualquier API compatible con OpenAI).
-Usa traducciones oficiales y otras variantes del español cuando existen, y nunca pisa traducciones hechas por personas.
+Traduce al español los textos de tus mods, desde cualquier idioma, usando una IA: en tu PC (Ollama, LM Studio) o en la nube (Gemini, Groq, OpenRouter).
+
+- Usa el español del juego: España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador.
+- Respeta las traducciones oficiales y aprovecha otras variantes del español antes de traducir.
+- Traduce también los libros de Patchouli.
+- Un asistente te guía la primera vez. Solo se traduce lo nuevo.
+
+Abrí "Configuración" para elegir la IA y ver el progreso. Comandos: /traductor
 '''
+logoFile="traductor_es.png"
+logoBlur=false
+credits="Hecho con ayuda de IA (Claude, de Anthropic)."
 
 [[dependencies.${mod_id}]]
     modId="neoforge"

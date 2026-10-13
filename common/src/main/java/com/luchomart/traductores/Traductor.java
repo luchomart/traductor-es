@@ -246,7 +246,9 @@ public final class Traductor {
                 String p = pct + " %";
                 g.drawString(font, p, x + w - 6 - font.width(p), y + 6, UiKit.WHITE, false);
                 String waiting = j.waitingMessage();
-                UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
+                SpeedLevel lvl = speedLevel(j);
+                UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null,
+                        lvl == null ? 0xFF7FF23A : lvl.color, lvl == null ? 0xFF4CAF1A : lvl.shade());
                 String sub;
                 int color = UiKit.MUTED;
                 if (paused) sub = "Reanudá desde el panel";
@@ -353,10 +355,13 @@ public final class Traductor {
                 out.add(title.copy().append(Component.literal(head).withStyle(
                         j.isPaused() ? ChatFormatting.YELLOW : ChatFormatting.WHITE)));
                 out.add(Component.literal("con " + j.aiLabel()).withStyle(ChatFormatting.GRAY));
-                String detail = j.currentNamespace + " · " + SpeedLevel.describe(j.displayRate());
+                SpeedLevel lvl = speedLevel(j);
                 String left = remaining(j);
-                if (left != null) detail += " · quedan " + left;
-                out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
+                net.minecraft.network.chat.MutableComponent detail = Component.literal(j.currentNamespace + " · ").withStyle(ChatFormatting.GRAY);
+                detail.append(lvl == null ? Component.literal("midiendo velocidad…").withStyle(ChatFormatting.GRAY)
+                        : Component.literal(SpeedLevel.describe(j.displayRate())).withStyle(st -> st.withColor(lvl.color & 0xFFFFFF)));
+                if (left != null) detail.append(Component.literal(" · quedan " + left).withStyle(ChatFormatting.GRAY));
+                out.add(detail);
                 String waiting = j.waitingMessage();
                 if (waiting != null && !j.isPaused()) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
@@ -370,6 +375,13 @@ public final class Traductor {
             case ERROR -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.RED)));
         }
         return out;
+    }
+
+    /** Nivel de velocidad, o null mientras no hay datos suficientes (los primeros 40 textos o el primer minuto). */
+    static SpeedLevel speedLevel(TranslationJob j) {
+        long elapsed = System.currentTimeMillis() - j.translateStartMs - j.totalPausedMs();
+        if (j.translateStartMs == 0 || (j.recentRate() < 0 && j.done < 40 && elapsed < 60_000)) return null;
+        return SpeedLevel.of(j.displayRate());
     }
 
     static String fmt(int n) {

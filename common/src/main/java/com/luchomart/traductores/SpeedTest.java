@@ -40,6 +40,13 @@ public final class SpeedTest {
         }
     }
 
+    private static volatile Result last;
+
+    /** El último minitest hecho en esta sesión (para pintar el resultado con el color de su velocidad). */
+    public static Result lastResult() {
+        return last;
+    }
+
     /** Textos por minuto estimados con esta configuración (ya contadas las peticiones simultáneas y el límite). */
     public static Result measure(LlmClient client, Config cfg, String target) throws IOException, InterruptedException {
         String prompt = cfg.effectivePrompt(target);
@@ -51,7 +58,8 @@ public final class SpeedTest {
         ServiceGuide.measured(cfg.apiUrl, cfg.model, perMinute);
         TraductorES.LOG.info("[Traductor ES] Minitest: {} textos en {} s → ~{} textos/min (sin límite: ~{})", SAMPLE.size(),
                 Math.round(seconds * 10) / 10.0, perMinute, raw);
-        return new Result(Math.max(raw, perMinute), perMinute);
+        last = new Result(Math.max(raw, perMinute), perMinute);
+        return last;
     }
 
     /** Como {@link #measure}, pero si falla devuelve null (el minitest es un extra: no debe cortar la prueba). */

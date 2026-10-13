@@ -413,8 +413,11 @@ public class ConfigScreen extends BaseScreen {
                 MutableComponent ok = Component.literal("Conexión correcta con «" + cfg.model + "» ("
                         + (System.currentTimeMillis() - t0) / 100 / 10.0 + " s)." + note).withStyle(ChatFormatting.GREEN);
                 report(ok.copy().append(Component.literal(" Midiendo la velocidad…").withStyle(ChatFormatting.GRAY)));
+                SpeedTest.Result measured = speedTestAllowed() ? SpeedTest.lastResult() : null;
                 String speed = speedLine(client, cfg);
-                if (speed != null) ok.append(Component.literal(" " + speed).withStyle(ChatFormatting.AQUA));
+                SpeedTest.Result now = SpeedTest.lastResult();
+                int speedColor = now != null && now != measured ? SpeedLevel.of(now.effective()).color & 0xFFFFFF : 0x55FFFF;
+                if (speed != null) ok.append(Component.literal(" " + speed).withStyle(st -> st.withColor(speedColor)));
                 String quota = client.quota(cfg);
                 if (quota != null) ok.append(Component.literal(" " + quota + ".").withStyle(ChatFormatting.YELLOW));
                 List<String> others = ModelPicker.ranked(preset, models);
@@ -682,7 +685,9 @@ public class ConfigScreen extends BaseScreen {
                 String right = pct + " %";
                 g.drawString(font, font.plainSubstrByWidth(head, w - font.width(right) - 4), x, y, color, false);
                 g.drawString(font, right, x + w - font.width(right), y, UiKit.MUTED, false);
-                UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
+                SpeedLevel lvl = Traductor.speedLevel(j);
+                UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null,
+                        lvl == null ? 0xFF7FF23A : lvl.color, lvl == null ? 0xFF4CAF1A : lvl.shade());
             }
             case SCANNING -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
             case DONE -> {

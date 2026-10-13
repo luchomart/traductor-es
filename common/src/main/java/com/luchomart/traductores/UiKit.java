@@ -46,12 +46,17 @@ public final class UiKit {
 
     /** Con active, un brillo recorre la barra: se ve que sigue trabajando aunque el número tarde en cambiar. */
     public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active) {
+        progressBar(g, x, y, w, h, fraction, active, 0xFF7FF23A, 0xFF4CAF1A);
+    }
+
+    /** Con el color de relleno elegido (por ejemplo, el de la velocidad) y su sombra. */
+    public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active, int fill, int shade) {
         g.fill(x, y, x + w, y + h, 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF262626);
         int fw = (int) Math.round((w - 2) * Math.max(0, Math.min(1, fraction)));
         if (fw > 0) {
-            g.fill(x + 1, y + 1, x + 1 + fw, y + h - 1, 0xFF7FF23A);
-            if (h > 4) g.fill(x + 1, y + h - 3, x + 1 + fw, y + h - 1, 0xFF4CAF1A);
+            g.fill(x + 1, y + 1, x + 1 + fw, y + h - 1, fill);
+            if (h > 4) g.fill(x + 1, y + h - 3, x + 1 + fw, y + h - 1, shade);
         }
         if (active) {
             int inner = w - 2, band = Math.max(8, inner / 8);

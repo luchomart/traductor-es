@@ -59,6 +59,8 @@ public class CorrectionScreen extends BaseScreen {
     private Entry editing;
     private MultiLineEditBox editor;
     private String warning;
+    /** Lo escrito en el editor, para no perderlo al rearmar la pantalla (por ejemplo, al mostrar un aviso). */
+    private String draft;
     /** Se tocó Guardar con un problema de marcadores: el segundo toque guarda igual. */
     private boolean confirmWarning;
     private String status;
@@ -139,12 +141,13 @@ public class CorrectionScreen extends BaseScreen {
         Entry e = editing;
         int boxTop = originalBottom() + 16;
         int by = height - 28;
-        int boxH = Math.max(40, by - 22 - boxTop);
+        // Con un aviso, el cuadro se achica para que el aviso entre entre el contador y los botones.
+        int boxH = Math.max(40, by - 22 - boxTop - (warning != null ? 34 : 0));
         editor = new MultiLineEditBox(font, left, boxTop, W, boxH, Component.literal("Escribí la traducción correcta"), Component.literal("Traducción"));
         editor.setCharacterLimit(10000);
         // Minecraft dibuja los códigos § como colores y no se ven: en el editor aparecen como &9, &r…
         codeMark = AMP_CODE.matcher(e.original + e.current()).find() ? "¤" : "&";
-        editor.setValue(visibleCodes(e.current()));
+        editor.setValue(draft != null ? draft : visibleCodes(e.current()));
         addRenderableWidget(editor);
         setInitialFocus(editor);
         Button save = addRenderableWidget(Button.builder(Component.literal("Guardar"), b -> save()).bounds(left + W - 90, by, 90, 20).build());
@@ -187,6 +190,7 @@ public class CorrectionScreen extends BaseScreen {
 
     private void openEditor(Entry e) {
         editing = e;
+        draft = null;
         warning = null;
         confirmWarning = false;
         status = null;
@@ -195,9 +199,20 @@ public class CorrectionScreen extends BaseScreen {
 
     private void closeEditor(String message) {
         editing = null;
+        draft = null;
+        warning = null;
         editor = null;
         status = message;
         rebuildWidgets();
+    }
+
+    private void showWarning(String text) {
+        boolean relayout = warning == null;
+        warning = text;
+        if (relayout) {
+            draft = editor.getValue();
+            rebuildWidgets();
+        }
     }
 
     private String visibleCodes(String s) {
@@ -212,13 +227,13 @@ public class CorrectionScreen extends BaseScreen {
         Entry e = editing;
         String text = realCodes(editor.getValue());
         if (text.isBlank()) {
-            warning = "La traducción está vacía. Si querés volver a la de la IA, usá «Volver a la de la IA».";
+            showWarning("La traducción está vacía. Si querés volver a la de la IA, usá «Volver a la de la IA».");
             return;
         }
         String problem = e.original.isEmpty() ? null : Validator.check(e.original, text);
         if (problem != null && !confirmWarning) {
-            warning = "Ojo: " + problem + " respecto del original (colores, %s, {0}…). Puede verse mal. Tocá Guardar otra vez para guardarla igual.";
             confirmWarning = true;
+            showWarning("Ojo: " + visibleCodes(problem) + " respecto del original (colores, %s, {0}…). Puede verse mal. Tocá Guardar otra vez para guardarla igual.");
             return;
         }
         try {
@@ -228,7 +243,7 @@ public class CorrectionScreen extends BaseScreen {
             TraductorES.LOG.info("[Traductor ES] Corrección guardada: {}:{}", e.ns, e.key);
             closeEditor(applied(e));
         } catch (Exception ex) {
-            warning = "No se pudo guardar: " + ex.getMessage();
+            showWarning("No se pudo guardar: " + ex.getMessage());
         }
     }
 
@@ -239,7 +254,7 @@ public class CorrectionScreen extends BaseScreen {
             e.corrected = null;
             closeEditor(applied(e));
         } catch (Exception ex) {
-            warning = "No se pudo guardar: " + ex.getMessage();
+            showWarning("No se pudo guardar: " + ex.getMessage());
         }
     }
 
@@ -297,8 +312,8 @@ public class CorrectionScreen extends BaseScreen {
         String label = e.corrected != null ? "Tu corrección" : "Traducción de la IA";
         if (SECTION.matcher(e.original + e.current()).find()) label += "  ·  " + codeMark + "9, " + codeMark + "r… son colores: dejalos en su lugar";
         g.drawString(font, font.plainSubstrByWidth(label, W), left, originalBottom() + 4, UiKit.MUTED, false);
-        if (warning != null) {
-            UiKit.wrapped(g, font, Component.literal(warning), left, height - 48, W, UiKit.YELLOW);
+        if (warning != null && editor != null) {
+            UiKit.wrapped(g, font, Component.literal(warning), left, editor.getY() + editor.getHeight() + 13, W, UiKit.YELLOW);
         }
     }
 

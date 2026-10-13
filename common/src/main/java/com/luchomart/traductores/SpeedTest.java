@@ -36,7 +36,7 @@ public final class SpeedTest {
 
         /** "Rápida (~95 textos/min)" o "Normal (~60 textos/min): responde a ~920/min, pero el plan gratis la frena". */
         public String describe() {
-            return SpeedLevel.describe(effective) + (limited() ? ": responde a ~" + raw + "/min, pero el plan gratis la frena" : "");
+            return SpeedLevel.describe(effective) + (limited() ? ": responde a ~" + raw + "/min, pero los límites del servicio la frenan" : "");
         }
     }
 
@@ -99,7 +99,9 @@ public final class SpeedTest {
     static int estimate(double seconds, int texts, int parallel, boolean local, ServiceGuide.Option service) {
         double single = texts / seconds * 60;
         double total = local ? single * LOCAL_REAL_FACTOR : single * Math.max(1, parallel);
-        if (!local && service.free()) total = Math.min(total, service.perMinute());
+        // En la nube, un test corto no choca con los límites por minuto (ni los planes pagos: OpenRouter de pago rinde
+        // ~200/min aunque responda a miles). Se usa el ritmo medido en traducciones reales como techo.
+        if (!local) total = Math.min(total, service.perMinute());
         return (int) Math.max(1, Math.round(total));
     }
 }

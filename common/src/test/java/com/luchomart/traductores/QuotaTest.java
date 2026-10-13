@@ -50,7 +50,8 @@ class QuotaTest {
         // 20 textos en 10 s = 120/min por petición.
         assertEquals(48, SpeedTest.estimate(10, 20, 4, true, local));         // en la PC no se multiplica y rinde ~40 % del test
         assertEquals(groq.perMinute(), SpeedTest.estimate(10, 20, 2, false, groq)); // tope del plan gratis
-        assertEquals(480, SpeedTest.estimate(10, 20, 4, false, paid));       // de pago: sin tope
+        assertEquals(paid.perMinute(), SpeedTest.estimate(10, 20, 4, false, paid)); // de pago también: lo que rinde de verdad
+        assertEquals(20, SpeedTest.estimate(60, 20, 1, false, paid));        // por debajo del techo, lo medido
         assertEquals(1, SpeedTest.estimate(10_000, 1, 1, true, local));
     }
 }

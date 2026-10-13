@@ -22,6 +22,19 @@ public class WizardScreen extends BaseScreen {
 
     private enum Status { PENDING, OK, FAIL, WARN }
 
+    /**
+     * Cada ronda de comprobaciones tiene un número. Si el jugador cambia de servicio mientras una corre, empieza otra y
+     * la vieja ya no puede escribir en pantalla ni en la configuración (si no, se mezclaban servicio y modelo).
+     */
+    private static volatile int currentRun;
+    private static final ThreadLocal<Integer> RUN = new ThreadLocal<>();
+
+    /** Lo escribe la ronda vigente (o el hilo del juego, que no tiene ronda). */
+    private static boolean current() {
+        Integer r = RUN.get();
+        return r == null || r == currentRun;
+    }
+
     /** Una fila de la comprobación: estado, texto y un botón opcional para arreglarlo. */
     private static final class Check {
         volatile Status status = Status.PENDING;
@@ -29,9 +42,24 @@ public class WizardScreen extends BaseScreen {
         volatile String actionLabel;
         volatile Runnable action;
 
-        void set(Status s, String t, String d) { status = s; title = t; detail = d; actionLabel = null; action = null; }
+        void set(Status s, String t, String d) {
+            if (!current()) return;
+            status = s; title = t; detail = d; actionLabel = null; action = null;
+        }
 
-        void action(String label, Runnable r) { actionLabel = label; action = r; }
+        void action(String label, Runnable r) {
+            if (!current()) return;
+            actionLabel = label; action = r;
+        }
+    }
+
+    /** El modelo elegido en la comprobación pasa a la configuración, si la ronda sigue vigente y el servicio es el mismo. */
+    private static void applyModel(Config work) {
+        if (!current()) return;
+        Config live = Config.get();
+        if (!live.apiUrl.equals(work.apiUrl)) return;
+        live.model = work.model;
+        live.save();
     }
 
     private static final int ROW = 28;
@@ -252,8 +280,10 @@ public class WizardScreen extends BaseScreen {
 
     /** Comprueba IA, modelo, idioma y cuánto falta traducir. Lo lento va en otro hilo. */
     private void runChecks() {
-        Config cfg = Config.get();
-        cfg.save();
+        Config.get().save();
+        // La ronda trabaja con su propia copia: cambiar de servicio a mitad de camino no la mezcla.
+        Config cfg = Config.get().snapshot();
+        int run = ++currentRun;
         Minecraft mc = Minecraft.getInstance();
         checking = true;
         checkedLang = mc.options.languageCode;
@@ -269,6 +299,7 @@ public class WizardScreen extends BaseScreen {
 
         Preset preset = Preset.fromUrl(cfg.apiUrl);
         Thread t = new Thread(() -> {
+            RUN.set(run);
             try {
                 checkAi(cfg, preset);
                 if (target != null) {
@@ -287,8 +318,10 @@ public class WizardScreen extends BaseScreen {
                 TraductorES.LOG.error("[Traductor ES] Error en la comprobación del asistente", e);
                 if (cTexts.status == Status.PENDING) cTexts.set(Status.WARN, "No se pudo calcular cuánto falta", LlmClient.describe(e));
             } finally {
-                checking = false;
-                mc.execute(this::rebuildWidgets);
+                if (run == currentRun) {
+                    checking = false;
+                    mc.execute(this::rebuildWidgets);
+                }
             }
         }, "Traductor ES - asistente");
         t.setDaemon(true);
@@ -326,7 +359,7 @@ public class WizardScreen extends BaseScreen {
             String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
             if (pick != null) {
                 cfg.model = pick;
-                cfg.save();
+                applyModel(cfg);
             }
         }
         String switched = null;
@@ -348,7 +381,7 @@ public class WizardScreen extends BaseScreen {
                 }
                 switched = cfg.model + ": " + info.tag().toLowerCase(java.util.Locale.ROOT);
                 cfg.model = alt;
-                cfg.save();
+                applyModel(cfg);
             } catch (Exception e) {
                 failAi(preset, e);
                 return;

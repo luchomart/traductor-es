@@ -1,0 +1,64 @@
+plugins {
+    id 'fabric-loom'
+}
+
+ext {
+    fabric_minecraft_version = '1.21.1'
+    fabric_loader_version = '0.19.5'
+    fabric_api_version = '0.116.17+1.21.1'
+    modmenu_version = '11.0.5'
+}
+
+version = mod_version
+group = mod_group_id
+
+// La lógica compartida con las otras versiones vive en ../common
+sourceSets.main.java.srcDir('../common/src/main/java')
+sourceSets.main.resources.srcDir('../common/src/main/resources')
+
+base {
+    archivesName = "${mod_id}-fabric-${fabric_minecraft_version}"
+}
+
+// Minecraft 1.21.1 usa Java 21.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${fabric_minecraft_version}"
+    // Los mismos nombres que usan NeoForge y Forge: el código común compila igual en todas.
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    // Mod Menu es opcional: solo se usa para el botón de configuración.
+    modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+}
+
+loom {
+    runs {
+        client {
+            client()
+        }
+    }
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            mod_id     : mod_id,
+            mod_name   : mod_name,
+            mod_license: mod_license,
+            mod_version: mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

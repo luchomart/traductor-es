@@ -39,8 +39,9 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [ ] Probar todo en el juego (las dos versiones)
 
 ## Fase 3: Fabric
-- [ ] Fabric 1.20.1
-- [ ] Fabric 1.21.1
+- [x] Fabric 1.20.1 (Loom 1.15, nombres de Mojang, mixin para el pack, Mod Menu opcional)
+- [x] Fabric 1.21.1
+- [ ] Probar en el juego con un modpack de Fabric
 
 ## Fase 4: FTB Quests
 - [ ] Traducir misiones cuando el modpack no trae el idioma

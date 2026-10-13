@@ -12,7 +12,7 @@ Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuent
 
 | | |
 |---|---|
-| **Minecraft** | Forge **1.20.1** o NeoForge **1.21.1** |
+| **Minecraft** | **1.20.1** (Forge o Fabric) o **1.21.1** (NeoForge o Fabric) |
 | **Placa de video** | Recomendado: 12 GB de VRAM o más. Con menos también funciona, usando un modelo más chico (ver abajo). |
 | **Espacio** | Unos 8 GB libres para el modelo de IA |
 | **Ollama** | El programa que hace correr la IA. Se instala una sola vez. (Si no tenés placa de video, mirá [IA en la nube](#ia-en-la-nube).) |
@@ -42,6 +42,10 @@ Copiá el archivo del mod en la carpeta `mods` de tu modpack. Usá el que corres
 
 - `traductor_es-forge-1.20.1-….jar` para modpacks de **Forge 1.20.1**
 - `traductor_es-neoforge-1.21.1-….jar` para modpacks de **NeoForge 1.21.1**
+- `traductor_es-fabric-1.20.1-….jar` para modpacks de **Fabric 1.20.1**
+- `traductor_es-fabric-1.21.1-….jar` para modpacks de **Fabric 1.21.1**
+
+En Fabric también necesitás **Fabric API** (casi todos los modpacks ya lo traen). Con **Mod Menu** aparece el botón para abrir el panel desde la lista de mods; sin él, escribí `/traductor panel` en el chat dentro de un mundo.
 
 ### 4. Poner el juego en español
 
@@ -67,7 +71,7 @@ Desde ahí, cada vez que abras el juego el mod traduce solo lo que falta. Mientr
 
 ## Panel de configuración
 
-En el menú principal: **Mods → Traductor ES → Configurar**. Arriba tiene un indicador de conexión y el botón **Guía**, y abajo el progreso con **Traducir ahora / Pausar / Cancelar**. Pasá el mouse sobre cualquier opción para ver qué hace.
+En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace falta Mod Menu), o dentro de un mundo con `/traductor panel`. Arriba tiene un indicador de conexión y el botón **Guía**, y abajo el progreso con **Traducir ahora / Pausar / Cancelar**. Pasá el mouse sobre cualquier opción para ver qué hace.
 
 **Pestaña Conexión**
 
@@ -92,7 +96,7 @@ En el menú principal: **Mods → Traductor ES → Configurar**. Arriba tiene un
 
 **Pestaña Herramientas**: exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
 
-También podés usar comandos en el chat: `/traductor estado`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
+También podés usar comandos en el chat: `/traductor estado`, `/traductor panel`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
 
 ## IA en la nube
 
@@ -165,11 +169,11 @@ Si querés que una palabra se traduzca **siempre igual** en todos los mods, agre
 Copiá este texto y pegalo en la IA que uses (ChatGPT, Claude, Gemini…). Te va a guiar paso a paso, con los datos correctos del mod. También podés copiarlo desde el juego: **Configurar → Guía → ¿Necesitás ayuda? → Copiar prompt**.
 
 ```text
-Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Con eso, recomendame IA en mi PC o en la nube. Dame un paso por vez y esperá a que te confirme antes de seguir.
+Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué loader y versión usa mi modpack (Forge, NeoForge o Fabric; 1.20.1 o 1.21.1). Con eso, recomendame IA en mi PC o en la nube. Dame un paso por vez y esperá a que te confirme antes de seguir.
 
 Datos del mod (no inventes opciones que no estén acá):
 - Traduce los textos de los mods al español que el jugador tenga elegido en el juego (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador) usando una IA. Respeta las traducciones oficiales. Es un mod solo de cliente.
-- Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
+- Hay un archivo por loader y versión: traductor_es-forge-1.20.1, traductor_es-neoforge-1.21.1, traductor_es-fabric-1.20.1 y traductor_es-fabric-1.21.1 (….jar). Va en la carpeta "mods" del modpack. En Fabric también hace falta Fabric API; Mod Menu es opcional y agrega el botón para abrir el panel.
 - El juego tiene que estar en algún español: Opciones → Idioma.
 
 Dos formas de usarlo:
@@ -179,12 +183,12 @@ Dos formas de usarlo:
 Primer uso:
 - Al abrir el juego aparece un asistente de 3 pasos: elegir "En mi PC" o "En la nube", una comprobación automática (que la IA responda, el modelo, el idioma y cuántos textos faltan, con botones para arreglar lo que falte: Descargar, Conseguir, Copiar comando, Cambiar idioma) y "Empezar a traducir". También se abre desde el panel (Herramientas → Asistente) y vuelve a aparecer si una traducción falla por la configuración.
 
-Panel (Mods → Traductor ES → Configurar), con un botón Guía arriba a la derecha y tres pestañas:
+Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para ese botón; en cualquier versión también con /traductor panel en el chat), con un botón Guía arriba a la derecha y tres pestañas:
 - Conexión: Servicio (flechas para elegir Ollama, LM Studio, Gemini, Groq u OpenRouter), URL (se completa sola), Clave (se ve oculta; cada servicio guarda la suya; no hace falta con Ollama), botón "Conseguir"/"Descargar", Modelo (vacío = el mod elige el recomendado del servicio; botón "Elegir…" con la lista y un buscador) y "Probar conexión".
 - Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros del juego, otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
 - Herramientas: exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
 - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
-- Comandos en el chat: /traductor estado, iniciar, pausar, reanudar, cancelar.
+- Comandos en el chat: /traductor estado, panel, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 
 Problemas conocidos:
@@ -221,7 +225,7 @@ El proyecto compila las dos versiones a la vez:
 ```
 
 - `common/`: lógica compartida (motor de traducción, validación, glosario, caché, libros de Patchouli, interfaz).
-- `neoforge-1.21.1/` y `forge-1.20.1/`: solo lo que cambia entre plataformas (`Platform`, registro del pack y eventos).
+- `neoforge-1.21.1/`, `forge-1.20.1/`, `fabric-1.21.1/` y `fabric-1.20.1/`: solo lo que cambia entre plataformas (`Platform`, registro del pack y eventos). En Fabric el pack se suma con un mixin (`PackRepositoryMixin`).
 
 Los jars quedan en `*/build/libs/`.
 

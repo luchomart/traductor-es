@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "Traduce al español los textos de tus mods, desde cualquier idioma, usando una IA: en tu PC (Ollama, LM Studio) o en la nube (Gemini, Groq, OpenRouter). Usa el español del juego (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador), respeta las traducciones oficiales y traduce también los libros de Patchouli. Comandos: /traductor",
+  "authors": ["luchomart"],
+  "contributors": ["Hecho con ayuda de IA (Claude, de Anthropic)"],
+  "license": "${mod_license}",
+  "icon": "traductor_es.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.luchomart.traductores.TraductorES"],
+    "modmenu": ["com.luchomart.traductores.ModMenuIntegration"]
+  },
+  "mixins": ["traductor_es.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15",
+    "fabric-api": "*",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
+  }
+}

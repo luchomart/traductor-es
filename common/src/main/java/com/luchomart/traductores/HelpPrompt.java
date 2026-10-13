@@ -5,11 +5,11 @@ public final class HelpPrompt {
     private HelpPrompt() {}
 
     public static final String TEXT = """
-            Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué versión usa mi modpack (Forge 1.20.1 o NeoForge 1.21.1). Con eso, recomendame IA en mi PC o en la nube. Dame un paso por vez y esperá a que te confirme antes de seguir.
+            Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso a paso, en español y sin tecnicismos. Antes de empezar, preguntame: mi sistema operativo, mi placa de video y cuánta VRAM tiene, cuánta RAM tengo y qué loader y versión usa mi modpack (Forge, NeoForge o Fabric; 1.20.1 o 1.21.1). Con eso, recomendame IA en mi PC o en la nube. Dame un paso por vez y esperá a que te confirme antes de seguir.
 
             Datos del mod (no inventes opciones que no estén acá):
             - Traduce los textos de los mods al español que el jugador tenga elegido en el juego (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador) usando una IA. Respeta las traducciones oficiales. Es un mod solo de cliente.
-            - Hay dos archivos: traductor_es-forge-1.20.1-….jar (Forge 1.20.1) y traductor_es-neoforge-1.21.1-….jar (NeoForge 1.21.1). Va en la carpeta "mods" del modpack.
+            - Hay un archivo por loader y versión: traductor_es-forge-1.20.1, traductor_es-neoforge-1.21.1, traductor_es-fabric-1.20.1 y traductor_es-fabric-1.21.1 (….jar). Va en la carpeta "mods" del modpack. En Fabric también hace falta Fabric API; Mod Menu es opcional y agrega el botón para abrir el panel.
             - El juego tiene que estar en algún español: Opciones → Idioma.
 
             Dos formas de usarlo:
@@ -19,12 +19,12 @@ public final class HelpPrompt {
             Primer uso:
             - Al abrir el juego aparece un asistente de 3 pasos: elegir "En mi PC" o "En la nube", una comprobación automática (que la IA responda, el modelo, el idioma y cuántos textos faltan, con botones para arreglar lo que falte: Descargar, Conseguir, Copiar comando, Cambiar idioma) y "Empezar a traducir". También se abre desde el panel (Herramientas → Asistente) y vuelve a aparecer si una traducción falla por la configuración.
 
-            Panel (Mods → Traductor ES → Configurar), con un botón Guía arriba a la derecha y tres pestañas:
+            Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para ese botón; en cualquier versión también con /traductor panel en el chat), con un botón Guía arriba a la derecha y tres pestañas:
             - Conexión: Servicio (flechas para elegir Ollama, LM Studio, Gemini, Groq u OpenRouter), URL (se completa sola), Clave (se ve oculta; cada servicio guarda la suya; no hace falta con Ollama), botón "Conseguir"/"Descargar", Modelo (vacío = el mod elige el recomendado del servicio; botón "Elegir…" con la lista y un buscador) y "Probar conexión".
             - Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros del juego, otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
             - Herramientas: exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
             - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
-            - Comandos en el chat: /traductor estado, iniciar, pausar, reanudar, cancelar.
+            - Comandos en el chat: /traductor estado, panel, iniciar, pausar, reanudar, cancelar.
             - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 
             Problemas conocidos:

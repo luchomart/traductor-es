@@ -8,9 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -213,26 +211,32 @@ public final class Traductor {
         }
     }
 
-    /** El comando de cliente /traductor; cada plataforma lo registra en su evento. */
-    public static LiteralArgumentBuilder<CommandSourceStack> command() {
-        return Commands.literal("traductor")
+    /** El comando /traductor. Genérico en la fuente: cada loader tiene la suya para comandos de cliente. */
+    public static <S> LiteralArgumentBuilder<S> command() {
+        return LiteralArgumentBuilder.<S>literal("traductor")
                 .executes(Traductor::cmdStatus)
-                .then(Commands.literal("estado").executes(Traductor::cmdStatus))
-                .then(Commands.literal("iniciar").executes(ctx -> reply(ctx, start() ? "Traducción iniciada" : "Ya hay una traducción en curso")))
-                .then(Commands.literal("pausar").executes(ctx -> {
+                .then(LiteralArgumentBuilder.<S>literal("estado").executes(Traductor::cmdStatus))
+                .then(LiteralArgumentBuilder.<S>literal("panel").executes(ctx -> {
+                    // Al tick siguiente: el chat se cierra después de ejecutar el comando y taparía el panel.
+                    Minecraft mc = Minecraft.getInstance();
+                    mc.tell(() -> mc.setScreen(new ConfigScreen(mc.screen)));
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(LiteralArgumentBuilder.<S>literal("iniciar").executes(ctx -> reply(ctx, start() ? "Traducción iniciada" : "Ya hay una traducción en curso")))
+                .then(LiteralArgumentBuilder.<S>literal("pausar").executes(ctx -> {
                     TranslationJob j = job;
                     if (j == null || !j.isRunning()) return reply(ctx, "No hay ninguna traducción en curso");
                     j.pause();
                     autoPaused = false;
                     return reply(ctx, "Traducción en pausa");
                 }))
-                .then(Commands.literal("reanudar").executes(ctx -> {
+                .then(LiteralArgumentBuilder.<S>literal("reanudar").executes(ctx -> {
                     TranslationJob j = job;
                     if (j == null || !j.isRunning()) return reply(ctx, "No hay ninguna traducción en curso");
                     j.resume();
                     return reply(ctx, "Traducción reanudada");
                 }))
-                .then(Commands.literal("cancelar").executes(ctx -> {
+                .then(LiteralArgumentBuilder.<S>literal("cancelar").executes(ctx -> {
                     TranslationJob j = job;
                     if (j == null || !j.isRunning()) return reply(ctx, "No hay ninguna traducción en curso");
                     j.cancel();
@@ -240,17 +244,22 @@ public final class Traductor {
                 }));
     }
 
-    private static int cmdStatus(CommandContext<CommandSourceStack> ctx) {
+    private static <S> int cmdStatus(CommandContext<S> ctx) {
         TranslationJob j = job;
-        if (j == null) return reply(ctx, "Traductor ES: todavía no se ejecutó en esta sesión. Usa /traductor iniciar");
-        for (Component line : statusLines(j)) ctx.getSource().sendSystemMessage(line);
+        if (j == null) return reply(ctx, "Traductor ES: todavía no se ejecutó en esta sesión. Usá /traductor iniciar o abrí el panel con /traductor panel");
+        for (Component line : statusLines(j)) chat(line);
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int reply(CommandContext<CommandSourceStack> ctx, String msg) {
-        ctx.getSource().sendSystemMessage(Component.literal("[Traductor ES] ").withStyle(ChatFormatting.GOLD)
+    private static <S> int reply(CommandContext<S> ctx, String msg) {
+        chat(Component.literal("[Traductor ES] ").withStyle(ChatFormatting.GOLD)
                 .append(Component.literal(msg).withStyle(ChatFormatting.WHITE)));
         return Command.SINGLE_SUCCESS;
+    }
+
+    /** Los comandos son del cliente: la respuesta va directo al chat propio. */
+    private static void chat(Component line) {
+        Minecraft.getInstance().gui.getChat().addMessage(line);
     }
 
     // ---------- Texto de estado ----------

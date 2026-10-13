@@ -36,6 +36,10 @@ public class CorrectionScreen extends BaseScreen {
     }
 
     private static final int ROW = 24, TOP = 52;
+    private static final java.util.regex.Pattern SECTION = java.util.regex.Pattern.compile("§([0-9a-fk-orA-FK-OR])");
+    private static final java.util.regex.Pattern AMP_CODE = java.util.regex.Pattern.compile("&[0-9a-fk-orA-FK-OR]");
+    /** Cómo se muestran los códigos § en el editor: "&" (como en los servidores), o "¤" si el texto ya usa & propios. */
+    private String codeMark = "&";
     /** Lo que se saltea al ordenar: espacios, símbolos y códigos de color al principio. */
     private static final java.util.regex.Pattern SORT_PREFIX = java.util.regex.Pattern.compile("^(?:[§&][0-9a-fk-orA-FK-OR]|[^\\p{L}\\p{N}])+");
 
@@ -138,7 +142,9 @@ public class CorrectionScreen extends BaseScreen {
         int boxH = Math.max(40, by - 22 - boxTop);
         editor = new MultiLineEditBox(font, left, boxTop, W, boxH, Component.literal("Escribí la traducción correcta"), Component.literal("Traducción"));
         editor.setCharacterLimit(10000);
-        editor.setValue(e.current());
+        // Minecraft dibuja los códigos § como colores y no se ven: en el editor aparecen como &9, &r…
+        codeMark = AMP_CODE.matcher(e.original + e.current()).find() ? "¤" : "&";
+        editor.setValue(visibleCodes(e.current()));
         addRenderableWidget(editor);
         setInitialFocus(editor);
         Button save = addRenderableWidget(Button.builder(Component.literal("Guardar"), b -> save()).bounds(left + W - 90, by, 90, 20).build());
@@ -194,9 +200,17 @@ public class CorrectionScreen extends BaseScreen {
         rebuildWidgets();
     }
 
+    private String visibleCodes(String s) {
+        return SECTION.matcher(s).replaceAll(java.util.regex.Matcher.quoteReplacement(codeMark) + "$1");
+    }
+
+    private String realCodes(String s) {
+        return s.replaceAll(java.util.regex.Pattern.quote(codeMark) + "([0-9a-fk-orA-FK-OR])", "§$1");
+    }
+
     private void save() {
         Entry e = editing;
-        String text = editor.getValue();
+        String text = realCodes(editor.getValue());
         if (text.isBlank()) {
             warning = "La traducción está vacía. Si querés volver a la de la IA, usá «Volver a la de la IA».";
             return;
@@ -275,12 +289,14 @@ public class CorrectionScreen extends BaseScreen {
         g.drawString(font, font.plainSubstrByWidth(e.ns + ":" + e.key, W), left, 22, UiKit.DIM, false);
         g.drawString(font, "Original", left, 36, UiKit.MUTED, false);
         int y = 46, shown = 0;
-        for (var line : font.split(Component.literal(e.original.isEmpty() ? "(texto oficial, sin original guardado)" : e.original), W)) {
+        for (var line : font.split(Component.literal(e.original.isEmpty() ? "(texto oficial, sin original guardado)" : visibleCodes(e.original)), W)) {
             if (++shown > 6) break;
             g.drawString(font, line, left, y, UiKit.WHITE, false);
             y += font.lineHeight + 1;
         }
-        g.drawString(font, e.corrected != null ? "Tu corrección" : "Traducción de la IA", left, originalBottom() + 4, UiKit.MUTED, false);
+        String label = e.corrected != null ? "Tu corrección" : "Traducción de la IA";
+        if (SECTION.matcher(e.original + e.current()).find()) label += "  ·  " + codeMark + "9, " + codeMark + "r… son colores: dejalos en su lugar";
+        g.drawString(font, font.plainSubstrByWidth(label, W), left, originalBottom() + 4, UiKit.MUTED, false);
         if (warning != null) {
             UiKit.wrapped(g, font, Component.literal(warning), left, height - 48, W, UiKit.YELLOW);
         }

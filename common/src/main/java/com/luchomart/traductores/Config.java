@@ -108,10 +108,17 @@ public class Config {
         // La clave escrita queda guardada para su servicio.
         Preset p = Preset.fromUrl(apiUrl);
         if (p.isCloud()) apiKeys.put(p.name(), apiKey);
-        if (shareKeys) Shared.saveKeys(apiKeys);
+        // Con claves compartidas, viven solo en ~/.traductor_es: config.json queda sin claves, porque muchos
+        // creadores de modpacks exportan la carpeta config entera (y la clave viajaría con el modpack).
+        boolean keysElsewhere = shareKeys && Shared.saveKeys(apiKeys);
         try {
             Files.createDirectories(DIR);
-            Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8);
+            com.google.gson.JsonObject json = GSON.toJsonTree(this).getAsJsonObject();
+            if (keysElsewhere) {
+                json.addProperty("apiKey", "");
+                json.add("apiKeys", new com.google.gson.JsonObject());
+            }
+            Files.writeString(FILE, GSON.toJson(json), StandardCharsets.UTF_8);
         } catch (IOException e) {
             TraductorES.LOG.error("[Traductor ES] No se pudo guardar config.json", e);
         }

@@ -121,7 +121,7 @@ public class ConfigScreen extends BaseScreen {
         } else {
             key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
         }
-        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en config.json y, con «Claves compartidas», en ~/.traductor_es (no compartas esos archivos).")));
+        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en ~/.traductor_es, fuera del modpack (sin «Claves compartidas», en config.json). No compartas esos archivos.")));
         helpBtn = addRenderableWidget(Button.builder(Component.empty(), b -> openHelpPage())
                 .bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20).build());
         y += ROW;

@@ -46,7 +46,7 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 
 ## Privacy
 
-With a cloud service, your mods' texts are sent to that service, and your API key is stored in plain text in `config/traductor_es/config.json` and, so all your modpacks can use it, in `.traductor_es/claves.json` in your user folder (you can turn this off). Don't share those files. With Ollama nothing leaves your PC.
+With a cloud service, your mods' texts are sent to that service, and your API key is stored in plain text in `.traductor_es/claves.json` in your user folder, so all your modpacks can use it. It is **not** saved inside the modpack, so exporting your `config` folder doesn't leak it. If you turn off «Claves compartidas» (shared keys), each modpack keeps its own key in `config/traductor_es/config.json` instead. Don't share those files. With Ollama nothing leaves your PC.
 
 ## Made with AI assistance
 
@@ -81,7 +81,7 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 
 ## Privacidad
 
-Con un servicio en la nube, los textos de tus mods se envían a ese servicio y la clave queda guardada en `config/traductor_es/config.json` y, para que la usen todos tus modpacks, en `.traductor_es/claves.json` dentro de tu carpeta de usuario (se puede desactivar). No compartas esos archivos. Con Ollama nada sale de tu PC.
+Con un servicio en la nube, los textos de tus mods se envían a ese servicio y la clave queda guardada en `.traductor_es/claves.json` dentro de tu carpeta de usuario, para que la usen todos tus modpacks. **No** se guarda dentro del modpack: si exportás la carpeta `config`, la clave no va adentro. Si desactivás «Claves compartidas», cada modpack guarda la suya en `config/traductor_es/config.json`. No compartas esos archivos. Con Ollama nada sale de tu PC.
 
 ## Hecho con ayuda de IA
 

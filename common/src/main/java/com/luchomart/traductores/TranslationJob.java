@@ -302,6 +302,11 @@ public class TranslationJob implements Runnable {
     // ---------- Preparación ----------
 
     private final Map<String, Item> byText = new LinkedHashMap<>();
+    /**
+     * Ya se combinaron todas las fuentes (oficial, variantes, caché, correcciones). Antes de eso output está vacío:
+     * escribir el pack lo dejaría sin nada (por ejemplo, al cancelar mientras busca textos o sin internet al elegir modelo).
+     */
+    private volatile boolean prepared;
     private final Set<String> usedRequestKeys = new HashSet<>();
     private int bookCounter;
 
@@ -361,6 +366,7 @@ public class TranslationJob implements Runnable {
         glossary.sort();
 
         packChanged |= writePack();
+        prepared = true;
         List<Item> pending = new ArrayList<>(byText.values());
         // Primero los nombres: después se usan como glosario en descripciones y libros.
         pending.sort(Comparator.comparing((Item it) -> !it.isName));
@@ -606,6 +612,15 @@ public class TranslationJob implements Runnable {
             }
         } finally {
             pool.shutdownNow();
+            // Si se cortó por un error, las peticiones en curso todavía pueden anotar resultados: se espera que
+            // terminen antes de escribir el informe y el pack (si no, se cruzan y la traducción puede quedar colgada).
+            try {
+                if (!pool.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)) {
+                    TraductorES.LOG.warn("[Traductor ES] Alguna petición no terminó a tiempo");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -742,7 +757,13 @@ public class TranslationJob implements Runnable {
                 }
                 throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
             }
-            cfg.model = pick;
+            // Se reemplaza entera, como en switchAway: las peticiones en curso ven la anterior o la nueva, nunca a medias.
+            Config next = cfg.snapshot();
+            next.model = pick;
+            cfg = next;
+            // Los fallidos se anotan con el modelo que traduce ahora (si no, se omitirían o reintentarían de más).
+            aiId = FailureLog.aiId(next);
+            triedAis.add(aiId);
             // cfg es la copia de esta traducción: el modelo elegido se guarda en la configuración real solo si
             // el jugador no cambió de servicio ni de modelo mientras tanto.
             Config live = Config.get();
@@ -951,7 +972,8 @@ public class TranslationJob implements Runnable {
     /** Espera a que termine la pausa compartida (límite de la IA) y la del jugador, si hay. */
     private void awaitPause() {
         while (System.currentTimeMillis() < pauseUntil || pauseRequested) {
-            if (cancelRequested) throw new Cancelled();
+            // Interrumpida: la traducción se está cerrando (sin esto, la espera giraría sin dormir hasta el final).
+            if (cancelRequested || Thread.currentThread().isInterrupted()) throw new Cancelled();
             sleepQuietly(250);
         }
     }
@@ -1124,10 +1146,12 @@ public class TranslationJob implements Runnable {
     private void finish(State end, String msg) {
         cache.flush();
         failureLog.save();
-        try {
-            packChanged |= writePack();
-        } catch (IOException e) {
-            TraductorES.LOG.error("[Traductor ES] No se pudo escribir el pack", e);
+        if (prepared) {
+            try {
+                packChanged |= writePack();
+            } catch (IOException e) {
+                TraductorES.LOG.error("[Traductor ES] No se pudo escribir el pack", e);
+            }
         }
         if (!applyOnly) writeReport(msg); // el informe es de la última traducción, no de aplicar correcciones
         message = msg;
@@ -1138,6 +1162,12 @@ public class TranslationJob implements Runnable {
     }
 
     private void writeReport(String msg) {
+        List<String> failures;
+        Map<String, int[]> perMod;
+        synchronized (this) { // copias: accept y fail los modifican con este mismo candado
+            failures = new ArrayList<>(this.failures);
+            perMod = new TreeMap<>(this.perMod);
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("Traductor ES — informe\n");
         sb.append("Fecha: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append('\n');

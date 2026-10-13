@@ -148,7 +148,7 @@ Una clave es como una contraseña que le dice al servicio que sos vos. Los tres 
 
 > **Importante:** la clave se muestra **una sola vez**. Copiala enseguida y no se la pases a nadie. Algunos planes gratis pueden usar lo que les mandás (acá, los textos de los mods) para mejorar sus modelos.
 
-> **Ojo:** con un servicio en la nube, los textos de tus mods se envían a ese servicio, y la clave queda guardada en `config/traductor_es/config.json` y en `~/.traductor_es/claves.json` (compartida por todos tus modpacks; se desactiva con «Claves compartidas»). No compartas esos archivos.
+> **Ojo:** con un servicio en la nube, los textos de tus mods se envían a ese servicio, y la clave queda guardada en `~/.traductor_es/claves.json`, compartida por todos tus modpacks y fuera de la carpeta del modpack (exportar `config` no la incluye). Con «Claves compartidas» desactivado, cada modpack la guarda en `config/traductor_es/config.json`. No compartas esos archivos.
 
 ## Corregir una traducción
 

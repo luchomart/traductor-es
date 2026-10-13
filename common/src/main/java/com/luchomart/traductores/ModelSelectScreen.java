@@ -42,7 +42,8 @@ public class ModelSelectScreen extends BaseScreen {
                 error = LlmClient.describe(e);
                 models = List.of();
             }
-            minecraft.execute(this::refreshRows);
+            // Minecraft.getInstance(): si la lista llega antes de abrir la pantalla, el campo minecraft todavía es null.
+            net.minecraft.client.Minecraft.getInstance().execute(this::refreshRows);
         }, "Traductor ES - modelos");
         t.setDaemon(true);
         t.start();

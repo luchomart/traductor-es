@@ -52,7 +52,7 @@ public class GuideScreen extends BaseScreen {
                     List.of(new Step("1", "Elegí el servicio", "Gemini, Groq u OpenRouter, con las flechas de «Servicio»."),
                             new Step("2", "Conseguí una clave", "El botón «Conseguir» abre la página para crearla."),
                             new Step("3", "Probá la conexión", "Elige solo el mejor modelo, mide la velocidad y muestra cuánto cupo te queda (Groq, OpenRouter).")),
-                    "Ojo: los textos de tus mods se envían a ese servicio, y la clave queda guardada en config.json y en la carpeta .traductor_es de tu usuario (para todos tus modpacks)."),
+                    "Ojo: los textos de tus mods se envían a ese servicio, y la clave queda guardada en la carpeta .traductor_es de tu usuario (para todos tus modpacks), no dentro del modpack."),
             new Section("¿Cuál conviene?",
                     "Tiempos aproximados para 1.000 y 10.000 textos (un modpack grande tiene unos 10.000 sin español).",
                     ServiceGuide.OPTIONS.stream().map(o -> new Step(o.free() ? "✓" : "$", o.name() + " · " + o.cost(),

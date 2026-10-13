@@ -64,6 +64,8 @@ public final class Traductor {
         }
         TranslationJob j = new TranslationJob(Config.get().snapshot(), target, Traductor::onFinish);
         launch(j);
+        // Arrancó dentro de un mundo (comando o «Usar este servicio»): vale la opción «Mientras juego».
+        if (mc.level != null) applyWhilePlaying(j, false);
         return true;
     }
 
@@ -192,13 +194,17 @@ public final class Traductor {
 
     /** Al entrar a un mundo o servidor. */
     public static void onWorldJoin() {
-        TranslationJob j = job;
+        applyWhilePlaying(job, true);
+    }
+
+    /** Pausa la traducción si la opción «Mientras juego» lo pide. announce: avisar también si sigue. */
+    private static void applyWhilePlaying(TranslationJob j, boolean announce) {
         if (j == null || !j.isRunning() || j.isPauseRequested() || j.applyOnly) return;
         // La opción es la del panel; si la IA es local o no, la de la traducción en curso (puede haber cambiado de servicio).
         Config cfg = Config.get();
         boolean keep = switch (cfg.whilePlaying) { case "si" -> true; case "no" -> false; default -> !j.usesLocalAi(); };
         if (keep) {
-            toast("Traductor ES", j.usesLocalAi()
+            if (announce) toast("Traductor ES", j.usesLocalAi()
                     ? "La traducción sigue mientras jugás (la IA de tu PC comparte la placa de video: puede bajar los FPS)"
                     : "La traducción sigue mientras jugás");
             return;

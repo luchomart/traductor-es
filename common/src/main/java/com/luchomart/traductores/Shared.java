@@ -35,8 +35,11 @@ public final class Shared {
         return new TreeMap<>();
     }
 
-    /** Guarda las claves de este modpack: las escritas se suman, las borradas a propósito se sacan. */
-    static synchronized void saveKeys(Map<String, String> local) {
+    /**
+     * Guarda las claves de este modpack: las escritas se suman, las borradas a propósito se sacan. Devuelve si
+     * quedaron guardadas (si no, quien llama las conserva en su propio archivo para no perderlas).
+     */
+    static synchronized boolean saveKeys(Map<String, String> local) {
         Map<String, String> all = loadKeys();
         boolean changed = false;
         for (Map.Entry<String, String> e : local.entrySet()) {
@@ -48,7 +51,7 @@ public final class Shared {
                 changed = true;
             }
         }
-        if (!changed) return;
+        if (!changed) return true;
         try {
             Files.createDirectories(DIR);
             // Solo el usuario puede leerlas (en Linux y Mac). El archivo nace así, para que no haya un instante en que
@@ -61,8 +64,10 @@ public final class Shared {
                 }
             }
             Files.writeString(KEYS, GSON.toJson(all), StandardCharsets.UTF_8);
+            return true;
         } catch (Exception e) {
             TraductorES.LOG.warn("[Traductor ES] No se pudo guardar {}: {}", KEYS, e.toString());
+            return false;
         }
     }
 }

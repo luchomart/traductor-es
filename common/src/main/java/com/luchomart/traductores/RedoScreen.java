@@ -27,7 +27,8 @@ public class RedoScreen extends BaseScreen {
         this.target = target;
         Thread t = new Thread(() -> {
             counts = new TranslationCache(target).countByModel();
-            minecraft.execute(this::rebuildWidgets);
+            // Minecraft.getInstance(): con poco caché termina antes de abrir la pantalla y el campo minecraft es null.
+            net.minecraft.client.Minecraft.getInstance().execute(this::rebuildWidgets);
         }, "Traductor ES - rehacer");
         t.setDaemon(true);
         t.start();

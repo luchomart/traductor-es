@@ -38,7 +38,7 @@ public class ConfigScreen extends BaseScreen {
 
     private final Screen parent;
     private EditBox model;
-    private Button runBtn, cancelBtn, helpBtn, testBtn;
+    private Button runBtn, cancelBtn, helpBtn, testBtn, useBtn;
     private volatile Component testResult;
     /** Hay una prueba de conexión en curso (no se puede lanzar otra). */
     private volatile boolean testing;
@@ -69,6 +69,7 @@ public class ConfigScreen extends BaseScreen {
         model = null;
         helpBtn = null;
         testBtn = null;
+        useBtn = null;
 
         // Encabezado: la guía siempre a la vista.
         addRenderableWidget(Button.builder(Component.literal("Guía"), b -> openGuide())
@@ -132,8 +133,17 @@ public class ConfigScreen extends BaseScreen {
         }).bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20)
                 .tooltip(Tooltip.create(Component.literal("Ver los modelos que tiene el servicio y elegir uno."))).build());
         y += ROW + 2;
-        testBtn = addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection())
-                .bounds(innerX, y, 120, 20).build());
+        testBtn = addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection(null))
+                .bounds(innerX, y, 120, 20)
+                .tooltip(Tooltip.create(Component.literal("Comprueba que responda y mide la velocidad. No cambia la traducción en curso."))).build());
+        // Solo aparece si se está traduciendo con otro servicio o modelo (ver tick).
+        useBtn = addRenderableWidget(Button.builder(Component.literal("Usar este servicio"), b -> testConnection(() -> {
+                    Traductor.restartWithCurrentConfig();
+                    report(Component.literal("Listo: la traducción sigue con " + Preset.fromUrl(Config.get().apiUrl).label
+                            + ". Lo ya traducido quedó guardado.").withStyle(ChatFormatting.GREEN));
+                }))
+                .bounds(innerX + 238, y, 120, 20)
+                .tooltip(Tooltip.create(Component.literal("Prueba la conexión y, si anda, la traducción sigue con este servicio. Lo ya traducido no se pierde."))).build());
         addRenderableWidget(Button.builder(Component.literal("¿Cuál conviene?"), b -> openCompare())
                 .bounds(innerX + 124, y, 110, 20)
                 .tooltip(Tooltip.create(Component.literal("Cuánto tarda cada servicio y cuáles son gratis."))).build());
@@ -285,7 +295,7 @@ public class ConfigScreen extends BaseScreen {
     private void toggleRun() {
         TranslationJob j = Traductor.job();
         if (j != null && j.isRunning()) {
-            if (j.state == TranslationJob.State.PAUSED) j.resume();
+            if (j.isPauseRequested()) j.resume();
             else j.pause();
         } else {
             Config.get().save();
@@ -298,7 +308,7 @@ public class ConfigScreen extends BaseScreen {
         TranslationJob j = Traductor.job();
         boolean running = j != null && j.isRunning();
         runBtn.setMessage(Component.literal(!running ? "Traducir ahora"
-                : j.state == TranslationJob.State.PAUSED ? "Reanudar" : "Pausar"));
+                : j.isPauseRequested() ? "Reanudar" : "Pausar"));
         cancelBtn.active = running;
         if (testBtn != null) {
             testBtn.active = !testing;
@@ -331,7 +341,7 @@ public class ConfigScreen extends BaseScreen {
      * Lista los modelos del servidor y hace una petición de prueba. Si el modelo configurado no existe
      * o el servicio lo retiró, elige el recomendado (o el que sugiere el propio servicio) y lo deja puesto.
      */
-    private void testConnection() {
+    private void testConnection(Runnable onOk) {
         Config cfg = Config.get();
         cfg.save();
         Preset preset = Preset.fromUrl(cfg.apiUrl);
@@ -386,6 +396,7 @@ public class ConfigScreen extends BaseScreen {
                 others.remove(cfg.model);
                 if (!others.isEmpty()) ok.append(Component.literal(" Otros modelos: " + summarize(others)).withStyle(ChatFormatting.GRAY));
                 report(ok);
+                if (onOk != null) minecraft.execute(onOk);
             } catch (Exception e) {
                 Traductor.setConnection(Traductor.Connection.FAIL, LlmClient.describe(e));
                 String with = cfg.model.isBlank() ? "" : " con «" + cfg.model + "»";
@@ -497,6 +508,16 @@ public class ConfigScreen extends BaseScreen {
     @Override
     public void tick() {
         updateButtons();
+        if (useBtn != null) {
+            useBtn.visible = otherAiRunning() != null;
+            useBtn.active = !testing;
+        }
+    }
+
+    /** La traducción en curso, si usa otro servicio o modelo que el elegido en el panel; si no, null. */
+    private static TranslationJob otherAiRunning() {
+        TranslationJob j = Traductor.job();
+        return j != null && j.isRunning() && !j.applyOnly && !j.restarting && !j.usesAi(Config.get()) ? j : null;
     }
 
     // ---------- Dibujo ----------
@@ -532,7 +553,14 @@ public class ConfigScreen extends BaseScreen {
                 g.drawCenteredString(font, p.label, fieldX + fieldW / 2, y + 6, UiKit.WHITE);
                 String[] labels = {"URL de la API", "Clave (API key)", "Modelo"};
                 for (int i = 0; i < labels.length; i++) g.drawString(font, labels[i], innerX, y + ROW * (i + 1) + 6, UiKit.MUTED, false);
-                drawMessage(g, y + ROW * 4 + 26);
+                int my = y + ROW * 4 + 26;
+                TranslationJob other = otherAiRunning();
+                if (other != null) {
+                    my = UiKit.wrapped(g, font, Component.literal("Ahora se está traduciendo con " + other.aiLabel()
+                            + ". Para seguir con el de arriba, tocá «Usar este servicio»; si no, se usa en la próxima traducción.")
+                            .withStyle(ChatFormatting.GOLD), innerX, my, innerW, UiKit.WHITE) + 4;
+                }
+                drawMessage(g, my);
             }
             case TRADUCCION -> {
                 g.drawString(font, "Español de destino", innerX, y + 6, UiKit.MUTED, false);
@@ -572,7 +600,13 @@ public class ConfigScreen extends BaseScreen {
     private void drawConnectionChip(GuiGraphics g) {
         String text;
         int color, box;
-        switch (Traductor.connection) {
+        TranslationJob j = Traductor.job();
+        if (j != null && j.isRunning() && !j.applyOnly && !j.restarting) {
+            // Mientras traduce, el cartel dice con qué (puede no ser lo que está elegido abajo).
+            text = (j.isPaused() ? "En pausa · " : "Traduciendo con ") + j.aiLabel();
+            color = j.isPaused() ? UiKit.YELLOW : UiKit.GREEN;
+            box = j.isPaused() ? 0xFF2A2410 : 0xFF0F2A12;
+        } else switch (Traductor.connection) {
             case OK -> { text = "Conectado · " + Traductor.connectionDetail; color = UiKit.GREEN; box = 0xFF0F2A12; }
             case FAIL -> { text = "Sin conexión"; color = UiKit.RED; box = 0xFF2A0F0F; }
             default -> { text = "Sin probar"; color = UiKit.MUTED; box = 0xFF1F2126; }
@@ -596,7 +630,7 @@ public class ConfigScreen extends BaseScreen {
         }
         switch (j.state) {
             case TRANSLATING, PAUSED -> {
-                boolean paused = j.state == TranslationJob.State.PAUSED;
+                boolean paused = j.isPaused();
                 int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
                 String waiting = j.waitingMessage();
                 // Siempre algo que se mueve: el tiempo que falta, o por qué está esperando.

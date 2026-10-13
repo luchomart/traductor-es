@@ -80,6 +80,33 @@ public final class Traductor {
         return true;
     }
 
+    /**
+     * Sigue la traducción con el servicio elegido ahora en el panel: corta la pasada en curso (lo traducido queda
+     * guardado) y arranca otra, que solo manda lo que falta.
+     */
+    public static synchronized void restartWithCurrentConfig() {
+        TranslationJob old = job;
+        if (old == null || !old.isRunning()) {
+            start();
+            return;
+        }
+        old.restarting = true;
+        old.cancel();
+        Thread t = new Thread(() -> {
+            while (old.isRunning()) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+            Minecraft.getInstance().execute(Traductor::start);
+        }, "Traductor ES - cambio de servicio");
+        t.setDaemon(true);
+        t.start();
+        TraductorES.LOG.info("[Traductor ES] Se sigue la traducción con otro servicio");
+    }
+
     private static void launch(TranslationJob j) {
         job = j;
         Thread t = new Thread(j, "Traductor ES");
@@ -104,7 +131,7 @@ public final class Traductor {
             } else if (j.packChanged) {
                 reloadOnMenu = Config.get().autoReload;
                 toast("Traductor ES", shortResult(j) + " Lo traducido se aplica al volver al menú (o con F3+T).");
-            } else if (j.state != TranslationJob.State.DONE) {
+            } else if (j.state != TranslationJob.State.DONE && !j.restarting) {
                 toast("Traductor ES", shortResult(j));
             }
             // Las misiones las carga FTB Quests al abrir el mundo: si ya estaba adentro, las ve la próxima vez.
@@ -213,16 +240,17 @@ public final class Traductor {
             }
             case TRANSLATING, PAUSED -> {
                 UiKit.icon(g, x + 6, y + 11, 1);
-                boolean paused = j.state == TranslationJob.State.PAUSED;
+                boolean paused = j.isPaused();
                 int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
-                g.drawString(font, paused ? "En pausa" : "Traduciendo mods…", tx, y + 6, paused ? UiKit.YELLOW : UiKit.YELLOW, false);
+                g.drawString(font, paused ? "En pausa" : "Traduciendo mods…", tx, y + 6, UiKit.YELLOW, false);
                 String p = pct + " %";
                 g.drawString(font, p, x + w - 6 - font.width(p), y + 6, UiKit.WHITE, false);
                 String waiting = j.waitingMessage();
                 UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null);
                 String sub;
                 int color = UiKit.MUTED;
-                if (waiting != null) { sub = waiting; color = UiKit.YELLOW; }
+                if (paused) sub = "Reanudá desde el panel";
+                else if (waiting != null) { sub = waiting; color = UiKit.YELLOW; }
                 else {
                     String left = remaining(j);
                     sub = j.currentNamespace + (left != null ? " · quedan " + left : "");
@@ -320,17 +348,18 @@ public final class Traductor {
             case SCANNING -> out.add(title.copy().append(Component.literal(j.message).withStyle(ChatFormatting.WHITE)));
             case TRANSLATING, PAUSED -> {
                 int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
-                String head = (j.state == TranslationJob.State.PAUSED ? "en pausa " : "traduciendo ")
+                String head = (j.isPaused() ? "en pausa " : "traduciendo ")
                         + fmt(j.done) + " / " + fmt(j.total) + " (" + pct + " %)";
                 out.add(title.copy().append(Component.literal(head).withStyle(
-                        j.state == TranslationJob.State.PAUSED ? ChatFormatting.YELLOW : ChatFormatting.WHITE)));
+                        j.isPaused() ? ChatFormatting.YELLOW : ChatFormatting.WHITE)));
+                out.add(Component.literal("con " + j.aiLabel()).withStyle(ChatFormatting.GRAY));
                 double rate = j.ratePerMinute();
                 String detail = j.currentNamespace + " · " + Math.round(rate) + " textos/min";
                 String left = remaining(j);
                 if (left != null) detail += " · quedan " + left;
                 out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
                 String waiting = j.waitingMessage();
-                if (waiting != null) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
+                if (waiting != null && !j.isPaused()) out.add(Component.literal(waiting).withStyle(ChatFormatting.YELLOW));
                 if (j.failed > 0) out.add(Component.literal(j.failed + " fallidos (quedan en el idioma original)").withStyle(ChatFormatting.RED));
                 String quota = j.quota();
                 if (quota != null) out.add(Component.literal(quota).withStyle(ChatFormatting.DARK_AQUA));
@@ -354,7 +383,7 @@ public final class Traductor {
         int left = j.total - j.done;
         if (left <= 0) return null;
         double rate = j.ratePerMinute();
-        long elapsed = System.currentTimeMillis() - j.translateStartMs - j.pausedMs;
+        long elapsed = System.currentTimeMillis() - j.translateStartMs - j.totalPausedMs();
         if (rate > 0 && (j.done >= 40 || elapsed > 60_000)) return duration((long) (left / rate * 60_000));
         return j.guessDuration(left);
     }

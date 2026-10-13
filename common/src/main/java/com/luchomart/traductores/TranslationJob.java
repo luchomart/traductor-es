@@ -142,10 +142,52 @@ public class TranslationJob implements Runnable {
     /** La IA de esta traducción corre en esta PC (con la configuración con la que empezó). */
     public boolean usesLocalAi() { return cfg.isLocalAi(); }
 
-    public void pause() { pauseRequested = true; }
-    public void resume() { pauseRequested = false; }
-    public void cancel() { cancelRequested = true; pauseRequested = false; }
+    private long pauseStartMs;
+
+    /** La pausa vale desde que se pide: las peticiones que estaban esperando ya no reintentan hasta reanudar. */
+    public synchronized void pause() {
+        if (pauseRequested) return;
+        pauseRequested = true;
+        pauseStartMs = System.currentTimeMillis();
+    }
+
+    public synchronized void resume() {
+        if (!pauseRequested) return;
+        pausedMs += System.currentTimeMillis() - pauseStartMs;
+        pauseRequested = false;
+    }
+
+    public void cancel() {
+        cancelRequested = true;
+        resume();
+    }
+
     public boolean isPauseRequested() { return pauseRequested; }
+
+    /** Tiempo en pausa, contando la pausa actual. */
+    public synchronized long totalPausedMs() {
+        return pausedMs + (pauseRequested ? System.currentTimeMillis() - pauseStartMs : 0);
+    }
+
+    /** En pausa para el jugador (aunque alguna petición en curso todavía esté terminando). */
+    public boolean isPaused() { return pauseRequested && isRunning(); }
+
+    /** Se cancela para seguir con otro servicio: no hace falta avisar que se canceló. */
+    public volatile boolean restarting;
+
+    /** Servicio y modelo con los que traduce esta pasada ("Groq · openai/gpt-oss-120b"). */
+    public String aiLabel() {
+        Preset p = Preset.fromUrl(cfg.apiUrl);
+        String name = p == Preset.CUSTOM ? cfg.apiUrl.replaceFirst("^https?://", "").replaceFirst("/.*$", "")
+                : p.label.replace(" (nube)", "").replace(" (en tu PC)", "");
+        return cfg.model.isBlank() ? name : name + " · " + cfg.model;
+    }
+
+    /** Si esta pasada usa la misma IA que esa configuración (servicio, modelo y clave). */
+    public boolean usesAi(Config c) {
+        return c.apiUrl.equals(cfg.apiUrl) && c.apiKey.equals(cfg.apiKey)
+                && (c.model.equals(cfg.model) || c.model.isBlank());
+    }
     public boolean isRunning() { return state == State.SCANNING || state == State.TRANSLATING || state == State.PAUSED; }
 
     /** Guarda el caché a disco (por ejemplo, al cerrar el juego). */
@@ -165,7 +207,7 @@ public class TranslationJob implements Runnable {
 
     /** Textos por minuto desde que empezó la traducción, sin contar pausas. */
     public double ratePerMinute() {
-        long elapsed = System.currentTimeMillis() - translateStartMs - pausedMs;
+        long elapsed = System.currentTimeMillis() - translateStartMs - totalPausedMs();
         return translateStartMs == 0 || elapsed < 1000 ? 0 : done * 60000.0 / elapsed;
     }
 
@@ -645,9 +687,9 @@ public class TranslationJob implements Runnable {
         awaitPause();
     }
 
-    /** Espera a que termine la pausa compartida, si hay una. */
+    /** Espera a que termine la pausa compartida (límite de la IA) y la del jugador, si hay. */
     private void awaitPause() {
-        while (System.currentTimeMillis() < pauseUntil) {
+        while (System.currentTimeMillis() < pauseUntil || pauseRequested) {
             if (cancelRequested) throw new Cancelled();
             sleepQuietly(250);
         }
@@ -804,7 +846,6 @@ public class TranslationJob implements Runnable {
     private void waitWhilePaused() {
         if (!pauseRequested) return;
         state = State.PAUSED;
-        long start = System.currentTimeMillis();
         cache.flush();
         while (pauseRequested && !cancelRequested) {
             try {
@@ -814,7 +855,6 @@ public class TranslationJob implements Runnable {
                 return;
             }
         }
-        pausedMs += System.currentTimeMillis() - start;
         state = State.TRANSLATING;
     }
 

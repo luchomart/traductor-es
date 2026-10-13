@@ -24,10 +24,11 @@ public class CorrectionScreen extends BaseScreen {
     private static final class Entry {
         final String ns, key, original, ai;
         String corrected;
-        final String haystack;
+        final String haystack, sortKey;
 
         Entry(String ns, String key, String original, String ai, String corrected) {
             this.ns = ns; this.key = key; this.original = original; this.ai = ai; this.corrected = corrected;
+            this.sortKey = SORT_PREFIX.matcher(original).replaceFirst("").toLowerCase(Locale.ROOT);
             this.haystack = (original + "\n" + ai + "\n" + (corrected == null ? "" : corrected) + "\n" + ns + ":" + key).toLowerCase(Locale.ROOT);
         }
 
@@ -35,6 +36,8 @@ public class CorrectionScreen extends BaseScreen {
     }
 
     private static final int ROW = 24, TOP = 52;
+    /** Lo que se saltea al ordenar: espacios, símbolos y códigos de color al principio. */
+    private static final java.util.regex.Pattern SORT_PREFIX = java.util.regex.Pattern.compile("^(?:[§&][0-9a-fk-orA-FK-OR]|[^\\p{L}\\p{N}])+");
 
     private final Screen parent;
     private volatile List<Entry> entries;
@@ -75,13 +78,17 @@ public class CorrectionScreen extends BaseScreen {
             try {
                 Map<String, Map<String, String>> corr = Corrections.load();
                 List<Entry> out = new ArrayList<>();
-                new TranslationCache(target).loadAll().forEach((ns, m) -> m.forEach((key, e) ->
-                        out.add(new Entry(ns, key, e.o, e.t, corr.getOrDefault(ns, Map.of()).get(key)))));
+                new TranslationCache(target).loadAll().forEach((ns, m) -> m.forEach((key, e) -> {
+                    // Sin letras (espacios, símbolos) no hay nada que corregir.
+                    if (Validator.isTrivial(e.o)) return;
+                    out.add(new Entry(ns, key, e.o, e.t, corr.getOrDefault(ns, Map.of()).get(key)));
+                }));
                 // Correcciones escritas a mano para textos que la IA no tradujo (oficiales, por ejemplo).
                 corr.forEach((ns, m) -> m.forEach((key, text) -> {
                     if (out.stream().noneMatch(e -> e.ns.equals(ns) && e.key.equals(key))) out.add(new Entry(ns, key, "", "", text));
                 }));
-                out.sort((a, b) -> a.original.compareToIgnoreCase(b.original));
+                // Por la primera letra: "  - Potions" va con la P, no antes de todo por el espacio.
+                out.sort(java.util.Comparator.comparing((Entry e) -> e.sortKey));
                 entries = out;
             } catch (Exception e) {
                 loadError = "No se pudo leer lo traducido: " + e.getMessage();
@@ -255,7 +262,7 @@ public class CorrectionScreen extends BaseScreen {
             int pages = Math.max(1, (matches.size() + perPage - 1) / perPage);
             info = Traductor.fmt(matches.size()) + " textos · página " + (page + 1) + " de " + pages;
         }
-        g.drawString(font, font.plainSubstrByWidth(info, W - 160), left + 50, height - 22, UiKit.DIM, false);
+        g.drawString(font, font.plainSubstrByWidth(info, W - 160), left + 50, height - 22, UiKit.MUTED, false);
         if (status != null) g.drawString(font, font.plainSubstrByWidth(status, W - 120), left + 150, 10, UiKit.GREEN, false);
         if (all != null && all.isEmpty() && loadError == null) {
             UiKit.wrappedCentered(g, font, Component.literal("Cuando la IA traduzca algo, aparece acá para corregirlo."), width / 2, TOP + 10, W, UiKit.MUTED);

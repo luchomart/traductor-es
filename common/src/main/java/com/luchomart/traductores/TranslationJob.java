@@ -181,6 +181,7 @@ public class TranslationJob implements Runnable {
         message = "Buscando textos en los mods…";
         Scan scan = scanOnMainThread();
         Map<String, Map<String, Map<String, String>>> all = scan.lang();
+        if (cfg.translateBooks) addBookTexts(all);
         corrections = Corrections.load();
 
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
@@ -254,6 +255,20 @@ public class TranslationJob implements Runnable {
                 });
             }
         }
+    }
+
+    /**
+     * Portadas de libros de Patchouli (book.json con "i18n"): el texto mismo es la clave de idioma. Se suman como
+     * claves en inglés del mod, salvo que ya existan.
+     */
+    private void addBookTexts(Map<String, Map<String, Map<String, String>>> all) {
+        PatchouliBooks.bookTexts(Minecraft.getInstance().gameDirectory.toPath().resolve("mods")).forEach((ns, texts) -> {
+            Map<String, Map<String, String>> langs = all.computeIfAbsent(ns, k -> new LinkedHashMap<>());
+            // Si el mod no tiene inglés pero sí otro idioma de origen, no se agrega: taparía ese idioma.
+            if (!langs.isEmpty() && !langs.containsKey("en_us")) return;
+            Map<String, String> en = langs.computeIfAbsent("en_us", k -> new HashMap<>());
+            for (String text : texts) en.putIfAbsent(text, text);
+        });
     }
 
     /** Misiones de FTB Quests: lo que no esté en el español oficial del modpack ni en otra variante. */

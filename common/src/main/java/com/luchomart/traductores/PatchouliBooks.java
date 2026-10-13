@@ -54,6 +54,49 @@ public final class PatchouliBooks {
 
     private PatchouliBooks() {}
 
+    private static final Pattern DATA_BOOK = Pattern.compile("data/([a-z0-9_.-]+)/patchouli_books/[^/]+/book\\.json");
+    /** Textos de book.json que Patchouli pasa por el traductor del juego cuando el libro tiene "i18n": true. */
+    private static final List<String> BOOK_FIELDS = List.of("name", "landing_text", "subtitle");
+
+    /**
+     * Textos sueltos de los book.json (portada del libro). Esos archivos están en los datos de cada mod, no en los
+     * recursos, así que se leen de los .jar. Con "i18n": true, Patchouli busca el texto como clave de idioma: si no
+     * es una clave (por ejemplo, la frase de la portada escrita tal cual), alcanza con agregarla en nuestro pack con
+     * ese texto como clave. Devuelve namespace → textos.
+     */
+    public static Map<String, Set<String>> bookTexts(Path modsDir) {
+        Map<String, Set<String>> out = new TreeMap<>();
+        if (!Files.isDirectory(modsDir)) return out;
+        try (Stream<Path> jars = Files.list(modsDir)) {
+            for (Path jar : jars.filter(p -> p.toString().endsWith(".jar")).toList()) {
+                try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jar.toFile())) {
+                    for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zip.entries(); en.hasMoreElements(); ) {
+                        java.util.zip.ZipEntry entry = en.nextElement();
+                        Matcher m = DATA_BOOK.matcher(entry.getName());
+                        if (!m.matches()) continue;
+                        try (Reader r = new java.io.InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8)) {
+                            JsonElement el = JsonParser.parseReader(r);
+                            if (!el.isJsonObject()) continue;
+                            JsonObject book = el.getAsJsonObject();
+                            if (!book.has("i18n") || !book.get("i18n").getAsBoolean()) continue;
+                            for (String field : BOOK_FIELDS) {
+                                JsonElement v = book.get(field);
+                                if (v == null || !v.isJsonPrimitive()) continue;
+                                String text = v.getAsString();
+                                if (!text.isBlank() && !KEY_LIKE.matcher(text).matches()) out.computeIfAbsent(m.group(1), k -> new java.util.TreeSet<>()).add(text);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    TraductorES.LOG.debug("[Traductor ES] No se pudo revisar {}: {}", jar.getFileName(), e.toString());
+                }
+            }
+        } catch (IOException e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudo leer la carpeta de mods: {}", e.toString());
+        }
+        return out;
+    }
+
     public static List<Book> scan(ResourceManager rm, String target, List<String> variants) {
         Map<ResourceLocation, List<Resource>> stacks = rm.listResourceStacks("patchouli_books", rl -> rl.getPath().endsWith(".json"));
         // ns/libro → idioma → archivo → recurso de más arriba (sin contar nuestro pack)

@@ -33,7 +33,7 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 - Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.20.1** or **Fabric 1.21.1** (Fabric needs Fabric API; Mod Menu is optional).
 - **Client only.** Servers don't need it.
 - An AI, one of:
-  - **On your PC:** Ollama with `gemma3:12b` (about 8 GB, ideal with a 12 GB GPU) or `gemma3:4b` for smaller GPUs.
+  - **On your PC:** Ollama with `translategemma:12b` (about 8 GB, ideal with a 12 GB GPU; a Gemma 3 trained for translation) or `translategemma:4b` for smaller GPUs.
   - **In the cloud:** a free API key from Google Gemini, Groq or OpenRouter.
 
 | Option | Cost | 1,000 texts | 10,000 texts |
@@ -77,7 +77,7 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 
 - Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.20.1** o **Fabric 1.21.1** (Fabric necesita Fabric API; Mod Menu es opcional).
 - **Solo cliente.** Los servidores no lo necesitan.
-- Una IA: **en tu PC** (Ollama con `gemma3:12b`, o `gemma3:4b` con menos VRAM) o **en la nube** (clave gratis de Gemini, Groq u OpenRouter). Los tiempos están en la tabla de arriba.
+- Una IA: **en tu PC** (Ollama con `translategemma:12b`, o `translategemma:4b` con menos VRAM) o **en la nube** (clave gratis de Gemini, Groq u OpenRouter). Los tiempos están en la tabla de arriba.
 
 ## Privacidad
 

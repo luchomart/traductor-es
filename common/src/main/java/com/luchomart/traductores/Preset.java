@@ -6,7 +6,7 @@ package com.luchomart.traductores;
  * el recomendado de la lista real del servicio (al probar la conexión o al empezar a traducir).
  */
 public enum Preset {
-    OLLAMA("Ollama (en tu PC)", "http://localhost:11434/v1/chat/completions", "gemma3:12b", false, 1, "https://ollama.com/download"),
+    OLLAMA("Ollama (en tu PC)", "http://localhost:11434/v1/chat/completions", "translategemma:12b", false, 1, "https://ollama.com/download"),
     LM_STUDIO("LM Studio (en tu PC)", "http://localhost:1234/v1/chat/completions", "", false, 1, "https://lmstudio.ai"),
     GEMINI("Google Gemini (nube)", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "", true, 2,
             "https://aistudio.google.com/apikey"),

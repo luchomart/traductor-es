@@ -94,4 +94,11 @@ class ModelPickerTest {
         assertEquals(ModelPicker.Kind.PREVIEW, ModelPicker.kind("gemini-3.1-pro-preview"));
         assertEquals(ModelPicker.Kind.WEAK, ModelPicker.kind("allam-2-7b"));
     }
+
+    @Test
+    void enLaPcPrefiereTranslateGemma() {
+        assertEquals("translategemma:12b", ModelPicker.recommend(Preset.OLLAMA, List.of("gemma3:12b", "qwen3:14b", "translategemma:12b")));
+        assertEquals("gemma3:12b", ModelPicker.recommend(Preset.OLLAMA, List.of("qwen3:14b", "gemma3:12b", "gemma3:4b")));
+        assertEquals("qwen3:14b", ModelPicker.recommend(Preset.OLLAMA, List.of("llama3.2:3b", "qwen3:14b")));
+    }
 }

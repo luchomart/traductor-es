@@ -96,6 +96,10 @@ public final class ModelPicker {
             case GEMINI -> firstNonNull(newest(chat, "gemini-[\\d.]+-flash-lite$"), newest(chat, "gemini-[\\d.]+-flash$"));
             case OPENROUTER -> firstNonNull(newest(chat, "^google/gemini-[\\d.]+-flash$"), newest(chat, ":free$"));
             // Modelos grandes de chat de uso general.
+            // En la PC: TranslateGemma (Gemma 3 entrenado para traducir) y si no, Gemma 3. Medido con 300 textos reales
+            // de OceanBlock: translategemma:12b 98 % bien y menos textos sin traducir que gemma3:12b (96 %), misma velocidad.
+            case OLLAMA, LM_STUDIO -> firstNonNull(newest(chat, "translategemma"), newest(chat, "^gemma3:12b"), newest(chat, "gemma-?3"),
+                    newest(chat, "qwen3"));
             case GROQ -> firstNonNull(newest(chat, "^openai/gpt-oss-120b$"), newest(chat, "llama-[\\d.]+-70b"),
                     newest(chat, "^openai/gpt-oss"), newest(chat, "llama"));
             default -> null;

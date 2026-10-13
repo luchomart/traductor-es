@@ -157,14 +157,17 @@ public class LlmClient {
      */
     private String chat(Config cfg, String system, String user, boolean jsonMode, int maxTokens, boolean tolerant)
             throws IOException, InterruptedException {
-        // Traducir no necesita razonar: en la nube se pide el mínimo (ahorra tiempo y saldo).
-        boolean lowReasoning = !reasoningUnsupported && Preset.fromUrl(cfg.apiUrl).isCloud();
+        // Traducir no necesita razonar: en la nube se pide el mínimo (ahorra tiempo y saldo) y en la PC, nada (qwen3:14b
+        // razonando traducía a 22 textos/min contra 60 sin razonar, con el mismo resultado). Ollama lo acepta también
+        // en modelos que no razonan; si un servidor no lo acepta, se sigue sin pedirlo.
+        boolean lowReasoning = !reasoningUnsupported;
+        String effort = Preset.fromUrl(cfg.apiUrl).isCloud() ? "low" : "none";
         JsonObject body = new JsonObject();
         body.addProperty("model", cfg.model);
         body.addProperty("max_tokens", maxTokens);
         body.addProperty("temperature", cfg.temperature);
         body.addProperty("stream", false);
-        if (lowReasoning) body.addProperty("reasoning_effort", "low");
+        if (lowReasoning) body.addProperty("reasoning_effort", effort);
         JsonArray messages = new JsonArray();
         messages.add(message("system", system));
         messages.add(message("user", user));

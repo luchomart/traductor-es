@@ -23,7 +23,7 @@ public class Config {
     public String apiKey = "";
     /** Clave de cada servicio en la nube, para no perderla al cambiar de uno a otro. */
     public java.util.Map<String, String> apiKeys = new java.util.HashMap<>();
-    public String model = "gemma3:12b";
+    public String model = "translategemma:12b";
     /** Máximo de textos por petición. */
     public int batchSize = 20;
     /** Peticiones a la IA al mismo tiempo. 1 para una IA local; más para servicios en la nube. */

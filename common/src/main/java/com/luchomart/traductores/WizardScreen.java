@@ -317,13 +317,13 @@ public class WizardScreen extends BaseScreen {
             if (preset == Preset.LM_STUDIO) {
                 cModel.set(Status.FAIL, "No hay ningún modelo cargado", "en LM Studio: bajá un modelo (por ejemplo Gemma 3 12B) y cargalo");
             } else {
-                cModel.set(Status.FAIL, "No hay ningún modelo instalado", "en una terminal: ollama pull gemma3:12b");
-                cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull gemma3:12b"));
+                cModel.set(Status.FAIL, "No hay ningún modelo instalado", "en una terminal: ollama pull translategemma:12b");
+                cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull translategemma:12b"));
             }
             return;
         }
         if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
-            String pick = !cloud && models.contains("gemma3:12b") ? "gemma3:12b" : ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
+            String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
             if (pick != null) {
                 cfg.model = pick;
                 cfg.save();
@@ -364,6 +364,11 @@ public class WizardScreen extends BaseScreen {
                 quota != null ? quota : "en " + where);
         cModel.set(Status.OK, "Modelo: " + cfg.model, switched != null ? "en vez de " + switched
                 : cloud ? "elegido automáticamente" : "instalado en tu PC");
+        // Con Ollama y sin TranslateGemma: anda, pero hay uno que traduce mejor con el mismo tamaño.
+        if (preset == Preset.OLLAMA && !cfg.model.startsWith("translategemma") && models.stream().noneMatch(m -> m.startsWith("translategemma"))) {
+            cModel.set(Status.OK, "Modelo: " + cfg.model, "consejo: translategemma:12b traduce mejor (mismo tamaño)");
+            cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull translategemma:12b"));
+        }
     }
 
     private void failAi(Preset preset, Exception e) {

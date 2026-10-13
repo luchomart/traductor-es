@@ -13,7 +13,7 @@ public final class HelpPrompt {
             - El juego tiene que estar en algún español: Opciones → Idioma.
 
             Dos formas de usarlo:
-            - IA en la PC (gratis, sin internet): Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes) y un modelo bajado con "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más) o "ollama pull gemma3:4b" con menos VRAM. "ollama list" muestra los modelos instalados.
+            - IA en la PC (gratis, sin internet): Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes) y un modelo bajado con "ollama pull translategemma:12b" (un Gemma 3 entrenado para traducir) (unos 8 GB, ideal con 12 GB de VRAM o más) o "ollama pull translategemma:4b" con menos VRAM. "ollama list" muestra los modelos instalados.
             - IA en la nube (sin placa de video potente): Gemini, Groq u OpenRouter, con una clave (API key) gratis. Se crean en aistudio.google.com/apikey (Gemini), console.groq.com/keys (Groq) y openrouter.ai/settings/keys (OpenRouter). La clave se muestra una sola vez. Los textos de los mods se envían a ese servicio.
 
             - Tiempos aproximados para 1.000 textos (un modpack grande tiene unos 10.000): OpenRouter de pago ~5 min (cobra por uso, hay que cargar saldo), Groq ~10 min (gratis), Gemini ~17 min (gratis, irregular), OpenRouter con modelos ":free" ~20 min pero como máximo unos 1.000 textos por día (gratis), en la PC ~17 min (gratis, depende de la placa de video). El botón «¿Cuál conviene?» (en el asistente y en el panel) calcula el tiempo para su modpack y elige el servicio con un clic.
@@ -38,8 +38,8 @@ public final class HelpPrompt {
             - "No existe ese modelo": dejar Modelo vacío o usar "Elegir…"; el mod también cambia solo si el servicio retiró el modelo.
             - "El servicio está saturado" o pide bajar el ritmo: el mod espera y reintenta solo.
             - "Respuesta cortada": bajar Textos por lote a 10, o subir el contexto de Ollama con la variable de entorno OLLAMA_CONTEXT_LENGTH=8192.
-            - Va muy lento: en la nube el mod cambia solo de modelo o servicio (Cambio automático); en la PC, usar gemma3:4b y cerrar videos del navegador.
+            - Va muy lento: en la nube el mod cambia solo de modelo o servicio (Cambio automático); en la PC, usar translategemma:4b y cerrar videos del navegador.
 - "Se acabó el cupo" o un modelo marcado AGOTADO: es el límite gratis del servicio; el mod sigue con otro modelo o servicio, o se puede esperar a que se renueve.
-            - El juego se cierra por falta de memoria mientras traduce: Ollama puede usar varios GB de RAM. Se soluciona con las variables de entorno LLAMA_ARG_CACHE_RAM=0 y LLAMA_ARG_CTX_CHECKPOINTS=2 en el servicio de Ollama (después hay que reiniciarlo), cerrando otros programas o usando gemma3:4b.
+            - El juego se cierra por falta de memoria mientras traduce: Ollama puede usar varios GB de RAM. Se soluciona con las variables de entorno LLAMA_ARG_CACHE_RAM=0 y LLAMA_ARG_CTX_CHECKPOINTS=2 en el servicio de Ollama (después hay que reiniciarlo), cerrando otros programas o usando translategemma:4b.
             """;
 }

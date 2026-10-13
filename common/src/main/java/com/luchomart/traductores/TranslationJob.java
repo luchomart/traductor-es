@@ -203,7 +203,7 @@ public class TranslationJob implements Runnable {
             return "Si sigue así, en unos minutos pasa sola a otro modelo o servicio gratis con clave.";
         }
         return usesLocalAi()
-                ? "Un modelo más chico (por ejemplo gemma3:4b) o un servicio en la nube va más rápido."
+                ? "Un modelo más chico (por ejemplo translategemma:4b) o un servicio en la nube va más rápido."
                 : "Cada modelo tiene su propio límite: probá otro en «Elegir…» o cambiá de servicio con «¿Cuál conviene?», y tocá «Usar este servicio».";
     }
 

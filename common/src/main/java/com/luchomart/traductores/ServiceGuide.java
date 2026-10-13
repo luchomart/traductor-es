@@ -61,7 +61,7 @@ public final class ServiceGuide {
             new Option("OpenRouter (gratis)", Preset.OPENROUTER, true, true, 50, 1000,
                     "Gratis", "Lento: el plan gratis permite unos 1.000 textos por día."),
             new Option("En tu PC (Ollama)", Preset.OLLAMA, true, false, 60, 0,
-                    "Gratis", "Sin internet ni cuentas. Depende de tu placa de video (gemma3:12b)."));
+                    "Gratis", "Sin internet ni cuentas. Depende de tu placa de video (translategemma:12b)."));
 
     /** Velocidad medida con el minitest en esta sesión, por servicio y modelo. */
     /** apiUrl + " " + modelo → {textos por minuto, cuándo se midió}. */

@@ -139,13 +139,11 @@ public class ConfigScreen extends BaseScreen {
                 .tooltip(Tooltip.create(Component.literal("Cuánto tarda cada servicio y cuáles son gratis."))).build());
     }
 
-    /** "¿Cuál conviene?": con los textos de la última traducción, si hubo una en esta sesión. */
+    /** "¿Cuál conviene?": la pantalla cuenta los textos del modpack por su cuenta. */
     private void openCompare() {
         Config cfg = Config.get();
         cfg.save();
-        TranslationJob j = Traductor.job();
-        int texts = j != null && j.total > 0 ? j.total - j.done : -1;
-        minecraft.setScreen(new CompareScreen(this, texts, o -> CompareScreen.apply(o, () -> {
+        minecraft.setScreen(new CompareScreen(this, -1, o -> CompareScreen.apply(o, () -> {
             TraductorES.LOG.info("[Traductor ES] Panel: elegido en «¿Cuál conviene?»: {} · {}", o.name(), cfg.model);
             testResult = Component.literal(o.name() + ": " + o.note()).withStyle(ChatFormatting.YELLOW);
             minecraft.setScreen(this);

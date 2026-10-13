@@ -19,7 +19,9 @@ public class CompareScreen extends BaseScreen {
     private static final int SAMPLE = 1000;
 
     private final Screen parent;
-    private final int texts;
+    /** Textos por traducir de este modpack; -1 mientras se cuentan o si no se pudo. */
+    private volatile int texts;
+    private volatile boolean counting;
     private final Consumer<ServiceGuide.Option> onPick;
     private int W, left, top, rowH;
 
@@ -29,6 +31,35 @@ public class CompareScreen extends BaseScreen {
         this.parent = parent;
         this.texts = texts;
         this.onPick = onPick;
+        if (texts < 0) count();
+    }
+
+    /** Sin el dato (por ejemplo, desde el panel): se cuentan los textos de los mods sin usar la IA. */
+    private void count() {
+        Minecraft mc = Minecraft.getInstance();
+        String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
+        String assumed = target != null ? target : "es_es";
+        counting = true;
+        Thread t = new Thread(() -> {
+            try {
+                java.util.concurrent.CompletableFuture<java.util.Map<String, java.util.Map<String, java.util.Map<String, String>>>> scan =
+                        new java.util.concurrent.CompletableFuture<>();
+                mc.execute(() -> {
+                    try {
+                        scan.complete(LangScanner.scan(mc.getResourceManager()));
+                    } catch (Throwable e) {
+                        scan.completeExceptionally(e);
+                    }
+                });
+                texts = Estimator.estimate(scan.join(), assumed, Config.get()).texts();
+            } catch (Throwable e) {
+                TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
+            } finally {
+                counting = false;
+            }
+        }, "Traductor ES - contar textos");
+        t.setDaemon(true);
+        t.start();
     }
 
     @Override
@@ -51,7 +82,8 @@ public class CompareScreen extends BaseScreen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         g.drawString(font, "¿Cuál conviene?", left, 12, UiKit.GOLD, true);
-        String sub = texts > 0 ? "Para este modpack: " + Traductor.fmt(texts) + " textos por traducir. Tiempos aproximados."
+        String sub = counting ? "Contando los textos de este modpack…" : texts == 0 ? "Este modpack no tiene nada por traducir. Tiempos para " + Traductor.fmt(SAMPLE) + " textos de ejemplo."
+                : texts > 0 ? "Para este modpack: " + Traductor.fmt(texts) + " textos por traducir. Tiempos aproximados."
                 : "Tiempos aproximados para " + Traductor.fmt(SAMPLE) + " textos de ejemplo.";
         g.drawString(font, font.plainSubstrByWidth(sub, W), left, 27, UiKit.MUTED, false);
         int fy = top + rowH * ServiceGuide.OPTIONS.size() + 4;

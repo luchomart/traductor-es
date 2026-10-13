@@ -31,8 +31,8 @@ public final class Estimator {
             boolean any = false;
             for (Map.Entry<String, String> kv : source.entrySet()) {
                 String key = kv.getKey(), text = kv.getValue();
-                if (official.containsKey(key) || Validator.isTrivial(text)) continue;
-                if (cfg.useSpanishVariants && inVariant(langs, target, key)) continue;
+                if (official.containsKey(key) && !Validator.isEnglishCopy(text, official.get(key)) || Validator.isTrivial(text)) continue;
+                if (cfg.useSpanishVariants && inVariant(langs, target, key, text)) continue;
                 String cached = cache.get(ns.getKey(), key, text);
                 if (cached != null && Validator.check(text, cached) == null) continue;
                 uniqueTexts.add(text);
@@ -43,10 +43,10 @@ public final class Estimator {
         return new Result(uniqueTexts.size(), mods);
     }
 
-    private static boolean inVariant(Map<String, Map<String, String>> langs, String target, String key) {
+    private static boolean inVariant(Map<String, Map<String, String>> langs, String target, String key, String english) {
         for (String v : SpanishTarget.fallbacks(target)) {
             Map<String, String> m = langs.get(v);
-            if (m != null && m.containsKey(key)) return true;
+            if (m != null && m.containsKey(key) && !Validator.isEnglishCopy(english, m.get(key))) return true;
         }
         return false;
     }

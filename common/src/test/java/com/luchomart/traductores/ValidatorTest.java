@@ -51,6 +51,16 @@ class ValidatorTest {
     }
 
     @Test
+    void detectaEspanolOficialQueEsInglesCopiado() {
+        // Zero CORE 2 y Occultism traen es_es.json con los textos en inglés.
+        assertTrue(Validator.isEnglishCopy("Right-click a block to show debug info", "Right-click a block to show debug info"));
+        assertTrue(Validator.isEnglishCopy("Debug Tool", "Debug Tool"));
+        assertFalse(Validator.isEnglishCopy("Mekanism", "Mekanism")); // nombre propio
+        assertFalse(Validator.isEnglishCopy("Debug Tool", "Herramienta de depuración"));
+        assertFalse(Validator.isEnglishCopy("Debug Tool", null));
+    }
+
+    @Test
     void descartaCodigosQueNoSonPalabras() {
         // Casos reales que la IA devolvía iguales.
         for (String s : List.of("00ccff", "002d04", "#FF55FF", "CXXIX", "CCIV", "IV", "Ⱎ", "x%s", "1 x 1", "setIsAndFunction()",

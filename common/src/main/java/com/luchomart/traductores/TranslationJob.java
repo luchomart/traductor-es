@@ -203,8 +203,11 @@ public class TranslationJob implements Runnable {
             for (Map.Entry<String, String> kv : new TreeMap<>(source).entrySet()) {
                 String key = kv.getKey(), text = kv.getValue();
                 if (corr.containsKey(key)) { glossary.addModName(ns, key, text, corr.get(key)); continue; }
-                if (es.containsKey(key)) { official++; glossary.addModName(ns, key, text, es.get(key)); continue; }
-                String variant = cfg.useSpanishVariants ? fromVariant(langs, key) : null;
+                // Si el "oficial" es el inglés copiado, se traduce como si no existiera.
+                if (es.containsKey(key) && !Validator.isEnglishCopy(text, es.get(key))) {
+                    official++; glossary.addModName(ns, key, text, es.get(key)); continue;
+                }
+                String variant = cfg.useSpanishVariants ? fromVariant(langs, key, text) : null;
                 if (variant != null) { nsOut.put(key, variant); fromVariants++; glossary.addModName(ns, key, text, variant); continue; }
                 if (Validator.isTrivial(text)) continue;
                 String cached = usableCache(ns, key, text);
@@ -357,10 +360,10 @@ public class TranslationJob implements Runnable {
         return best;
     }
 
-    private String fromVariant(Map<String, Map<String, String>> langs, String key) {
+    private String fromVariant(Map<String, Map<String, String>> langs, String key, String english) {
         for (String v : fallbacks) {
             Map<String, String> m = langs.get(v);
-            if (m != null && m.containsKey(key)) return m.get(key);
+            if (m != null && m.containsKey(key) && !Validator.isEnglishCopy(english, m.get(key))) return m.get(key);
         }
         return null;
     }

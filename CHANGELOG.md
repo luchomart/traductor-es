@@ -1,0 +1,25 @@
+# Changelog
+
+## 1.0.0
+
+First release. / Primera versión.
+
+**English**
+- Translates mod texts from any language into the Spanish variant your game uses (Spain, Mexico, Argentina, Chile, Uruguay, Venezuela, Ecuador) with an AI on your PC (Ollama, LM Studio) or in the cloud (Gemini, Groq, OpenRouter).
+- Keeps official translations, reuses other Spanish variants before translating, and detects "Spanish" files that are just English copies.
+- Translates Patchouli books (including book covers) and FTB Quests (lang-file format, single player).
+- Protects formatting: colors (§a, &a), placeholders (%s, {0}), Patchouli macros, JSON text with colors and links.
+- First-run setup assistant, "Which one should I use?" comparison with time estimates for your modpack, tabbed settings panel, in-game guide.
+- In-game correction editor and "hold Alt to see the original" on item tooltips.
+- Translates in the background; works while you play when the AI is in the cloud.
+- Forge 1.20.1, NeoForge 1.21.1, Fabric 1.20.1 and Fabric 1.21.1. Client only.
+
+**Español**
+- Traduce los textos de los mods desde cualquier idioma a la variante del español del juego (España, México, Argentina, Chile, Uruguay, Venezuela, Ecuador) con una IA en tu PC (Ollama, LM Studio) o en la nube (Gemini, Groq, OpenRouter).
+- Respeta las traducciones oficiales, aprovecha otras variantes del español antes de traducir y detecta los archivos "en español" que son el inglés copiado.
+- Traduce los libros de Patchouli (también la portada) y las misiones de FTB Quests (formato con archivos de idioma, un jugador).
+- Protege el formato: colores (§a, &a), marcadores (%s, {0}), macros de Patchouli y texto JSON con colores y links.
+- Asistente para la primera vez, comparación «¿Cuál conviene?» con tiempos para tu modpack, panel con pestañas y guía dentro del juego.
+- Editor de correcciones dentro del juego y «original con Alt» en la descripción de los objetos.
+- Traduce en segundo plano; con una IA en la nube sigue mientras jugás.
+- Forge 1.20.1, NeoForge 1.21.1, Fabric 1.20.1 y Fabric 1.21.1. Solo cliente.

@@ -421,16 +421,16 @@ public class ConfigScreen extends BaseScreen {
 
     /**
      * Mientras traduce no se mide: la prueba competiría con la traducción (y con una IA en la PC haría fila).
-     * Durante la traducción el panel ya muestra el ritmo real.
+     * Durante la traducción el panel ya muestra el ritmo real. En pausa sí se puede.
      */
     static boolean speedTestAllowed() {
         TranslationJob j = Traductor.job();
-        return j == null || j.state != TranslationJob.State.TRANSLATING;
+        return j == null || j.state != TranslationJob.State.TRANSLATING || j.isPaused();
     }
 
     /** Minitest de velocidad y cuánto tardaría lo que falta: "Velocidad: ~85 textos/min → faltan 3.891 textos: ~45 min." */
     private static String speedLine(LlmClient client, Config cfg) {
-        if (!speedTestAllowed()) return "La velocidad real se ve abajo, en el progreso.";
+        if (!speedTestAllowed()) return "La velocidad real se ve abajo, en el progreso (para medirla aparte, pausá la traducción).";
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
         Integer perMinute = SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es");

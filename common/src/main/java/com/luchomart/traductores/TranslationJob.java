@@ -94,14 +94,15 @@ public class TranslationJob implements Runnable {
 
     private volatile boolean pauseRequested, cancelRequested;
 
-    private final Config cfg;
+    /** Configuración de esta traducción. Si cambia sola de servicio o modelo, se reemplaza entera (nunca a medias). */
+    private volatile Config cfg;
     private final Consumer<TranslationJob> onFinish;
-    private final LlmClient client = new LlmClient();
+    private volatile LlmClient client = new LlmClient();
     private final TranslationCache cache;
     /** Textos que fallaron varias veces seguidas con la misma IA: se dejan de mandar. */
     private final FailureLog failureLog;
     /** Servicio y modelo de esta traducción (se fija al empezar, después de elegir el modelo). */
-    private String aiId = "";
+    private volatile String aiId = "";
     /** Textos que no se mandaron porque ya fallaron {@link FailureLog#MAX_RUNS} veces con esta IA. */
     public volatile int skipped;
     /** Variante del español de destino (es_es, es_mx…) y las que se usan como respaldo. */
@@ -145,16 +146,23 @@ public class TranslationJob implements Runnable {
     private long pauseStartMs;
 
     /** La pausa vale desde que se pide: las peticiones que estaban esperando ya no reintentan hasta reanudar. */
-    public synchronized void pause() {
-        if (pauseRequested) return;
-        pauseRequested = true;
-        pauseStartMs = System.currentTimeMillis();
+    /** Candado propio de la pausa del jugador (no el de la traducción: se consulta desde cualquier hilo). */
+    private final Object pauseStateLock = new Object();
+
+    public void pause() {
+        synchronized (pauseStateLock) {
+            if (pauseRequested) return;
+            pauseRequested = true;
+            pauseStartMs = System.currentTimeMillis();
+        }
     }
 
-    public synchronized void resume() {
-        if (!pauseRequested) return;
-        pausedMs += System.currentTimeMillis() - pauseStartMs;
-        pauseRequested = false;
+    public void resume() {
+        synchronized (pauseStateLock) {
+            if (!pauseRequested) return;
+            pausedMs += System.currentTimeMillis() - pauseStartMs;
+            pauseRequested = false;
+        }
     }
 
     public void cancel() {
@@ -179,6 +187,9 @@ public class TranslationJob implements Runnable {
 
     /** Qué probar cuando va lento (para el panel y el aviso). */
     public String slowAdvice() {
+        if (cfg.autoSwitch && !cfg.isLocalAi() && !noAlternative) {
+            return "Si sigue así, en unos minutos pasa sola a otro modelo o servicio gratis con clave.";
+        }
         return usesLocalAi()
                 ? "Un modelo más chico (por ejemplo gemma3:4b) o un servicio en la nube va más rápido."
                 : "Cada modelo tiene su propio límite: probá otro en «Elegir…» o cambiá de servicio con «¿Cuál conviene?», y tocá «Usar este servicio».";
@@ -189,6 +200,7 @@ public class TranslationJob implements Runnable {
     /** Avisa una sola vez por traducción si va lento. */
     private void checkSlow() {
         if (slowNotified || applyOnly || !isSlow()) return;
+        if (cfg.autoSwitch && !cfg.isLocalAi() && !noAlternative) return; // lo resuelve el cambio automático
         slowNotified = true;
         String msg = "Va lento (~" + Math.round(ratePerMinute()) + " textos/min). "
                 + (usesLocalAi() ? "Probá un modelo más chico o la nube: mirá el panel." : "Probá con otro modelo: mirá el panel.");
@@ -198,8 +210,10 @@ public class TranslationJob implements Runnable {
     }
 
     /** Tiempo en pausa, contando la pausa actual. */
-    public synchronized long totalPausedMs() {
-        return pausedMs + (pauseRequested ? System.currentTimeMillis() - pauseStartMs : 0);
+    public long totalPausedMs() {
+        synchronized (pauseStateLock) {
+            return pausedMs + (pauseRequested ? System.currentTimeMillis() - pauseStartMs : 0);
+        }
     }
 
     /** En pausa para el jugador (aunque alguna petición en curso todavía esté terminando). */
@@ -585,6 +599,7 @@ public class TranslationJob implements Runnable {
 
     /** Cada minuto se guarda el caché y se actualiza el pack, por si el juego se cierra. */
     private void maybeFlush() throws IOException {
+        monitorSpeed();
         checkSlow();
         if (System.currentTimeMillis() - lastFlushMs < 60_000) return;
         cache.flush();
@@ -607,14 +622,16 @@ public class TranslationJob implements Runnable {
         });
 
         Map<String, String> raw;
-        String used = cfg.model;
+        Config c = cfg;
+        String used = c.model;
         int connectFails = 0, transientFails = 0;
         while (true) {
             try {
                 awaitPause();
-                used = cfg.model;
-                raw = client.translate(cfg, prompt, masked);
-                ModelStatus.ok(cfg.apiUrl, used);
+                c = cfg; // pudo cambiar de servicio o modelo mientras esperaba
+                used = c.model;
+                raw = client.translate(c, prompt, masked);
+                ModelStatus.ok(c.apiUrl, used);
                 Traductor.setConnection(Traductor.Connection.OK, cfg.model);
                 // OpenRouter no lo informa en cada respuesta: se consulta cada tanto (Groq se actualiza solo).
                 if (Preset.fromUrl(cfg.apiUrl) == Preset.OPENROUTER && System.currentTimeMillis() - quotaCheckedMs > 120_000) {
@@ -635,7 +652,7 @@ public class TranslationJob implements Runnable {
                 throw new FatalException("Traducción interrumpida", e);
             } catch (LlmClient.LlmException e) {
                 // Retirado, sin plan gratis o sin cupo por horas: esperar no sirve, se sigue con otro modelo.
-                ModelStatus.Info learned = ModelStatus.learn(cfg.apiUrl, used, e);
+                ModelStatus.Info learned = ModelStatus.learn(c.apiUrl, used, e);
                 if (learned != null && modelSwitches.get() < MAX_MODEL_SWITCHES) {
                     chooseModel(e, used);
                     continue;
@@ -698,6 +715,8 @@ public class TranslationJob implements Runnable {
             }
             if (pick == null) {
                 ModelStatus.Info why = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
+                // No queda otro modelo en este servicio: se prueba con otro servicio gratis con clave.
+                if (why != null && cfg.autoSwitch && switchAway("se acabó el cupo de " + failed, failed)) return;
                 if (why != null) {
                     throw new FatalException(why.explain(failed) + " No queda otro modelo disponible en este servicio: cambiá de servicio en el panel («¿Cuál conviene?»)", cause, true);
                 }
@@ -735,6 +754,164 @@ public class TranslationJob implements Runnable {
             throw new FatalException("La IA falló " + fails + " veces seguidas. Último error: " + LlmClient.describe(e), e);
         }
         return e;
+    }
+
+    // ---------- Cambio automático de modelo o servicio ----------
+
+    private final Object switchLock = new Object();
+    /** Servicio y modelo ya usados en esta traducción (no se vuelve a ellos). */
+    private final Set<String> triedAis = ConcurrentHashMap.newKeySet();
+    /** Muestras {tiempo activo en ms, textos hechos} para medir el ritmo reciente. */
+    private final java.util.ArrayDeque<long[]> samples = new java.util.ArrayDeque<>();
+    /** Desde cuándo (tiempo activo) se mide el ritmo: el arranque o el último cambio. */
+    private volatile long windowStartMs;
+    /** Ya se buscó a dónde cambiar y no había nada. */
+    private volatile boolean noAlternative;
+    private static final long SWITCH_WINDOW_MS = 180_000;
+
+    /** Milisegundos traduciendo, sin contar pausas. */
+    private long activeMs() {
+        return System.currentTimeMillis() - translateStartMs - totalPausedMs();
+    }
+
+    /** Textos por minuto de los últimos 3 minutos, o -1 si todavía no hay 3 minutos medidos desde el arranque o el último cambio. */
+    public double recentRate() {
+        synchronized (samples) {
+            if (translateStartMs == 0 || samples.isEmpty()) return -1;
+            long now = activeMs();
+            if (now - windowStartMs < SWITCH_WINDOW_MS) return -1;
+            long[] old = samples.peekFirst();
+            for (long[] smp : samples) {
+                if (now - smp[0] <= SWITCH_WINDOW_MS) { old = smp; break; }
+            }
+            long span = now - old[0];
+            return span < 60_000 ? -1 : (done - old[1]) * 60_000.0 / span;
+        }
+    }
+
+    /** Ritmo para mostrar: el reciente si ya hay, si no el de toda la traducción. */
+    public double displayRate() {
+        double r = recentRate();
+        return r >= 0 ? r : ratePerMinute();
+    }
+
+    /** Cada tanto: anota el ritmo y, si va muy lenta (o lenta con mucho por delante), cambia sola. */
+    private void monitorSpeed() {
+        if (state != State.TRANSLATING || isPaused() || applyOnly || translateStartMs == 0) return;
+        long now = activeMs();
+        synchronized (samples) {
+            long[] last = samples.peekLast();
+            if (last == null || now - last[0] >= 10_000) samples.addLast(new long[]{now, done});
+            while (samples.size() > 2 && now - samples.peekFirst()[0] > SWITCH_WINDOW_MS + 30_000) samples.removeFirst();
+        }
+        Config c = cfg;
+        if (!c.autoSwitch || c.isLocalAi()) return; // con la IA en la PC no se cambia sola (sería mandar los textos a internet)
+        double r = recentRate();
+        if (r < 0) return;
+        int left = total - done;
+        String reason = null;
+        if (r < SpeedLevel.SLOW.from) reason = "iba muy lenta";
+        else if (r < SpeedLevel.NORMAL.from && r > 0 && left / r > 120) reason = "iba lenta y faltaban más de 2 horas";
+        if (reason == null) return;
+        if (!switchAway(reason + " (~" + Math.round(r) + " textos/min)", null)) {
+            noAlternative = true;
+            windowStartMs = now; // se vuelve a mirar en 3 minutos
+        }
+    }
+
+    /**
+     * Pasa a otro modelo del mismo servicio o, si no hay, a otro servicio gratis con clave. Nunca a uno de pago ni
+     * de una IA en la PC a la nube. failedModel: el que se agotó (null si es por velocidad). Devuelve si cambió.
+     */
+    boolean switchAway(String reason, String failedModel) {
+        synchronized (switchLock) {
+            Config cur = cfg;
+            if (failedModel != null && !failedModel.equals(cur.model)) return true; // otra petición ya cambió
+            if (cur.isLocalAi() || modelSwitches.get() >= MAX_MODEL_SWITCHES) return false;
+            triedAis.add(FailureLog.aiId(cur));
+            Config next = sameServiceAlternative(cur);
+            if (next == null) next = otherServiceAlternative(cur);
+            if (next == null) {
+                TraductorES.LOG.info("[Traductor ES] {}, pero no hay otro modelo ni servicio gratis con clave", reason);
+                return false;
+            }
+            modelSwitches.incrementAndGet();
+            String from = aiLabel();
+            Config old = cur;
+            cfg = next;
+            if (!next.apiUrl.equals(old.apiUrl)) client = new LlmClient();
+            aiId = FailureLog.aiId(next);
+            triedAis.add(aiId);
+            noAlternative = false;
+            pauseUntil = 0; // la espera era del servicio o modelo anterior
+            consecutiveFailures.set(0);
+            // Con su propio candado: quien llama puede tener el de la traducción (no se cruzan).
+            synchronized (samples) {
+                samples.clear();
+                windowStartMs = activeMs();
+            }
+            // La configuración del panel sigue el cambio, si el jugador no la tocó mientras tanto.
+            Config live = Config.get();
+            if (live.apiUrl.equals(old.apiUrl) && (live.model.isBlank() || live.model.equals(old.model))) {
+                if (!live.apiUrl.equals(next.apiUrl)) live.applyPreset(Preset.fromUrl(next.apiUrl));
+                live.model = next.model;
+                live.save();
+            }
+            String msg = "Con " + from + " " + reason + ". Sigue con " + aiLabel() + ".";
+            TraductorES.LOG.info("[Traductor ES] Cambio automático: {}", msg);
+            Minecraft.getInstance().execute(() -> Platform.toast(net.minecraft.network.chat.Component.literal("Traductor ES"),
+                    net.minecraft.network.chat.Component.literal(msg)));
+            return true;
+        }
+    }
+
+    /** Otro modelo gratis del mismo servicio que todavía no se usó, o null. */
+    private Config sameServiceAlternative(Config cur) {
+        Preset p = Preset.fromUrl(cur.apiUrl);
+        if (!p.isCloud()) return null;
+        String pick = pickModel(cur, p);
+        if (pick == null) return null;
+        Config next = cur.snapshot();
+        next.model = pick;
+        return next;
+    }
+
+    /** El primer servicio gratis en la nube (del más rápido al más lento) con clave y algún modelo sin usar, o null. */
+    private Config otherServiceAlternative(Config cur) {
+        Preset from = Preset.fromUrl(cur.apiUrl);
+        Config live = Config.get();
+        for (Preset p : new Preset[]{Preset.GROQ, Preset.GEMINI, Preset.OPENROUTER}) {
+            if (p == from) continue;
+            String key = live.apiKeys.getOrDefault(p.name(), cur.apiKeys.getOrDefault(p.name(), ""));
+            if (key == null || key.isBlank()) continue;
+            Config next = cur.snapshot();
+            next.apiUrl = p.url;
+            next.apiKey = key;
+            next.model = "";
+            if (p.parallel > 0) next.parallelRequests = p.parallel;
+            String pick = pickModel(next, p);
+            if (pick == null) continue;
+            next.model = pick;
+            return next;
+        }
+        return null;
+    }
+
+    /**
+     * Un modelo gratis del servicio que sirva para traducir, sin los ya usados ni los agotados, retirados o sin
+     * plan gratis. En OpenRouter, solo los ":free" (nunca se pasa solo a uno de pago).
+     */
+    private String pickModel(Config c, Preset p) {
+        try {
+            List<String> models = new ArrayList<>(ModelStatus.usable(c.apiUrl, new LlmClient().listModels(c)));
+            models.removeIf(m -> triedAis.contains(c.apiUrl + " " + m) || ModelPicker.weakReason(m) != null
+                    || ModelPicker.kind(m) == ModelPicker.Kind.PREVIEW);
+            if (p == Preset.OPENROUTER) return ModelPicker.recommendFree(models);
+            return models.isEmpty() ? null : ModelPicker.recommend(p, models);
+        } catch (Exception e) {
+            TraductorES.LOG.info("[Traductor ES] No se pudo ver los modelos de {}: {}", p.label, LlmClient.describe(e));
+            return null;
+        }
     }
 
     /** Espera antes de reintentar, mostrando el motivo (corto: entra en el aviso de la esquina). Se puede cancelar mientras tanto. */

@@ -34,10 +34,9 @@ public final class SpeedTest {
             return raw > effective * 3 / 2;
         }
 
-        /** "~95 textos/min" o "muy rápida (~920 textos/min), con el plan gratis rinde ~60/min". */
+        /** "Rápida (~95 textos/min)" o "Normal (~60 textos/min): responde a ~920/min, pero el plan gratis la frena". */
         public String describe() {
-            return limited() ? "muy rápida (~" + raw + " textos/min); con el límite del plan gratis rinde ~" + effective + "/min"
-                    : "~" + effective + " textos/min";
+            return SpeedLevel.describe(effective) + (limited() ? ": responde a ~" + raw + "/min, pero el plan gratis la frena" : "");
         }
     }
 

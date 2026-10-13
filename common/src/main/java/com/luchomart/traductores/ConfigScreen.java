@@ -196,6 +196,10 @@ public class ConfigScreen extends BaseScreen {
                     cfg.save();
                 },
                 "Las claves de los servicios valen para todos tus modpacks (se guardan en " + Shared.DIR + "). Apagado: cada modpack tiene las suyas.");
+        y += ROW;
+        toggle(innerX, y, half, "Cambio automático", () -> cfg.autoSwitch, v -> cfg.autoSwitch = v,
+                "Si se acaba el cupo, va muy lenta 3 minutos o va lenta y faltan más de 2 horas: pasa sola a otro modelo del mismo "
+                        + "servicio o a otro servicio gratis del que tengas clave. Nunca a uno de pago ni de tu PC a la nube.");
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));
@@ -596,11 +600,11 @@ public class ConfigScreen extends BaseScreen {
             }
             case TRADUCCION -> {
                 g.drawString(font, "Español de destino", innerX, y + 6, UiKit.MUTED, false);
-                int ry = y + ROW * 4 + 8 + 6; // misma fila que los campos de lote y a la vez
+                int ry = y + ROW * 5 + 8 + 6; // misma fila que los campos de lote y a la vez
                 g.drawString(font, "Textos por lote", innerX, ry, UiKit.MUTED, false);
                 String vez = "A la vez";
                 g.drawString(font, vez, innerX + innerW - 46 - font.width(vez), ry, UiKit.MUTED, false);
-                drawMessage(g, y + ROW * 5 + 18);
+                drawMessage(g, y + ROW * 6 + 18);
             }
             case HERRAMIENTAS -> {
                 int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;

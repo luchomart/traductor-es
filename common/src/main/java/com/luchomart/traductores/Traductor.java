@@ -353,8 +353,7 @@ public final class Traductor {
                 out.add(title.copy().append(Component.literal(head).withStyle(
                         j.isPaused() ? ChatFormatting.YELLOW : ChatFormatting.WHITE)));
                 out.add(Component.literal("con " + j.aiLabel()).withStyle(ChatFormatting.GRAY));
-                double rate = j.ratePerMinute();
-                String detail = j.currentNamespace + " · " + Math.round(rate) + " textos/min";
+                String detail = j.currentNamespace + " · " + SpeedLevel.describe(j.displayRate());
                 String left = remaining(j);
                 if (left != null) detail += " · quedan " + left;
                 out.add(Component.literal(detail).withStyle(ChatFormatting.GRAY));
@@ -384,7 +383,7 @@ public final class Traductor {
     static String remaining(TranslationJob j) {
         int left = j.total - j.done;
         if (left <= 0) return null;
-        double rate = j.ratePerMinute();
+        double rate = j.displayRate(); // el de los últimos minutos: después de un cambio de servicio, el promedio engaña
         long elapsed = System.currentTimeMillis() - j.translateStartMs - j.totalPausedMs();
         if (rate > 0 && (j.done >= 40 || elapsed > 60_000)) return duration((long) (left / rate * 60_000));
         return j.guessDuration(left);

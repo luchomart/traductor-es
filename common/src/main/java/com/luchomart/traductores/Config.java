@@ -60,6 +60,11 @@ public class Config {
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
     /**
+     * Si la traducción va muy lenta o se acaba el cupo, pasar sola a otro modelo del mismo servicio o a otro
+     * servicio gratis con clave. Nunca a uno de pago ni de una IA en la PC a la nube.
+     */
+    public boolean autoSwitch = true;
+    /**
      * Claves y estado de los modelos compartidos entre todos los modpacks (en ~/.traductor_es). Si está apagado,
      * cada modpack tiene las suyas.
      */

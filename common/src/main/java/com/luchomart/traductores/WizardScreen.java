@@ -360,7 +360,7 @@ public class WizardScreen extends BaseScreen {
         String target = SpanishTarget.resolve(cfg.targetLanguage, Minecraft.getInstance().options.languageCode);
         SpeedTest.Result speed = ConfigScreen.speedTestAllowed() ? SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es") : null;
         String quota = client.quota(cfg);
-        cAi.set(Status.OK, "La IA responde" + (speed != null ? " · ~" + speed.effective() + " textos/min" + (speed.limited() ? " (tope del plan gratis)" : "") : ""),
+        cAi.set(Status.OK, "La IA responde" + (speed != null ? " · " + SpeedLevel.describe(speed.effective()) : ""),
                 quota != null ? quota : "en " + where);
         cModel.set(Status.OK, "Modelo: " + cfg.model, switched != null ? "en vez de " + switched
                 : cloud ? "elegido automáticamente" : "instalado en tu PC");

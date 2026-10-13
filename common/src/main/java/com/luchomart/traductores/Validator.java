@@ -73,9 +73,28 @@ public final class Validator {
         return n;
     }
 
-    /** Texto que no hace falta mandar a la IA: vacío, solo números, símbolos o marcadores. */
+    /** Cosas que no son palabras: links, ids (mod:objeto), identificadores de código y palabras con números (00ccff, 1st, MP3). */
+    private static final Pattern NOT_WORDS = Pattern.compile(
+            "https?://\\S+"
+            + "|&[0-9a-fk-orA-FK-OR]"
+            + "|\\b[a-z0-9_.-]+:[a-z0-9_/.-]+\\b"
+            + "|\\b[a-z0-9]+(?:[_.][a-z0-9]+)+\\b"
+            + "|\\b[a-z]+[A-Z]\\w*(?:\\(\\))?"
+            + "|\\b(?=\\w*\\d)\\w+\\b");
+    private static final Pattern ROMAN = Pattern.compile("^M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})$");
+    /** Una palabra de dos letras o más, o una sigla con puntos (R.I.P.). */
+    private static final Pattern WORD = Pattern.compile("\\p{L}{2,}|(?:\\p{Lu}\\.){2,}");
+
+    /**
+     * Texto que no hace falta mandar a la IA: sin ninguna palabra de verdad. Vacío, números, símbolos, marcadores,
+     * códigos de color (00ccff), números romanos (CXXIX), letras sueltas (x%s, Ⱎ), links o identificadores de código.
+     */
     public static boolean isTrivial(String s) {
         String rest = PATCHOULI.matcher(BRACES.matcher(FORMAT.matcher(PRINTF.matcher(s).replaceAll("")).replaceAll("")).replaceAll("")).replaceAll("");
-        return rest.codePoints().noneMatch(Character::isLetter);
+        rest = NOT_WORDS.matcher(rest).replaceAll(" ").strip();
+        // Una mayúscula sola es la sigla de un botón (B de negrita, I de cursiva): sí se traduce.
+        if (rest.length() == 1 && rest.charAt(0) >= 'A' && rest.charAt(0) <= 'Z') return false;
+        if (ROMAN.matcher(rest).matches()) return true;
+        return !WORD.matcher(rest).find();
     }
 }

@@ -2,6 +2,8 @@ package com.luchomart.traductores;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ValidatorTest {
@@ -46,6 +48,20 @@ class ValidatorTest {
         assertTrue(Validator.isTrivial("§a%s/%s"));
         assertTrue(Validator.isTrivial("123 - 45"));
         assertFalse(Validator.isTrivial("FE"));
+    }
+
+    @Test
+    void descartaCodigosQueNoSonPalabras() {
+        // Casos reales que la IA devolvía iguales.
+        for (String s : List.of("00ccff", "002d04", "#FF55FF", "CXXIX", "CCIV", "IV", "Ⱎ", "x%s", "1 x 1", "setIsAndFunction()",
+                "minecraft:stone", "item.mod.thing_name", "https://discord.gg/abc", "&a&l", "v1.2.3")) {
+            assertTrue(Validator.isTrivial(s), s);
+        }
+        // Textos de verdad, aunque tengan números o códigos.
+        for (String s : List.of("Solar Cell", "1st Slot: Outside Texture", "Tier IV", "Level 2", "0 = South, 90 = West",
+                "MP3 Player", "Windswept", "&aFree Runners&r", "Mix", "Proxy ID: %s", "OK", "B", "R.I.P.")) {
+            assertFalse(Validator.isTrivial(s), s);
+        }
     }
 
     @Test

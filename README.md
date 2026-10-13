@@ -168,7 +168,7 @@ Si querés que una palabra se traduzca **siempre igual** en todos los mods, agre
 
 **El juego se cierra solo mientras traduce.** Probablemente falta memoria RAM. Cerrá otros programas, usá un modelo más chico o bajá **Textos por lote**.
 
-**Algunos textos siguen en inglés.** Abrí `informe.txt` en la carpeta del mod: ahí están los textos que la IA no pudo traducir bien y por qué. Esos se vuelven a intentar cada vez que abrís el juego, y también podés traducirlos a mano con `correcciones.json`.
+**Algunos textos siguen en inglés.** Abrí `informe.txt` en la carpeta del mod: ahí están los textos que la IA no pudo traducir bien y por qué. Se reintentan al abrir el juego; si fallan 3 veces con el mismo modelo, se dejan de mandar para no perder tiempo (vuelven a intentarse si cambiás de modelo o de servicio). Suelen ser textos largos con muchos códigos de formato: con un servicio en la nube salen mejor. También podés traducirlos a mano con el editor de correcciones.
 
 ## ¿Necesitás ayuda para instalarlo?
 

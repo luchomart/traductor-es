@@ -21,7 +21,7 @@ final class Prompts {
             5. Los saltos de línea (\\n) se mantienen como saltos de línea normales del JSON, sin escaparlos dos veces.
             6. Usa el {variante} y la terminología oficial de Minecraft en esa variante. Respeta siempre el glosario si se incluye.
             7. Nombres propios de mods, marcas y personajes (Mekanism, Ars Nouveau, FE, RF) no se traducen.
-            8. Usa mayúscula inicial en nombres de objetos y bloques igual que el original, y mantén el estilo breve de la interfaz.
+            8. En nombres de objetos, bloques y entidades usa mayúscula solo en la primera palabra y en los nombres propios, como el Minecraft oficial en español: "Mesa de crafteo", "Cofre de ender", "Lingote de hierro", "Bloque de campo magnético" (no "Bloque de Campo Magnético"). Mantén el estilo breve de la interfaz.
             9. No omitas ninguna entrada. Si un texto no necesita traducción (siglas, números, nombres propios), devuélvelo igual.
             """;
 

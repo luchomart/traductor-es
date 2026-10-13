@@ -93,6 +93,12 @@ public class TranslationJob implements Runnable {
     private final Consumer<TranslationJob> onFinish;
     private final LlmClient client = new LlmClient();
     private final TranslationCache cache;
+    /** Textos que fallaron varias veces seguidas con la misma IA: se dejan de mandar. */
+    private final FailureLog failureLog;
+    /** Servicio y modelo de esta traducción (se fija al empezar, después de elegir el modelo). */
+    private String aiId = "";
+    /** Textos que no se mandaron porque ya fallaron {@link FailureLog#MAX_RUNS} veces con esta IA. */
+    public volatile int skipped;
     /** Variante del español de destino (es_es, es_mx…) y las que se usan como respaldo. */
     public final String target;
     private final List<String> fallbacks;
@@ -124,6 +130,7 @@ public class TranslationJob implements Runnable {
         this.target = target;
         this.fallbacks = SpanishTarget.fallbacks(target);
         this.cache = new TranslationCache(target);
+        this.failureLog = new FailureLog(target);
         this.onFinish = onFinish;
     }
 
@@ -182,6 +189,7 @@ public class TranslationJob implements Runnable {
     private List<Item> prepare() throws IOException {
         state = State.SCANNING;
         message = "Buscando textos en los mods…";
+        aiId = FailureLog.aiId(cfg);
         Scan scan = scanOnMainThread();
         Map<String, Map<String, Map<String, String>>> all = scan.lang();
         if (cfg.translateBooks) addBookTexts(all);
@@ -236,8 +244,8 @@ public class TranslationJob implements Runnable {
         // Primero los nombres: después se usan como glosario en descripciones y libros.
         pending.sort(Comparator.comparing((Item it) -> !it.isName));
         total = pending.size();
-        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, correcciones: {}, archivos de libros: {}, textos de misiones: {}, por traducir: {}",
-                glossary.size(), official, fromVariants, fromCache, corrected, bookFiles, questTexts, total);
+        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, correcciones: {}, archivos de libros: {}, textos de misiones: {}, omitidos por fallar: {}, por traducir: {}",
+                glossary.size(), official, fromVariants, fromCache, corrected, bookFiles, questTexts, skipped, total);
         return pending;
     }
 
@@ -311,6 +319,7 @@ public class TranslationJob implements Runnable {
     }
 
     private void enqueue(String ns, String modNs, String key, String requestKey, String text, boolean isName) {
+        if (failureLog.shouldSkip(ns, key, text, aiId)) { skipped++; return; } // siempre falla con esta IA
         Item item = byText.get(text);
         if (item == null) {
             String rk = requestKey;
@@ -480,6 +489,7 @@ public class TranslationJob implements Runnable {
     private void maybeFlush() throws IOException {
         if (System.currentTimeMillis() - lastFlushMs < 60_000) return;
         cache.flush();
+        failureLog.save();
         packChanged |= writePack();
         lastFlushMs = System.currentTimeMillis();
     }
@@ -737,6 +747,7 @@ public class TranslationJob implements Runnable {
 
     private synchronized void accept(Item it, String translation) {
         for (Target t : it.targets) {
+            failureLog.succeeded(t.ns(), t.key());
             cache.put(t.ns(), t.key(), it.text, translation, Validator.looksUntranslated(it.text, translation));
             output.computeIfAbsent(t.ns(), k -> new TreeMap<>()).put(t.key(), translation);
             if (it.isName) glossary.addModName(t.ns(), t.key(), it.text, translation);
@@ -749,6 +760,7 @@ public class TranslationJob implements Runnable {
         failed++;
         done++;
         perMod.computeIfAbsent(it.modNs, k -> new int[2])[1]++;
+        for (Target tg : it.targets) failureLog.failed(tg.ns(), tg.key(), it.text, aiId);
         Target t = it.targets.get(0);
         failures.add(t.ns() + ":" + t.key() + " — " + why + " — \"" + abbreviate(it.text) + "\"");
     }
@@ -772,6 +784,7 @@ public class TranslationJob implements Runnable {
 
     private void finish(State end, String msg) {
         cache.flush();
+        failureLog.save();
         try {
             packChanged |= writePack();
         } catch (IOException e) {
@@ -799,7 +812,9 @@ public class TranslationJob implements Runnable {
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
                 .append(quests == null ? " (el modpack no tiene misiones con archivos de idioma)" : "").append('\n');
         sb.append("Textos únicos enviados a la IA: ").append(done).append(" de ").append(total).append('\n');
-        sb.append("Fallidos (quedan en el idioma original): ").append(failed).append("\n\n");
+        sb.append("Fallidos (quedan en el idioma original): ").append(failed).append('\n');
+        sb.append("Omitidos (fallaron ").append(FailureLog.MAX_RUNS).append(" veces con esta IA; se reintentan si cambiás de modelo o de servicio): ")
+                .append(skipped).append("\n\n");
         if (!perMod.isEmpty()) {
             sb.append("Por mod (traducidos / fallidos):\n");
             perMod.forEach((ns, c) -> sb.append("  ").append(ns).append(": ").append(c[0]).append(" / ").append(c[1]).append('\n'));

@@ -15,7 +15,7 @@ public final class ModelPicker {
     /** Modelos que no sirven para traducir texto: voz, filtros de seguridad, imágenes, embeddings… */
     private static final Pattern NOT_CHAT = Pattern.compile(
             "guard|safeguard|orpheus|tts|whisper|embed|image|imagen|audio|speech|moderation|rerank|veo|aqa|learnlm|live|transcribe|vision-preview|computer-use"
-            + "|deep-research|antigravity|robotics|banana");
+            + "|deep-research|antigravity|robotics|banana|lyria|chirp");
     /** Versiones de prueba: se pueden elegir, pero se listan al final. */
     private static final Pattern EXPERIMENTAL = Pattern.compile("preview|exp|beta|latest");
     /** Modelos entrenados sobre todo para otro idioma (ALLaM: árabe; Jais: árabe; Swallow: japonés…). */

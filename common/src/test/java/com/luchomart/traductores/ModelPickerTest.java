@@ -38,6 +38,17 @@ class ModelPickerTest {
     }
 
     @Test
+    void geminiSinModelosRarosEnLaLista() {
+        List<String> gemini = List.of("gemini-3.8-flash", "gemini-3.9-flash-preview-09-2026", "deep-research-pro-preview",
+                "antigravity-preview", "gemini-robotics-er-1.5-preview", "nano-banana-pro", "lyria-realtime-exp",
+                "chirp-3", "gemini-2.5-flash-preview-tts", "gemini-2.5-computer-use-preview", "gemini-embedding-001");
+        List<String> ranked = ModelPicker.ranked(Preset.GEMINI, gemini);
+        // Solo quedan los de chat; las versiones de prueba, al final.
+        assertEquals(List.of("gemini-3.8-flash", "gemini-3.9-flash-preview-09-2026"), ranked);
+        assertEquals(ModelPicker.Kind.PREVIEW, ModelPicker.kind("gemini-3.9-flash-preview-09-2026"));
+    }
+
+    @Test
     void openRouterPrefiereGeminiFlashYSinoUnoGratis() {
         assertEquals("google/gemini-3.8-flash", ModelPicker.recommend(Preset.OPENROUTER,
                 List.of("anthropic/claude-x", "google/gemini-3.8-flash", "google/gemini-2.5-flash", "qwen/qwen3:free")));

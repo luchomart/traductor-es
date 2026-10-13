@@ -23,8 +23,8 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Elección automática del modelo en la nube, tope de respuesta (max_tokens) y cambio solo si el servicio retira el modelo (encontrado al probar con claves reales)
 
 ## Pendientes chicos (para la etapa visual)
-- [ ] Filtrar modelos raros de la lista de Gemini (antigravity, deep-research, preview)
-- [ ] Mostrar en el log los reintentos de Probar conexión
+- [x] Filtrar modelos raros de la lista de Gemini (antigravity, deep-research, música, voz…; los preview van al final y nunca se eligen solos)
+- [x] Mostrar en el log los reintentos de Probar conexión (panel y asistente)
 - [ ] Probar una traducción completa con un servicio en la nube
 
 ## Etapa visual

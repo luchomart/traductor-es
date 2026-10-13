@@ -405,6 +405,7 @@ public class ConfigScreen extends BaseScreen {
                         note.append(" ").append(info.explain(old));
                         if (alt == null) throw new LlmClient.LlmException("no queda otro modelo disponible en este servicio: probá otro servicio con «¿Cuál conviene?»");
                         note.append(" Se probó con «").append(alt).append("».");
+                        TraductorES.LOG.info("[Traductor ES] Probar conexión: {} ({}), se prueba con {}", old, info.tag(), alt);
                         setModel(cfg, alt);
                     }
                 }
@@ -481,7 +482,7 @@ public class ConfigScreen extends BaseScreen {
 
     /** Prueba la conexión reintentando si el servicio está saturado (503) o pide esperar (429). */
     private void pingRetrying(LlmClient client, Config cfg) throws Exception {
-        pingPatiently(client, cfg, msg -> report(Component.literal(msg).withStyle(ChatFormatting.YELLOW)));
+        pingPatiently(client, cfg, msg -> testResult = Component.literal(msg).withStyle(ChatFormatting.YELLOW));
     }
 
     /**
@@ -499,6 +500,8 @@ public class ConfigScreen extends BaseScreen {
                 // Se espera lo que pide el servicio ("retry in 22s" o Retry-After), hasta 30 s.
                 long asked = Math.max(ModelStatus.parseWait(e.getMessage()), e.retryAfterSeconds);
                 long wait = asked > 0 ? Math.min(asked + 1, 30) : 4;
+                TraductorES.LOG.info("[Traductor ES] Probar conexión con {}: intento {} falló ({}), se reintenta en {} s",
+                        cfg.model, attempt, e.getMessage(), wait);
                 status.accept((e.status == 429 ? "El servicio pide esperar " + wait + " s (límite por minuto)" : "El servicio está saturado")
                         + ", reintentando (" + attempt + "/2)…");
                 Thread.sleep(wait * 1000);

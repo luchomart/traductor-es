@@ -380,6 +380,7 @@ public class WizardScreen extends BaseScreen {
                     return;
                 }
                 switched = cfg.model + ": " + info.tag().toLowerCase(java.util.Locale.ROOT);
+                TraductorES.LOG.info("[Traductor ES] Asistente: {} ({}), se prueba con {}", cfg.model, info.tag(), alt);
                 cfg.model = alt;
                 applyModel(cfg);
             } catch (Exception e) {

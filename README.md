@@ -91,6 +91,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 | Al abrir el juego | Traducir solo lo nuevo cada vez que llegás al menú. |
 | Mientras juego | *Auto*: con IA en la nube sigue; con IA en tu PC se pausa para no bajar los FPS. También *Sí* o *No*. |
 | Libros y misiones | Los manuales de Patchouli y las misiones de FTB Quests. Las misiones se ven al volver a entrar al mundo, y solo en mundos de un jugador (en un servidor las misiones vienen del servidor). |
+| Original con Alt | Con **Alt** apretado sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés. Sirve para buscar guías o recetas en internet. |
 | Otras variantes | Si un mod no trae tu español pero sí otro, usarlo en vez de traducir. |
 | Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |
 
@@ -195,6 +196,7 @@ Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para 
 - Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros y misiones (manuales de Patchouli y misiones de FTB Quests; las misiones se ven al volver a entrar al mundo y solo en mundos de un jugador), otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
 - Herramientas: editor de correcciones, exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
 - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
+- Original con Alt: dejando apretada la tecla Alt sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés (se desactiva en Traducción → Original con Alt).
 - Corregir una traducción: Herramientas → Abrir editor (o /traductor corregir en el chat): buscar el texto en inglés o español, corregirlo y Guardar. Se aplica enseguida (las misiones, al volver a entrar al mundo).
 - Comandos en el chat: /traductor estado, panel, corregir, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).

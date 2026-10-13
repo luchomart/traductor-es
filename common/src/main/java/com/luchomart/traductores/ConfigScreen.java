@@ -177,6 +177,9 @@ public class ConfigScreen extends BaseScreen {
                 "También los manuales de Patchouli y las misiones de FTB Quests (las misiones se ven al volver a entrar al mundo).");
         toggle(innerX + half + 4, y, half, "Otras variantes", () -> cfg.useSpanishVariants, v -> cfg.useSpanishVariants = v,
                 "Si un mod no trae tu español pero sí otro (México, Argentina…), usarlo en vez de traducir.");
+        y += ROW;
+        toggle(innerX, y, half, "Original con Alt", () -> cfg.originalOnAlt, v -> cfg.originalOnAlt = v,
+                "Con Alt apretado sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés.");
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));

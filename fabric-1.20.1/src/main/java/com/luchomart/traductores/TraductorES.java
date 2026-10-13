@@ -5,6 +5,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import org.slf4j.Logger;
 
@@ -27,6 +28,7 @@ public class TraductorES implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> Traductor.onWorldJoin());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> Traductor.onWorldLeave());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> Traductor.onShutdown());
+        ItemTooltipCallback.EVENT.register((stack, flag, lines) -> OriginalText.onTooltip(lines));
 
         LOG.info("[Traductor ES] Cargado. Configuración en {}", Config.DIR);
     }

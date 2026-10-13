@@ -48,6 +48,8 @@ public class Config {
     public String whilePlaying = "auto";
     /** Traducir también los libros de Patchouli (manuales dentro del juego). */
     public boolean translateBooks = true;
+    /** Con Alt apretado, la descripción de los objetos traducidos se ve en inglés. */
+    public boolean originalOnAlt = true;
     /** Si la IA devuelve sin cambios un texto de varias palabras, pedirle una vez más que lo traduzca. */
     public boolean retryUnchanged = true;
     /** Español de destino: "auto" usa el idioma del juego; también es_es, es_mx, es_ar, es_cl, es_uy, es_ve, es_ec. */

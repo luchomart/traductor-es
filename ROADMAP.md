@@ -50,7 +50,7 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 
 ## Extras
 - [x] Editor de correcciones dentro del juego (buscador + editor; /traductor corregir)
-- [ ] Ver el texto original manteniendo Alt
+- [x] Ver el texto original manteniendo Alt
 - [ ] Forge 1.19.2
 
 ## Publicación

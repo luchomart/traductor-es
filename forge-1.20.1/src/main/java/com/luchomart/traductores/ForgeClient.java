@@ -12,6 +12,7 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AddPackFindersEvent;
 import net.minecraftforge.event.GameShuttingDownEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -32,6 +33,8 @@ final class ForgeClient {
         bus.addListener(EventPriority.NORMAL, false, ClientPlayerNetworkEvent.LoggingIn.class, e -> Traductor.onWorldJoin());
         bus.addListener(EventPriority.NORMAL, false, ClientPlayerNetworkEvent.LoggingOut.class, e -> Traductor.onWorldLeave());
         bus.addListener(EventPriority.NORMAL, false, GameShuttingDownEvent.class, e -> Traductor.onShutdown());
+        // Al final, para que la pista "Alt: ver original" quede debajo de lo que agregan otros mods.
+        bus.addListener(EventPriority.LOWEST, false, ItemTooltipEvent.class, e -> OriginalText.onTooltip(e.getToolTip()));
         ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> new ConfigScreen(parent)));
 

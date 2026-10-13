@@ -45,7 +45,7 @@ public class GuideScreen extends BaseScreen {
             new Section("El panel",
                     "Mods → Traductor ES → Configurar (en Fabric, con Mod Menu), o /traductor panel en el chat. Tiene tres pestañas.",
                     List.of(new Step("1", "Conexión", "Servicio de IA, clave, modelo y «Probar conexión»."),
-                            new Step("2", "Traducción", "Español de destino, traducir al abrir, mientras juego, libros, lote y peticiones a la vez."),
+                            new Step("2", "Traducción", "Español de destino, traducir al abrir, mientras juego, libros y misiones, lote y peticiones a la vez."),
                             new Step("3", "Herramientas", "Exportar el pack para amigos, ver el informe, abrir la carpeta y el asistente.")),
                     "Pasá el mouse sobre cualquier opción para ver qué hace."),
             new Section("IA en la nube",

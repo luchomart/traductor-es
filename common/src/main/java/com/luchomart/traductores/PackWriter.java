@@ -46,7 +46,8 @@ public final class PackWriter {
         boolean changed = false;
         Path assets = DIR.resolve("assets");
         for (Map.Entry<String, Map<String, String>> e : byNamespace.entrySet()) {
-            if (e.getValue().isEmpty() || e.getKey().startsWith(PatchouliBooks.PREFIX)) continue;
+            // Lo que empieza con "@" son libros o misiones: se escriben en otro lado.
+            if (e.getValue().isEmpty() || e.getKey().startsWith("@")) continue;
             Path lang = assets.resolve(e.getKey()).resolve("lang");
             Path file = lang.resolve(target + ".json");
             String json = GSON.toJson(new TreeMap<>(e.getValue()));

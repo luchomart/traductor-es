@@ -84,6 +84,8 @@ public final class Traductor {
             } else if (j.state != TranslationJob.State.DONE) {
                 toast("Traductor ES", shortResult(j));
             }
+            // Las misiones las carga FTB Quests al abrir el mundo: si ya estaba adentro, las ve la próxima vez.
+            if (j.questsChanged && !inMenu) toast("Traductor ES", "Misiones traducidas: se ven al volver a entrar al mundo.");
             // Falló por algo de configuración y el jugador está en el menú: el asistente lo ayuda a arreglarlo.
             Config cfg = Config.get();
             if (j.setupProblem && cfg.showWizard && !wizardDismissed && mc.screen instanceof TitleScreen) {

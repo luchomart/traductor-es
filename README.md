@@ -90,7 +90,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 | Español de destino | *Automático* usa el idioma del juego; también podés fijar uno. |
 | Al abrir el juego | Traducir solo lo nuevo cada vez que llegás al menú. |
 | Mientras juego | *Auto*: con IA en la nube sigue; con IA en tu PC se pausa para no bajar los FPS. También *Sí* o *No*. |
-| Traducir libros | Los manuales de Patchouli dentro del juego. |
+| Libros y misiones | Los manuales de Patchouli y las misiones de FTB Quests. Las misiones se ven al volver a entrar al mundo, y solo en mundos de un jugador (en un servidor las misiones vienen del servidor). |
 | Otras variantes | Si un mod no trae tu español pero sí otro, usarlo en vez de traducir. |
 | Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |
 
@@ -201,7 +201,7 @@ Primer uso:
 
 Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para ese botón; en cualquier versión también con /traductor panel en el chat), con un botón Guía arriba a la derecha y tres pestañas:
 - Conexión: Servicio (flechas para elegir Ollama, LM Studio, Gemini, Groq u OpenRouter), URL (se completa sola), Clave (se ve oculta; cada servicio guarda la suya; no hace falta con Ollama), botón "Conseguir"/"Descargar", Modelo (vacío = el mod elige el recomendado del servicio; botón "Elegir…" con la lista y un buscador) y "Probar conexión".
-- Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros del juego, otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
+- Traducción: español de destino (Automático = el idioma del juego), "Al abrir el juego", "Mientras juego" (Auto: sigue si la IA está en la nube y se pausa si está en la PC para no bajar los FPS; Sí; No), libros y misiones (manuales de Patchouli y misiones de FTB Quests; las misiones se ven al volver a entrar al mundo y solo en mundos de un jugador), otras variantes del español, textos por lote (20) y peticiones a la vez (1 en la PC, 2 a 4 en la nube).
 - Herramientas: exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
 - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
 - Comandos en el chat: /traductor estado, panel, iniciar, pausar, reanudar, cancelar.
@@ -241,7 +241,7 @@ El proyecto compila las dos versiones a la vez:
 ./gradlew build
 ```
 
-- `common/`: lógica compartida (motor de traducción, validación, glosario, caché, libros de Patchouli, interfaz).
+- `common/`: lógica compartida (motor de traducción, validación, glosario, caché, libros de Patchouli, misiones de FTB Quests, interfaz).
 - `neoforge-1.21.1/`, `forge-1.20.1/`, `fabric-1.21.1/` y `fabric-1.20.1/`: solo lo que cambia entre plataformas (`Platform`, registro del pack y eventos). En Fabric el pack se suma con un mixin (`PackRepositoryMixin`).
 
 Los jars quedan en `*/build/libs/`.

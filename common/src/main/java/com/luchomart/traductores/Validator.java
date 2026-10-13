@@ -13,6 +13,7 @@ public final class Validator {
     // %s, %d, %1$s, %.2f, %% (sin el flag de espacio, para no confundir "50% de" con "% d")
     private static final Pattern PRINTF = Pattern.compile("%(?:\\d+\\$)?[-#+0,(]*\\d*(?:\\.\\d+)?[sdfxXcbeEgGo%]");
     private static final Pattern FORMAT = Pattern.compile("§[0-9a-fk-orA-FK-OR]");
+    private static final Pattern AMP_FORMAT = Pattern.compile("&[0-9a-fk-orA-FK-OR]");
     private static final Pattern BRACES = Pattern.compile("\\{[^{}\\s]{1,40}}");
     private static final Pattern PATCHOULI = Pattern.compile("\\$\\([^)]{0,60}\\)");
     private static final Pattern TAGS = Pattern.compile("</?[a-zA-Z][a-zA-Z0-9_:#-]{0,30}>");
@@ -25,6 +26,7 @@ public final class Validator {
         if (translated.isBlank() && !source.isBlank()) return "traducción vacía";
         String why = compare("marcadores %", PRINTF, source, translated);
         if (why == null) why = compare("códigos §", FORMAT, source, translated);
+        if (why == null) why = compare("códigos &", AMP_FORMAT, source, translated);
         if (why == null) why = compare("marcadores {}", BRACES, source, translated);
         if (why == null) why = compare("marcadores $()", PATCHOULI, source, translated);
         if (why == null) why = compare("etiquetas <>", TAGS, source, translated);

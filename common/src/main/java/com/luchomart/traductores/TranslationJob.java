@@ -80,6 +80,8 @@ public class TranslationJob implements Runnable {
     public volatile int official, fromVariants, fromCache, corrected, bookFiles;
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
+    /** Se escribieron misiones nuevas: se ven al volver a entrar al mundo. */
+    public volatile boolean questsChanged;
     /** Terminó con un error de configuración (lo puede resolver el asistente). */
     public volatile boolean setupProblem;
     /** Motivo de la espera actual antes de reintentar (null si no se está esperando). */
@@ -98,6 +100,9 @@ public class TranslationJob implements Runnable {
     private final List<String> failures = new ArrayList<>();
     private final Map<String, int[]> perMod = new TreeMap<>(); // [traducidos, fallidos]
     private List<PatchouliBooks.Book> books = List.of();
+    /** Misiones de FTB Quests del modpack, o null si no tiene (o no en el formato con archivos de idioma). */
+    private volatile FtbQuests.Quests quests;
+    public volatile int questTexts;
     private Glossary glossary;
     private long lastFlushMs;
     /** Motivo por el que no se pudo restituir una ficha, por clave de petición (para el reintento). */
@@ -203,7 +208,10 @@ public class TranslationJob implements Runnable {
             if (!all.containsKey(ns)) { output.computeIfAbsent(ns, k -> new TreeMap<>()).putAll(corr); corrected += corr.size(); }
         });
 
-        if (cfg.translateBooks) prepareBooks(scan.books());
+        if (cfg.translateBooks) {
+            prepareBooks(scan.books());
+            prepareQuests();
+        }
         glossary.sort();
 
         packChanged |= writePack();
@@ -211,8 +219,8 @@ public class TranslationJob implements Runnable {
         // Primero los nombres: después se usan como glosario en descripciones y libros.
         pending.sort(Comparator.comparing((Item it) -> !it.isName));
         total = pending.size();
-        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, correcciones: {}, archivos de libros: {}, por traducir: {}",
-                glossary.size(), official, fromVariants, fromCache, corrected, bookFiles, total);
+        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, correcciones: {}, archivos de libros: {}, textos de misiones: {}, por traducir: {}",
+                glossary.size(), official, fromVariants, fromCache, corrected, bookFiles, questTexts, total);
         return pending;
     }
 
@@ -235,6 +243,30 @@ public class TranslationJob implements Runnable {
                 });
             }
         }
+    }
+
+    /** Misiones de FTB Quests: lo que no esté en el español oficial del modpack ni en otra variante. */
+    private void prepareQuests() {
+        FtbQuests.Quests q;
+        try {
+            q = FtbQuests.scan(target, cfg.useSpanishVariants ? fallbacks : List.of());
+        } catch (Exception e) {
+            // Un archivo de misiones que no se entiende no debe frenar el resto de la traducción.
+            TraductorES.LOG.warn("[Traductor ES] No se pudieron leer las misiones de FTB Quests: {}", e.toString());
+            return;
+        }
+        if (q == null) return;
+        quests = q;
+        official += q.official();
+        fromVariants += q.fromVariant();
+        Map<String, String> questOut = output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>());
+        FtbQuests.extract(q, (key, text) -> {
+            if (Validator.isTrivial(text)) return;
+            questTexts++;
+            String cached = usableCache(FtbQuests.NS, key, text);
+            if (cached != null) { questOut.put(key, cached); fromCache++; return; }
+            enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
+        });
     }
 
     /** Traducción del caché si sigue valiendo: mismo original, marcadores bien y no "olvidada" sin traducir. */
@@ -310,6 +342,10 @@ public class TranslationJob implements Runnable {
     private synchronized boolean writePack() throws IOException {
         boolean changed = PackWriter.write(output, target);
         changed |= PatchouliBooks.write(books, output, target);
+        if (quests != null) {
+            // Las misiones no están en el pack: FTB Quests las lee de su carpeta al cargar el mundo.
+            questsChanged |= FtbQuests.write(quests, output.getOrDefault(FtbQuests.NS, Map.of()));
+        }
         return changed;
     }
 
@@ -718,6 +754,8 @@ public class TranslationJob implements Runnable {
         sb.append("Correcciones manuales aplicadas: ").append(corrected).append('\n');
         sb.append("Reutilizados del caché: ").append(fromCache).append('\n');
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
+        sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
+                .append(quests == null ? " (el modpack no tiene misiones con archivos de idioma)" : "").append('\n');
         sb.append("Textos únicos enviados a la IA: ").append(done).append(" de ").append(total).append('\n');
         sb.append("Fallidos (quedan en el idioma original): ").append(failed).append("\n\n");
         if (!perMod.isEmpty()) {

@@ -44,7 +44,9 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Probar en el juego con un modpack de Fabric (1.21.1: Farmer's Delight, JEI, Mod Menu)
 
 ## Fase 4: FTB Quests
-- [ ] Traducir misiones cuando el modpack no trae el idioma
+- [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta
+- [ ] Probar en el juego (OceanBlock)
+- [ ] Formato viejo (textos dentro de los capítulos), si aparece un modpack que lo use
 
 ## Extras
 - [ ] Editor de correcciones dentro del juego (buscador)

@@ -16,6 +16,8 @@ public final class Masker {
             + "|\\$\\([^)]{0,60}\\)"                              // $(item), $(l:ruta), $()
             + "|%(?:\\d+\\$)?[-#+0,(]*\\d*(?:\\.\\d+)?[sdfxXcbeEgGo%]" // %s, %1$s, %%
             + "|§[0-9a-fk-orA-FK-OR]"                             // §a, §r
+            + "|&[0-9a-fk-orA-FK-OR]"                              // &a, &r de FTB Quests
+            + "|\\\\[&\\s]"                                         // \& (un & literal en FTB Quests) y "\ "
             + "|</?[a-zA-Z][a-zA-Z0-9_:#-]{0,30}>"                 // <item>, <r>, <n>, </b>
             + "|\\\\n"                                             // \n escrito como texto
             + "|" + Validator.HIGHLIGHT.pattern());                // _resaltado_ de Create (no el _ de stone_bricks)

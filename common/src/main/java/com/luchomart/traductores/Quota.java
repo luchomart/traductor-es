@@ -27,19 +27,25 @@ public final class Quota {
      * OpenRouter: respuestas de /api/v1/key y /api/v1/credits (esta última puede faltar).
      * Con un modelo ":free" lo que importa es el tope diario; con uno de pago, el saldo.
      */
+    /** Lo último que se supo de la cuenta de OpenRouter (para «¿Cuál conviene?»): si nunca cargó saldo y cuánto le queda. */
+    public static volatile Boolean openRouterFreeTier;
+    public static volatile Double openRouterBalance;
+
     static String fromOpenRouter(String keyBody, String creditsBody, boolean freeModel) {
         JsonObject key = data(keyBody);
         if (key == null) return null;
-        if (freeModel) {
-            // Sin haber comprado créditos el tope es de 50 peticiones por día; con créditos, 1.000.
-            boolean freeTier = bool(key, "is_free_tier");
-            return freeTier ? "OpenRouter gratis: 50 peticiones por día (1.000 si cargás 10 US$)"
-                    : "OpenRouter gratis: hasta 1.000 peticiones por día";
-        }
+        // Sin haber comprado créditos el tope de los modelos ":free" es de 50 peticiones por día; con créditos, 1.000.
+        boolean freeTier = bool(key, "is_free_tier");
         Double balance = null;
         JsonObject credits = data(creditsBody);
         if (credits != null && credits.has("total_credits") && credits.has("total_usage")) {
             balance = credits.get("total_credits").getAsDouble() - credits.get("total_usage").getAsDouble();
+        }
+        openRouterFreeTier = freeTier;
+        if (balance != null) openRouterBalance = balance;
+        if (freeModel) {
+            return freeTier ? "OpenRouter gratis: 50 peticiones por día (1.000 si cargás 10 US$)"
+                    : "OpenRouter gratis: hasta 1.000 peticiones por día";
         }
         Double keyLeft = key.has("limit_remaining") && !key.get("limit_remaining").isJsonNull()
                 ? key.get("limit_remaining").getAsDouble() : null;
@@ -77,7 +83,7 @@ public final class Quota {
         return String.format(Locale.ROOT, "%,d", n).replace(',', '.');
     }
 
-    private static String money(double v) {
+    static String money(double v) {
         return String.format(Locale.ROOT, "%.2f", Math.max(0, v)).replace('.', ',') + " US$";
     }
 }

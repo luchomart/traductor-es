@@ -30,6 +30,7 @@ public class CompareScreen extends BaseScreen {
         super(Component.literal("¿Cuál conviene?"));
         this.parent = parent;
         this.texts = texts;
+        refreshOpenRouter();
         this.onPick = onPick;
         if (texts < 0) count();
     }
@@ -60,6 +61,68 @@ public class CompareScreen extends BaseScreen {
         }, "Traductor ES - contar textos");
         t.setDaemon(true);
         t.start();
+    }
+
+    /** Claves cargadas (las de este modpack y las compartidas): se leen una vez al abrir. */
+    private final java.util.Map<String, String> keys = loadKeys();
+
+    private static java.util.Map<String, String> loadKeys() {
+        Config cfg = Config.get();
+        java.util.Map<String, String> out = new java.util.HashMap<>(cfg.apiKeys);
+        if (cfg.shareKeys) Shared.loadKeys().forEach((k, v) -> { if (v != null && !v.isBlank()) out.put(k, v); });
+        return out;
+    }
+
+    private boolean hasKey(Preset p) {
+        String k = keys.get(p.name());
+        return k != null && !k.isBlank();
+    }
+
+    /** Si hay clave de OpenRouter, consulta en segundo plano si la cuenta cargó saldo alguna vez y cuánto le queda. */
+    private void refreshOpenRouter() {
+        String key = loadKeys().get(Preset.OPENROUTER.name());
+        if (key == null || key.isBlank()) return;
+        Config c = Config.get().snapshot();
+        c.apiUrl = Preset.OPENROUTER.url;
+        c.apiKey = key;
+        c.model = "";
+        Thread t = new Thread(() -> new LlmClient().quota(c), "Traductor ES - cuenta OpenRouter");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** La opción con lo que se sabe de verdad: la velocidad medida y el tope diario de la cuenta. */
+    private static ServiceGuide.Option adjusted(ServiceGuide.Option o) {
+        Integer measured = ServiceGuide.measuredFor(o);
+        if (measured != null) o = o.withSpeed(measured);
+        // OpenRouter gratis: 50 peticiones por día sin haber cargado saldo nunca, 1.000 si cargó (de a ~20 textos).
+        if (o.freeModel() && Boolean.FALSE.equals(Quota.openRouterFreeTier)) o = o.withPerDay(20_000);
+        return o;
+    }
+
+    /** Lo que se sabe de ese servicio para vos: si falta la clave, si se midió, saldo o tope diario. null si nada. */
+    private String status(ServiceGuide.Option o) {
+        Preset p = o.preset();
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (p.isCloud()) {
+            if (!hasKey(p)) return "falta clave";
+            parts.add("✓ clave");
+        }
+        if (ServiceGuide.measuredFor(o) != null) parts.add("medido");
+        if (p == Preset.OPENROUTER && !o.freeModel()) {
+            if (ModelStatus.noCredit(p.url)) parts.add("sin saldo");
+            else if (Quota.openRouterBalance != null) parts.add("saldo " + Quota.money(Quota.openRouterBalance));
+        }
+        if (p == Preset.OPENROUTER && o.freeModel() && Quota.openRouterFreeTier != null) {
+            parts.add(Quota.openRouterFreeTier ? "50 pedidos/día" : "1.000 pedidos/día");
+        }
+        return parts.isEmpty() ? null : String.join(" · ", parts);
+    }
+
+    /** Algo impide usarlo ya (falta la clave o no hay saldo). */
+    private boolean blocked(ServiceGuide.Option o) {
+        return o.preset().isCloud() && !hasKey(o.preset())
+                || o.preset() == Preset.OPENROUTER && !o.freeModel() && ModelStatus.noCredit(o.preset().url);
     }
 
     @Override
@@ -148,13 +211,24 @@ public class CompareScreen extends BaseScreen {
             int ty = twoLines ? y + 3 : y + (h - 8) / 2;
             String name = option.name() + (current ? "  ✓" : "");
             g.drawString(font, name, x + 6, ty, UiKit.WHITE, false);
-            String time = option.duration(texts > 0 ? texts : SAMPLE);
+            int n = texts > 0 ? texts : SAMPLE;
+            ServiceGuide.Option real = adjusted(option);
+            String time = real.duration(n);
             int tagW = 56, timeX = x + w - tagW - 8 - 70;
-            g.drawString(font, time, timeX, ty, UiKit.GOLD, false);
+            // El tiempo, con el color de su velocidad (celeste muy rápida … rojo muy lenta).
+            g.drawString(font, time, timeX, ty, SpeedLevel.of(real.effectiveRate(n)).color, false);
             int tagX = x + w - tagW - 4;
             g.fill(tagX, ty - 2, tagX + tagW, ty + 9, option.free() ? 0xFF1E4D23 : 0xFF5A4511);
             g.drawCenteredString(font, option.cost(), tagX + tagW / 2, ty, option.free() ? UiKit.GREEN : UiKit.GOLD);
-            if (twoLines) g.drawString(font, font.plainSubstrByWidth(option.note(), w - 12), x + 6, y + 14, UiKit.DIM, false);
+            String st = status(option);
+            int stColor = blocked(option) ? UiKit.RED : 0xFF7FBF7F;
+            if (twoLines) {
+                int stW = st == null ? 0 : font.width(st) + 8;
+                g.drawString(font, font.plainSubstrByWidth(option.note(), w - 12 - stW), x + 6, y + 14, UiKit.DIM, false);
+                if (st != null) g.drawString(font, st, x + w - 6 - font.width(st), y + 14, stColor, false);
+            } else if (st != null) {
+                g.drawString(font, st, x + 6 + font.width(name) + 8, ty, stColor, false);
+            }
         }
     }
 }

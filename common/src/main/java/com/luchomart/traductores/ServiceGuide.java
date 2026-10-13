@@ -19,6 +19,16 @@ public final class ServiceGuide {
      */
     public record Option(String name, Preset preset, boolean free, boolean freeModel, int perMinute, int perDay,
                          String cost, String note) {
+        /** Textos por minuto de verdad para esa cantidad: con tope diario, lo que da repartido en el día. */
+        public double effectiveRate(int texts) {
+            return perDay > 0 && texts > perDay ? perDay / 1440.0 : perMinute;
+        }
+
+        /** La misma opción con otro tope diario (OpenRouter gratis: depende de si la cuenta cargó saldo alguna vez). */
+        public Option withPerDay(int textsPerDay) {
+            return new Option(name, preset, free, freeModel, perMinute, textsPerDay, cost, note);
+        }
+
         /** La misma opción con otra velocidad (la medida con el minitest). */
         public Option withSpeed(int textsPerMinute) {
             return new Option(name, preset, free, freeModel, Math.max(1, textsPerMinute), perDay, cost, note);
@@ -54,17 +64,30 @@ public final class ServiceGuide {
                     "Gratis", "Sin internet ni cuentas. Depende de tu placa de video (gemma3:12b)."));
 
     /** Velocidad medida con el minitest en esta sesión, por servicio y modelo. */
-    private static final Map<String, Integer> MEASURED = new ConcurrentHashMap<>();
+    /** apiUrl + " " + modelo → {textos por minuto, cuándo se midió}. */
+    private static final Map<String, long[]> MEASURED = new ConcurrentHashMap<>();
 
     static void measured(String apiUrl, String model, int textsPerMinute) {
-        MEASURED.put(apiUrl + " " + model, textsPerMinute);
+        MEASURED.put(apiUrl + " " + model, new long[]{textsPerMinute, System.currentTimeMillis()});
+    }
+
+    /** La última velocidad medida en esta sesión para esa opción (mismo servicio y tipo de modelo), o null. */
+    public static Integer measuredFor(Option o) {
+        long[] best = null;
+        for (Map.Entry<String, long[]> e : MEASURED.entrySet()) {
+            int sp = e.getKey().indexOf(' ');
+            String url = e.getKey().substring(0, sp), model = e.getKey().substring(sp + 1);
+            if (Preset.fromUrl(url) != o.preset() || model.endsWith(":free") != o.freeModel()) continue;
+            if (best == null || e.getValue()[1] > best[1]) best = e.getValue();
+        }
+        return best == null ? null : (int) best[0];
     }
 
     /** La opción actual con la velocidad medida, si se midió; si no, con la aproximada. */
     public static Option estimate(Config cfg) {
         Option o = current(cfg);
-        Integer m = MEASURED.get(cfg.apiUrl + " " + cfg.model);
-        return m == null ? o : o.withSpeed(m);
+        long[] m = MEASURED.get(cfg.apiUrl + " " + cfg.model);
+        return m == null ? o : o.withSpeed((int) m[0]);
     }
 
     /** La opción que corresponde a la configuración actual. */

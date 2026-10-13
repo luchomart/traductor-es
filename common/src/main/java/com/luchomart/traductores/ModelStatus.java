@@ -21,7 +21,8 @@ import java.util.regex.Pattern;
  * elegirlos solos.
  */
 public final class ModelStatus {
-    public enum State { RETIRED, NO_FREE, EXHAUSTED, TOO_SMALL }
+    /** NO_CREDIT es de la cuenta, no de un modelo: se guarda con el modelo "*". */
+    public enum State { RETIRED, NO_FREE, EXHAUSTED, TOO_SMALL, NO_CREDIT }
 
     /** Estado de un modelo; until: hasta cuándo vale (solo EXHAUSTED); limit: el cupo que informó el servicio, si lo dijo. */
     public record Info(State state, long until, String limit) {
@@ -31,6 +32,7 @@ public final class ModelStatus {
                 case RETIRED -> "RETIRADO";
                 case NO_FREE -> "SIN PLAN GRATIS";
                 case TOO_SMALL -> "CUPO MUY CHICO";
+                case NO_CREDIT -> "SIN SALDO";
                 case EXHAUSTED -> "AGOTADO · vuelve en " + inWords(until - System.currentTimeMillis());
             };
         }
@@ -40,6 +42,7 @@ public final class ModelStatus {
             return switch (state) {
                 case RETIRED -> "El servicio todavía lista «" + model + "», pero ya no lo da: elegí otro.";
                 case NO_FREE -> "«" + model + "» no tiene plan gratis: hace falta cargar saldo en el servicio.";
+                case NO_CREDIT -> "La cuenta no tiene saldo: los modelos de pago no responden hasta cargar.";
                 case TOO_SMALL -> "El plan gratis de «" + model + "» deja pedir muy poco por minuto" + (limit != null ? " (" + limit + ")" : "")
                         + ": no alcanza para traducir. Elegí otro.";
                 case EXHAUSTED -> "Se acabó el cupo gratis de «" + model + "»" + (limit != null ? " (" + limit + ")" : "")
@@ -100,7 +103,16 @@ public final class ModelStatus {
 
     /** El modelo respondió bien: se olvida lo malo que se sabía de él. */
     public static synchronized void ok(String apiUrl, String model) {
-        if (data().remove(id(apiUrl, model)) != null) save();
+        boolean changed = data().remove(id(apiUrl, model)) != null;
+        // Respondió un modelo de pago: la cuenta tiene saldo.
+        if (Preset.fromUrl(apiUrl) == Preset.OPENROUTER && !model.endsWith(":free")) changed |= data().remove(id(apiUrl, "*")) != null;
+        if (changed) save();
+    }
+
+    /** La cuenta del servicio se quedó sin saldo (lo dijo con un 402). */
+    public static boolean noCredit(String apiUrl) {
+        Info i = get(apiUrl, "*");
+        return i != null && i.state() == State.NO_CREDIT;
     }
 
     public static synchronized void set(String apiUrl, String model, Info info) {
@@ -118,6 +130,11 @@ public final class ModelStatus {
         // Con una URL propia, un 404 puede ser la dirección mal escrita y no el modelo.
         if (e.status == 404 && Preset.fromUrl(apiUrl) == Preset.CUSTOM) return null;
         Info info = classify(e.status, e.getMessage(), e.retryAfterSeconds, System.currentTimeMillis());
+        if (info != null && info.state() == State.NO_CREDIT) {
+            // Es de la cuenta: se anota para «¿Cuál conviene?», pero no descarta el modelo (lo resuelve quien llama).
+            set(apiUrl, "*", info);
+            return null;
+        }
         if (info != null) set(apiUrl, model, info);
         return info;
     }
@@ -130,6 +147,7 @@ public final class ModelStatus {
         String msg = message == null ? "" : message;
         String low = msg.toLowerCase(Locale.ROOT);
         if (status == 404) return new Info(State.RETIRED, 0, null);
+        if (status == 402) return new Info(State.NO_CREDIT, 0, null);
         if (status != 429 && status != 413) return null;
         Matcher lm = LIMIT.matcher(msg);
         String limitNum = lm.find() ? lm.group(1) : null;

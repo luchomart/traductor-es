@@ -18,6 +18,7 @@ public final class ModelPicker {
             + "|deep-research|antigravity|robotics");
     /** Versiones de prueba: se pueden elegir, pero se listan al final. */
     private static final Pattern EXPERIMENTAL = Pattern.compile("preview|exp|beta|latest");
+    private static final Pattern SIZE = Pattern.compile("[-_:](\\d{1,4})b(?![a-z])");
     private static final Pattern VERSION = Pattern.compile("(\\d+(?:\\.\\d+)*)");
     /** Gemini sugiere el reemplazo en el error: "Please update your code to use models/gemini-x-flash". */
     private static final Pattern SUGGESTION = Pattern.compile("use (?:models/)?([A-Za-z0-9._:/-]+[A-Za-z0-9])");
@@ -47,6 +48,15 @@ public final class ModelPicker {
         return pick != null ? pick : chat.get(0);
     }
 
+    /** El modelo gratis recomendado de OpenRouter (los que terminan en ":free"), o null si no hay. */
+    public static String recommendFree(List<String> available) {
+        List<String> free = chatModels(available).stream().filter(m -> m.endsWith(":free")).toList();
+        if (free.isEmpty()) return null;
+        // Los que mejor traducen al español entre los gratis, y si no, cualquiera.
+        return firstNonNull(newest(free, "^google/gemma"), newest(free, "^google/gemini"), newest(free, "^meta-llama/llama-[\\d.]+-70b"),
+                newest(free, "^deepseek/"), newest(free, "^meta-llama/"), free.get(0));
+    }
+
     /** Modelos de chat con el recomendado primero (para mostrarlos en el panel). */
     public static List<String> ranked(Preset preset, List<String> available) {
         List<String> chat = chatModels(available);
@@ -72,8 +82,15 @@ public final class ModelPicker {
         Pattern p = Pattern.compile(regex);
         return models.stream()
                 .filter(m -> p.matcher(m.toLowerCase(Locale.ROOT)).find())
-                .max(Comparator.comparing(ModelPicker::version, ModelPicker::compareVersions))
+                // A igual versión, el más grande (27b antes que 12b): traduce mejor.
+                .max(Comparator.comparing(ModelPicker::version, ModelPicker::compareVersions).thenComparingInt(ModelPicker::size))
                 .orElse(null);
+    }
+
+    /** Tamaño en miles de millones de parámetros ("gemma-3-27b-it" → 27), o 0 si no figura. */
+    private static int size(String model) {
+        Matcher m = SIZE.matcher(model.toLowerCase(Locale.ROOT));
+        return m.find() ? Integer.parseInt(m.group(1)) : 0;
     }
 
     private static int[] version(String model) {

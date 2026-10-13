@@ -53,6 +53,49 @@ public class WizardScreen extends BaseScreen {
         this.parent = parent;
         mode = Preset.fromUrl(Config.get().apiUrl).isCloud() ? Mode.CLOUD : Mode.LOCAL;
         detectOllama();
+        estimateEarly();
+    }
+
+    /** Cuenta los textos desde el paso 1, para comparar servicios antes de elegir (sin IA, solo leyendo los mods). */
+    private void estimateEarly() {
+        Minecraft mc = Minecraft.getInstance();
+        String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
+        String assumed = target != null ? target : "es_es";
+        Thread t = new Thread(() -> {
+            try {
+                Estimator.Result r = Estimator.estimate(scanResources(mc), assumed, Config.get());
+                if (estimate == null) estimate = r;
+            } catch (Throwable e) {
+                TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
+            }
+        }, "Traductor ES - contar textos");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** Leer los recursos va en el hilo del juego; el resto, en el hilo que llama. */
+    private static Map<String, Map<String, Map<String, String>>> scanResources(Minecraft mc) {
+        CompletableFuture<Map<String, Map<String, Map<String, String>>>> scan = new CompletableFuture<>();
+        mc.execute(() -> {
+            try {
+                scan.complete(LangScanner.scan(mc.getResourceManager()));
+            } catch (Throwable e) {
+                scan.completeExceptionally(e);
+            }
+        });
+        return scan.join();
+    }
+
+    /** Abre "¿Cuál conviene?"; al elegir una opción, la aplica y vuelve al paso 2 a comprobarla. */
+    private void openCompare() {
+        Estimator.Result r = estimate;
+        minecraft.setScreen(new CompareScreen(this, r == null ? -1 : r.texts(), o -> {
+            mode = o.preset().isCloud() ? Mode.CLOUD : Mode.LOCAL;
+            CompareScreen.apply(o, () -> {
+                minecraft.setScreen(this);
+                goTo(2);
+            });
+        }));
     }
 
     private void detectOllama() {
@@ -100,6 +143,10 @@ public class WizardScreen extends BaseScreen {
                 b -> mode = Mode.CLOUD, () -> mode == Mode.CLOUD));
         addRenderableWidget(Button.builder(Component.literal("Ahora no"), b -> notNow()).bounds(left, by, 80, 20).build());
         addRenderableWidget(Button.builder(Component.literal("No mostrar más"), b -> neverAgain()).bounds(left + 84, by, 100, 20).build());
+        // En pantallas angostas no entra entre los otros botones: va arriba de "Siguiente".
+        boolean fits = left + W - 214 >= left + 188;
+        addRenderableWidget(Button.builder(Component.literal("¿Cuál conviene?"), b -> openCompare())
+                .bounds(fits ? left + W - 214 : left + W - 110, fits ? by : by - 24, 110, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Siguiente"), b -> goTo(2)).bounds(left + W - 100, by, 100, 20).build());
     }
 
@@ -225,20 +272,14 @@ public class WizardScreen extends BaseScreen {
             try {
                 checkAi(cfg, preset);
                 if (target != null) {
-                    // Leer los recursos va en el hilo del juego; contar, acá.
-                    CompletableFuture<Map<String, Map<String, Map<String, String>>>> scan = new CompletableFuture<>();
-                    mc.execute(() -> {
-                        try {
-                            scan.complete(LangScanner.scan(mc.getResourceManager()));
-                        } catch (Throwable e) {
-                            scan.completeExceptionally(e);
-                        }
-                    });
-                    Estimator.Result r = Estimator.estimate(scan.join(), target, cfg);
+                    Estimator.Result r = Estimator.estimate(scanResources(mc), target, cfg);
                     estimate = r;
                     if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada", "todo está en tu español");
-                    else cTexts.set(Status.WARN, Traductor.fmt(r.texts()) + " textos sin traducir en " + r.mods() + " mods",
-                            "la primera vez tarda: " + r.duration(preset.isCloud()) + " aprox.");
+                    else {
+                        cTexts.set(Status.WARN, Traductor.fmt(r.texts()) + " textos sin traducir en " + r.mods() + " mods",
+                                "la primera vez tarda: " + r.duration(cfg) + " aprox.");
+                        cTexts.action("Comparar", this::openCompare);
+                    }
                 } else {
                     cTexts.set(Status.WARN, "Textos por traducir", "se calculan cuando el juego esté en español");
                 }
@@ -353,6 +394,14 @@ public class WizardScreen extends BaseScreen {
                 g.drawString(font, "¡Hola! Vamos a poner tus mods en español", left, 24, UiKit.GOLD, true);
                 UiKit.wrapped(g, font, Component.literal("Una IA traduce los textos de los mods que no tienen español. Primero, ¿dónde querés que trabaje?"),
                         left, 40, W, UiKit.MUTED);
+                Estimator.Result r = estimate;
+                int sy = 70 + Math.min(100, height - 28 - 70 - 10) + 6;
+                if (r != null && r.texts() > 0 && sy + 10 < height - 32) {
+                    List<ServiceGuide.Option> o = ServiceGuide.OPTIONS;
+                    String line = "Este modpack: " + Traductor.fmt(r.texts()) + " textos · En tu PC " + o.get(o.size() - 1).duration(r.texts())
+                            + " · En la nube " + o.get(0).duration(r.texts()) + " a " + o.get(2).duration(r.texts());
+                    g.drawString(font, font.plainSubstrByWidth(line, W), left, sy, UiKit.DIM, false);
+                }
             }
             case 2 -> {
                 g.drawString(font, "Comprobando que todo esté listo", left, 24, UiKit.GOLD, true);
@@ -374,7 +423,7 @@ public class WizardScreen extends BaseScreen {
                 String[][] cards = {
                         {"IA", p.label.replaceFirst(" \\(.*\\)", "") + " · " + cfg.model},
                         {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
-                        {"Por traducir", r == null ? "—" : r.texts() == 0 ? "Nada pendiente" : Traductor.fmt(r.texts()) + " textos · " + r.duration(p.isCloud())}};
+                        {"Por traducir", r == null ? "—" : r.texts() == 0 ? "Nada pendiente" : Traductor.fmt(r.texts()) + " textos · " + r.duration(cfg)}};
                 int cw = (W - 12) / 3;
                 for (int i = 0; i < 3; i++) {
                     int cx = left + i * (cw + 6);

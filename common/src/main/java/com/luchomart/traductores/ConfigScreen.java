@@ -134,6 +134,22 @@ public class ConfigScreen extends BaseScreen {
         y += ROW + 2;
         testBtn = addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection())
                 .bounds(innerX, y, 120, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("¿Cuál conviene?"), b -> openCompare())
+                .bounds(innerX + 124, y, 110, 20)
+                .tooltip(Tooltip.create(Component.literal("Cuánto tarda cada servicio y cuáles son gratis."))).build());
+    }
+
+    /** "¿Cuál conviene?": con los textos de la última traducción, si hubo una en esta sesión. */
+    private void openCompare() {
+        Config cfg = Config.get();
+        cfg.save();
+        TranslationJob j = Traductor.job();
+        int texts = j != null && j.total > 0 ? j.total - j.done : -1;
+        minecraft.setScreen(new CompareScreen(this, texts, o -> CompareScreen.apply(o, () -> {
+            TraductorES.LOG.info("[Traductor ES] Panel: elegido en «¿Cuál conviene?»: {} · {}", o.name(), cfg.model);
+            testResult = Component.literal(o.name() + ": " + o.note()).withStyle(ChatFormatting.YELLOW);
+            minecraft.setScreen(this);
+        })));
     }
 
     private void initTraduccion(Config cfg, int y) {

@@ -51,6 +51,9 @@ public class ModelSelectScreen extends BaseScreen {
         String previous = search == null ? "" : search.getValue();
         search = new EditBox(font, left, 30, W, 20, Component.literal("Buscar"));
         search.setValue(previous);
+        if (Preset.fromUrl(Config.get().apiUrl) == Preset.OPENROUTER) {
+            search.setHint(Component.literal("Escribí «free» para ver solo los gratis").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        }
         search.setResponder(s -> refreshRows());
         addRenderableWidget(search);
         setInitialFocus(search);
@@ -68,12 +71,17 @@ public class ModelSelectScreen extends BaseScreen {
         if (all == null || search == null) return;
         String q = search.getValue().trim().toLowerCase(Locale.ROOT);
         String current = Config.get().model;
+        boolean openRouter = Preset.fromUrl(Config.get().apiUrl) == Preset.OPENROUTER;
         int y = listTop;
         for (String m : all) {
             if (!q.isEmpty() && !m.toLowerCase(Locale.ROOT).contains(q)) continue;
             if (rows.size() >= perPage) break;
             String label = m + (m.equals(recommended) ? "  ★ recomendado" : "") + (m.equals(current) ? "  (actual)" : "");
-            Button b = Button.builder(Component.literal(label), btn -> pick(m)).bounds(left, y, W, 20).build();
+            net.minecraft.network.chat.MutableComponent text = Component.literal(label);
+            // En OpenRouter conviven modelos gratis y de pago: se marca cada uno.
+            if (openRouter) text.append(m.endsWith(":free") ? Component.literal("  GRATIS").withStyle(net.minecraft.ChatFormatting.GREEN)
+                    : Component.literal("  DE PAGO").withStyle(net.minecraft.ChatFormatting.GOLD));
+            Button b = Button.builder(text, btn -> pick(m)).bounds(left, y, W, 20).build();
             rows.add(addRenderableWidget(b));
             y += 22;
         }

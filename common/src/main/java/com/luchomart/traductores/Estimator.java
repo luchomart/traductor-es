@@ -10,12 +10,9 @@ import java.util.Set;
  */
 public final class Estimator {
     public record Result(int texts, int mods) {
-        /** Tiempo aproximado: ~70 textos por minuto con una IA en la PC, ~250 en la nube con varias peticiones. */
-        public String duration(boolean cloud) {
-            if (texts == 0) return "nada";
-            long min = Math.max(1, Math.round(texts / (cloud ? 250.0 : 70.0)));
-            if (min < 2) return "un par de minutos";
-            return min < 60 ? "~" + min + " min" : "~" + (min / 60) + " h" + (min % 60 >= 10 ? " " + (min % 60) + " min" : "");
+        /** Tiempo aproximado con el servicio configurado (ver ServiceGuide). */
+        public String duration(Config cfg) {
+            return texts == 0 ? "nada" : ServiceGuide.current(cfg).duration(texts);
         }
     }
 

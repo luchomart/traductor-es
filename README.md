@@ -109,6 +109,20 @@ Si tu PC no tiene una placa de video potente, el mod puede usar un servicio en i
 
 Si el servicio pide bajar el ritmo, el mod espera lo que haga falta y sigue solo.
 
+### ¿Cuál conviene?
+
+Tiempos aproximados para traducir (un modpack grande tiene unos 10.000 textos sin español). Salen de traducciones reales y varían según la hora y tu PC. El botón **¿Cuál conviene?** del asistente y del panel calcula el tiempo para tu modpack y te deja elegir con un clic.
+
+| Opción | Costo | 1.000 textos | 10.000 textos | Qué tener en cuenta |
+|---|---|---|---|---|
+| OpenRouter (de pago) | De pago | ~5 min | ~50 min | El más rápido. Cobra por uso: necesitás cargar saldo. |
+| Groq | Gratis | ~10 min | ~1 h 40 min | Rápido; a ratos frena unos segundos por el límite del plan gratis. |
+| Google Gemini | Gratis | ~17 min | ~2 h 50 min | Velocidad irregular: Google limita el plan gratis según la demanda. |
+| OpenRouter (gratis) | Gratis | ~20 min | ~10 días | Modelos que terminan en `:free`; unos 1.000 textos por día. |
+| En tu PC (Ollama) | Gratis | ~17 min | ~2 h 50 min | Sin internet ni cuentas. Depende de tu placa de video. |
+
+Las próximas veces solo se traduce lo nuevo, así que tarda segundos.
+
 ### Conseguir una clave (API key)
 
 Una clave es como una contraseña que le dice al servicio que sos vos. Los tres tienen un plan gratis con límites (que cambian seguido; los actuales están en la página de cada uno).
@@ -180,6 +194,8 @@ Dos formas de usarlo:
 - IA en la PC (gratis, sin internet): Ollama instalado y abierto (ollama.com/download; en Linux desde el gestor de paquetes) y un modelo bajado con "ollama pull gemma3:12b" (unos 8 GB, ideal con 12 GB de VRAM o más) o "ollama pull gemma3:4b" con menos VRAM. "ollama list" muestra los modelos instalados.
 - IA en la nube (sin placa de video potente): Gemini, Groq u OpenRouter, con una clave (API key) gratis. Se crean en aistudio.google.com/apikey (Gemini), console.groq.com/keys (Groq) y openrouter.ai/settings/keys (OpenRouter). La clave se muestra una sola vez. Los textos de los mods se envían a ese servicio.
 
+- Tiempos aproximados para 1.000 textos (un modpack grande tiene unos 10.000): OpenRouter de pago ~5 min (cobra por uso, hay que cargar saldo), Groq ~10 min (gratis), Gemini ~17 min (gratis, irregular), OpenRouter con modelos ":free" ~20 min pero como máximo unos 1.000 textos por día (gratis), en la PC ~17 min (gratis, depende de la placa de video). El botón «¿Cuál conviene?» (en el asistente y en el panel) calcula el tiempo para su modpack y elige el servicio con un clic.
+
 Primer uso:
 - Al abrir el juego aparece un asistente de 3 pasos: elegir "En mi PC" o "En la nube", una comprobación automática (que la IA responda, el modelo, el idioma y cuántos textos faltan, con botones para arreglar lo que falte: Descargar, Conseguir, Copiar comando, Cambiar idioma) y "Empezar a traducir". También se abre desde el panel (Herramientas → Asistente) y vuelve a aparecer si una traducción falla por la configuración.
 
@@ -194,6 +210,7 @@ Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para 
 Problemas conocidos:
 - "No hay ninguna IA respondiendo en esa dirección": Ollama no está abierto (o LM Studio, si se eligió ese).
 - "La clave falta o no es válida": crear una clave nueva con "Conseguir" y pegarla en Clave.
+- "No tiene saldo" (OpenRouter): elegir "OpenRouter (gratis)" en «¿Cuál conviene?», un modelo terminado en ":free" con "Elegir…", o cambiar de servicio.
 - "No existe ese modelo": dejar Modelo vacío o usar "Elegir…"; el mod también cambia solo si el servicio retiró el modelo.
 - "El servicio está saturado" o pide bajar el ritmo: el mod espera y reintenta solo.
 - "Respuesta cortada": bajar Textos por lote a 10, o subir el contexto de Ollama con la variable de entorno OLLAMA_CONTEXT_LENGTH=8192.

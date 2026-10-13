@@ -21,7 +21,7 @@ public class GuideScreen extends BaseScreen {
     /** Una página: una sección entera o una parte de sus pasos (si no entran en la pantalla). */
     private record Page(int section, String intro, List<Step> steps, String tip, boolean continued) {}
 
-    private static final int HELP = 8; // índice de la sección "Ayuda con una IA"
+    private static final int HELP = 9; // índice de la sección "Ayuda con una IA"
 
     private static final List<Section> SECTIONS = List.of(
             new Section("¿Qué hace?",
@@ -54,6 +54,11 @@ public class GuideScreen extends BaseScreen {
                             new Step("2", "Conseguí una clave", "El botón «Conseguir» abre la página para crearla."),
                             new Step("3", "Probá la conexión", "El mod elige solo el mejor modelo disponible.")),
                     "Ojo: los textos de tus mods se envían a ese servicio, y la clave queda guardada en config.json."),
+            new Section("¿Cuál conviene?",
+                    "Tiempos aproximados para 1.000 y 10.000 textos (un modpack grande tiene unos 10.000 sin español).",
+                    ServiceGuide.OPTIONS.stream().map(o -> new Step(o.free() ? "✓" : "$", o.name() + " · " + o.cost(),
+                            "1.000: " + o.duration(1000) + " · 10.000: " + o.duration(10000) + ". " + o.note())).toList(),
+                    "El asistente y el panel («¿Cuál conviene?») calculan el tiempo para tu modpack. Tocá una opción para usarla."),
             new Section("Conseguir una clave",
                     "Una clave (API key) es como una contraseña que le dice al servicio que sos vos.",
                     List.of(new Step("G", "Google Gemini", "aistudio.google.com/apikey · entrá con tu cuenta de Google y tocá «Create API key»."),

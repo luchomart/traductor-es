@@ -498,7 +498,8 @@ public class TranslationJob implements Runnable {
             if (pick == null || pick.equals(old) || (!models.isEmpty() && !models.contains(pick))) {
                 List<String> others = new ArrayList<>(models);
                 others.remove(old);
-                pick = ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
+                // Si se usaba un modelo gratis de OpenRouter, se sigue con uno gratis.
+                pick = old.endsWith(":free") ? ModelPicker.recommendFree(others) : ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
             }
             if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
             cfg.model = pick;

@@ -47,7 +47,7 @@ public class Config {
      * porque compartiría la placa de video con el juego), "si" o "no".
      */
     public String whilePlaying = "auto";
-    /** Traducir también los libros dentro del juego (Patchouli y Mantle) y las misiones de FTB Quests. */
+    /** Traducir también los libros y guías dentro del juego (ver Books) y las misiones de FTB Quests. */
     public boolean translateBooks = true;
     /** Con Alt apretado, la descripción de los objetos traducidos se ve en inglés. */
     public boolean originalOnAlt = true;

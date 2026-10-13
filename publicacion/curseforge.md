@@ -9,7 +9,7 @@ Licencia: MIT
 
 # Traductor ES — play any modpack in Spanish
 
-**Traductor ES** translates the texts of your mods into Spanish using an AI: item names, tooltips, menus, **in-game books** (Patchouli and Tinkers' Construct) and **FTB Quests**. It runs on your PC with [Ollama](https://ollama.com) (free, offline) or with a free cloud service (Google Gemini, Groq or OpenRouter).
+**Traductor ES** translates the texts of your mods into Spanish using an AI: item names, tooltips, menus, **in-game books and guides** (Patchouli, Tinkers' Construct, AE2 and other GuideME guides, Immersive Engineering…) and **FTB Quests**. It runs on your PC with [Ollama](https://ollama.com) (free, offline) or with a free cloud service (Google Gemini, Groq or OpenRouter).
 
 It translates into the Spanish variant your game uses: Spain, Mexico, Argentina, Chile, Uruguay, Venezuela or Ecuador.
 
@@ -19,7 +19,7 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 
 - **Respects official translations.** If a mod already has your Spanish, it isn't touched. If it has another Spanish variant, that one is used instead of translating.
 - **Detects fake translations.** Many mods ship a Spanish file that is just English copied. Those texts get translated.
-- **Books and quests.** Patchouli books (pages and covers), Tinkers' Construct manuals (Mantle) and FTB Quests missions (single player).
+- **Books and quests.** Patchouli books (pages and covers), Tinkers' Construct manuals, GuideME guides (AE2 and addons, Powah), the Immersive Engineering manual, Alex's Mobs' dictionary and FTB Quests missions (single player).
 - **Keeps formatting safe.** Colors, placeholders (`%s`, `{0}`), Patchouli macros and JSON text with links are protected; broken translations are rejected and retried.
 - **Setup assistant.** Checks everything the first time and tells you what is missing, with buttons to fix it.
 - **"Which one should I use?"** Compares services with estimated times for *your* modpack, and which ones are free.
@@ -56,7 +56,7 @@ This mod was developed with the help of an AI assistant (Claude, by Anthropic). 
 
 # Traductor ES — jugá cualquier modpack en español
 
-**Traductor ES** traduce los textos de tus mods al español con una IA: nombres de objetos, descripciones, menús, **libros dentro del juego** (Patchouli y Tinkers' Construct) y **misiones de FTB Quests**. Funciona en tu PC con [Ollama](https://ollama.com) (gratis, sin internet) o con un servicio gratis en la nube (Google Gemini, Groq u OpenRouter).
+**Traductor ES** traduce los textos de tus mods al español con una IA: nombres de objetos, descripciones, menús, **libros y guías del juego** (Patchouli, Tinkers' Construct, AE2 y otras guías de GuideME, Immersive Engineering…) y **misiones de FTB Quests**. Funciona en tu PC con [Ollama](https://ollama.com) (gratis, sin internet) o con un servicio gratis en la nube (Google Gemini, Groq u OpenRouter).
 
 Traduce a la variante del español que tengas en el juego: España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador.
 
@@ -64,7 +64,7 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 
 - **Respeta las traducciones oficiales.** Si un mod ya trae tu español, no se toca; si trae otra variante, usa esa en vez de traducir.
 - **Detecta traducciones falsas.** Muchos mods traen un archivo "en español" que es el inglés copiado: esos textos se traducen.
-- **Libros y misiones.** Libros de Patchouli (páginas y portadas), manuales de Tinkers' Construct (Mantle) y misiones de FTB Quests (en un jugador).
+- **Libros y misiones.** Libros de Patchouli (páginas y portadas), manuales de Tinkers' Construct, guías de GuideME (AE2 y sus agregados, Powah), el manual de Immersive Engineering, el diccionario de Alex's Mobs y misiones de FTB Quests (en un jugador).
 - **Cuida el formato.** Colores, marcadores (`%s`, `{0}`), macros de Patchouli y texto con links quedan protegidos; si la IA rompe algo, se descarta y se reintenta.
 - **Asistente.** La primera vez revisa todo y te dice qué falta, con botones para arreglarlo.
 - **«¿Cuál conviene?»** Compara los servicios con el tiempo estimado para *tu* modpack y cuáles son gratis.

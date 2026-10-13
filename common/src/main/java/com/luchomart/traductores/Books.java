@@ -34,27 +34,67 @@ import java.util.stream.Stream;
  *   <li>Patchouli: assets/&lt;ns&gt;/patchouli_books/&lt;libro&gt;/&lt;idioma&gt;/....json.</li>
  *   <li>Mantle (los de Tinkers' Construct): assets/&lt;ns&gt;/book/&lt;libro&gt;/&lt;idioma&gt;/....json, más un language.lang
  *       con los nombres de las secciones. El libro tiene un index.json fuera de las carpetas de idioma.</li>
+ *   <li>Citadel (el diccionario de Alex's Mobs): assets/&lt;ns&gt;/book/&lt;libro&gt;/&lt;idioma&gt;/....txt, con un root.json
+ *       en el libro.</li>
+ *   <li>Manual de Immersive Engineering: assets/&lt;ns&gt;/manual/&lt;idioma&gt;/&lt;entrada&gt;.txt, con
+ *       manual/&lt;entrada&gt;.json al lado.</li>
+ *   <li>GuideME (AE2 y sus agregados, Powah): assets/&lt;ns&gt;/&lt;carpeta de la guía&gt;/....md en inglés y
+ *       .../_&lt;idioma&gt;/....md las traducciones.</li>
  * </ul>
- * Cada texto se traduce como una clave "archivo#/puntero/json" dentro de un namespace propio del libro.
- * Los dos buscan cada archivo primero en el idioma del juego y si no está, en inglés: alcanza con escribir los archivos
- * traducidos.
+ * Cada texto se traduce como una clave "archivo#/puntero" dentro de un namespace propio del libro (en los .txt y
+ * .md, el número de pedazo: ver {@link TextPages}). Todos buscan cada archivo primero en el idioma del juego y si no está, en inglés:
+ * alcanza con escribir los archivos traducidos.
  */
 public final class Books {
     /** Lo que distingue a cada formato. arrayFields: campos que son listas de textos (["Mucho daño", "Poca durabilidad"]). */
     public enum Format {
-        PATCHOULI("patchouli_books", "@patchouli/", Set.of("name", "title", "text", "description", "subtitle", "link_text", "header"), Set.of()),
-        MANTLE("book", "@mantle/", Set.of("title", "text", "description", "subText"), Set.of("effects", "properties", "entity", "block", "tooltip"));
+        PATCHOULI("patchouli_books", "@patchouli/", "json", null,
+                Set.of("name", "title", "text", "description", "subtitle", "link_text", "header"), Set.of()),
+        MANTLE("book", "@mantle/", "json|lang", "index.json",
+                Set.of("title", "text", "description", "subText"), Set.of("effects", "properties", "entity", "block", "tooltip")),
+        CITADEL("book", "@citadel/", "txt", "root.json", Set.of(), Set.of()),
+        /** Sin carpeta por libro: el "libro" es siempre "manual". */
+        IE_MANUAL("manual", "@manual/", "txt", null, Set.of(), Set.of()),
+        /** El "libro" es la carpeta de la guía: ae2guide (AE2 y sus agregados) o guides/&lt;mod&gt;/&lt;guía&gt;. */
+        GUIDEME("ae2guide|guides", "@guideme/", "md", null, Set.of(), Set.of());
 
-        final String folder, prefix;
+        final List<String> folders;
+        final String prefix;
+        /** Archivo que tiene que estar en la carpeta del libro para que sea de este formato ("book" lo usan varios). */
+        final String marker;
         final Set<String> textFields, arrayFields;
+        /** Grupos: libro, idioma (en GuideME falta en los de inglés) y archivo. */
         final Pattern path;
 
-        Format(String folder, String prefix, Set<String> textFields, Set<String> arrayFields) {
-            this.folder = folder;
+        Format(String folders, String prefix, String extensions, String marker, Set<String> textFields, Set<String> arrayFields) {
+            this.folders = List.of(folders.split("\\|"));
             this.prefix = prefix;
+            this.marker = marker;
             this.textFields = textFields;
             this.arrayFields = arrayFields;
-            this.path = Pattern.compile(folder + "/([^/]+)/([a-z0-9_]+)/(.+\\.(?:json|lang))");
+            String lang = "([a-z]{2,3}_[a-z]{2,3})";
+            this.path = Pattern.compile(switch (extensions) {
+                case "md" -> "(ae2guide|guides/[^/]+/[^/]+)/(?:_" + lang + "/)?((?!_)[^/].*\\.md)";
+                case "txt" -> folders + "/" + (folders.equals("manual") ? "()" : "([^/]+)/") + lang + "/([^/]+\\.txt)";
+                default -> folders + "/([^/]+)/" + lang + "/(.+\\.(?:" + extensions + "))";
+            });
+        }
+
+        /** Carpeta del idioma dentro de assets/&lt;ns&gt;/. */
+        String dir(String book, String lang) {
+            return switch (this) {
+                case GUIDEME -> book + "/_" + lang;
+                case IE_MANUAL -> "manual/" + lang;
+                default -> folders.get(0) + "/" + book + "/" + lang;
+            };
+        }
+
+        TextPages.Kind textKind() {
+            return switch (this) {
+                case IE_MANUAL -> TextPages.Kind.IE;
+                case GUIDEME -> TextPages.Kind.MARKDOWN;
+                default -> TextPages.Kind.LINES;
+            };
         }
     }
 
@@ -132,30 +172,28 @@ public final class Books {
     }
 
     private static List<Book> scan(ResourceManager rm, Format format, String target, List<String> variants) {
-        Map<ResourceLocation, List<Resource>> stacks = rm.listResourceStacks(format.folder,
-                rl -> rl.getPath().endsWith(".json") || rl.getPath().endsWith(".lang"));
-        // Mantle: "book" es un nombre muy común; solo cuentan las carpetas con index.json (las de Mantle).
-        Set<String> mantleBooks = new HashSet<>();
-        if (format == Format.MANTLE) {
-            Pattern index = Pattern.compile("book/([^/]+)/index\\.json");
-            for (ResourceLocation rl : stacks.keySet()) {
-                Matcher m = index.matcher(rl.getPath());
-                if (m.matches()) mantleBooks.add(rl.getNamespace() + "/" + m.group(1));
-            }
+        Map<ResourceLocation, List<Resource>> stacks = new java.util.HashMap<>();
+        for (String folder : format.folders) {
+            stacks.putAll(rm.listResourceStacks(folder, rl -> rl.getPath().endsWith(".json") || rl.getPath().endsWith(".lang")
+                    || rl.getPath().endsWith(".txt") || rl.getPath().endsWith(".md")));
         }
+        Set<String> paths = new HashSet<>();
+        for (ResourceLocation rl : stacks.keySet()) paths.add(rl.getNamespace() + ":" + rl.getPath());
         // ns/libro → idioma → archivo → recurso de más arriba (sin contar nuestro pack)
         Map<String, Map<String, Map<String, Resource>>> index = new TreeMap<>();
         for (Map.Entry<ResourceLocation, List<Resource>> e : stacks.entrySet()) {
             Matcher m = format.path.matcher(e.getKey().getPath());
             if (!m.matches()) continue;
-            String id = e.getKey().getNamespace() + "/" + m.group(1);
-            if (format == Format.MANTLE ? !mantleBooks.contains(id) : m.group(3).endsWith(".lang")) continue;
-            String lang = m.group(2);
+            String ns = e.getKey().getNamespace();
+            String bookName = m.group(1).isEmpty() ? "manual" : m.group(1), rel = m.group(3);
+            String lang = m.group(2) == null ? "en_us" : m.group(2);
+            if (!belongs(format, paths, ns, bookName, rel)) continue;
+            String id = ns + "/" + bookName;
             if (!lang.equals("en_us") && !lang.startsWith("es_")) continue;
             Resource top = null;
             for (Resource r : e.getValue()) if (!PackWriter.PACK_ID.equals(r.sourcePackId())) top = r;
             if (top == null) continue;
-            index.computeIfAbsent(id, k -> new TreeMap<>()).computeIfAbsent(lang, k -> new TreeMap<>()).put(m.group(3), top);
+            index.computeIfAbsent(id, k -> new TreeMap<>()).computeIfAbsent(lang, k -> new TreeMap<>()).put(rel, top);
         }
 
         List<Book> books = new ArrayList<>();
@@ -173,7 +211,7 @@ public final class Books {
                     variant = e.getValue().getOrDefault(v, Map.of()).get(rel);
                     if (variant != null) break;
                 }
-                JsonElement parsed = read(variant != null ? variant : file.getValue(), rel);
+                JsonElement parsed = read(format, variant != null ? variant : file.getValue(), rel);
                 if (parsed == null) continue;
                 if (variant != null) book.fromVariant.put(rel, parsed);
                 else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
@@ -183,9 +221,20 @@ public final class Books {
         return books;
     }
 
-    private static JsonElement read(Resource r, String rel) {
+    /** "book" y "manual" son nombres comunes: cada formato se reconoce por un archivo que solo tienen sus libros. */
+    private static boolean belongs(Format format, Set<String> paths, String ns, String book, String rel) {
+        return switch (format) {
+            case PATCHOULI, GUIDEME -> true;
+            case MANTLE, CITADEL -> paths.contains(ns + ":book/" + book + "/" + format.marker);
+            // Alguna entrada tiene su .json al lado (no todas: engineered_bricks no lo tiene).
+            case IE_MANUAL -> paths.stream().anyMatch(p -> p.startsWith(ns + ":manual/") && p.endsWith(".json") && p.indexOf('/', ns.length() + 8) < 0);
+        };
+    }
+
+    private static JsonElement read(Format format, Resource r, String rel) {
         try (Reader reader = r.openAsReader()) {
             // El lector de Gson acepta los comentarios // y /* */ que usan algunos libros de Mantle.
+            if (rel.endsWith(".txt") || rel.endsWith(".md")) return TextPages.parse(reader, format.textKind());
             return rel.endsWith(".lang") ? parseLang(reader) : JsonParser.parseReader(reader);
         } catch (Exception e) {
             return null;
@@ -221,6 +270,10 @@ public final class Books {
                 String s = e.getValue().getAsString();
                 if (!e.getKey().contains("/") && !s.isBlank()) out.accept("/" + e.getKey(), s);
             }
+            return;
+        }
+        if (file.endsWith(".txt") || file.endsWith(".md")) {
+            TextPages.extract(el, out);
             return;
         }
         extract(format, el, "", out);
@@ -282,7 +335,7 @@ public final class Books {
         boolean changed = false;
         Set<Path> written = new HashSet<>();
         for (Book book : books) {
-            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve(book.format.folder).resolve(book.book).resolve(target);
+            Path base = PackWriter.DIR.resolve("assets").resolve(book.ns).resolve(book.format.dir(book.book, target));
             for (Map.Entry<String, JsonElement> v : book.fromVariant.entrySet()) {
                 changed |= writeIfChanged(base.resolve(v.getKey()), serialize(v.getKey(), v.getValue()), written);
             }
@@ -294,14 +347,15 @@ public final class Books {
                     if (t.getKey().startsWith(prefix)) perPointer.put(t.getKey().substring(prefix.length()), t.getValue());
                 }
                 if (perPointer.isEmpty()) continue;
-                // language.lang reemplaza entero al inglés: lo que falta traducir queda en inglés dentro del mismo archivo.
+                // language.lang, los .txt y los .md reemplazan entero al inglés: lo que falta traducir queda en inglés dentro del mismo archivo.
                 changed |= writeIfChanged(base.resolve(file.getKey()), serialize(file.getKey(), apply(file.getValue(), perPointer)), written);
             }
         }
         // Borra lo que quedó de libros o archivos que ya no se generan.
         Path assets = PackWriter.DIR.resolve("assets");
         if (Files.isDirectory(assets)) {
-            Pattern ours = Pattern.compile("[^/]+/(?:patchouli_books|book)/[^/]+/" + Pattern.quote(target) + "/.+");
+            String t = Pattern.quote(target);
+            Pattern ours = Pattern.compile("[^/]+/(?:(?:patchouli_books|book)/[^/]+/" + t + "|manual/" + t + "|(?:ae2guide|guides/[^/]+/[^/]+)/_" + t + ")/.+");
             try (Stream<Path> files = Files.walk(assets)) {
                 for (Path p : files.filter(Files::isRegularFile).toList()) {
                     String s = assets.relativize(p).toString().replace('\\', '/');
@@ -317,6 +371,7 @@ public final class Books {
     }
 
     private static String serialize(String file, JsonElement el) {
+        if (file.endsWith(".txt") || file.endsWith(".md")) return TextPages.write(el);
         return file.endsWith(".lang") ? toLang(el) : GSON.toJson(el);
     }
 

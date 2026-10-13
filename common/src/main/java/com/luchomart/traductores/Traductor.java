@@ -25,11 +25,24 @@ public final class Traductor {
     private static final long SHOW_RESULT_MS = 30_000;
 
     private static volatile TranslationJob job;
+
+    /** Estado de la conexión con la IA, para el indicador del panel. */
+    public enum Connection { UNKNOWN, OK, FAIL }
+    public static volatile Connection connection = Connection.UNKNOWN;
+    /** Modelo con el que se conectó, o el motivo del fallo. */
+    public static volatile String connectionDetail = "";
+
+    public static void setConnection(Connection state, String detail) {
+        connection = state;
+        connectionDetail = detail == null ? "" : detail;
+    }
     /** Idioma con el que ya se evaluó el inicio automático (para volver a evaluar si el jugador lo cambia). */
     private static String autoStartCheckedLang;
     /** Terminó mientras se jugaba: los textos se recargan al volver al menú. */
     private static boolean reloadOnMenu;
     private static long finishedAtMs;
+    /** El jugador cerró el asistente con "Ahora no": no se vuelve a abrir solo en esta sesión. */
+    public static boolean wizardDismissed;
     /** La pausa la puso el mod al entrar a un mundo (y no el jugador). */
     private static boolean autoPaused;
 
@@ -73,6 +86,11 @@ public final class Traductor {
             } else if (j.state != TranslationJob.State.DONE) {
                 toast("Traductor ES", j.message);
             }
+            // Falló por algo de configuración y el jugador está en el menú: el asistente lo ayuda a arreglarlo.
+            Config cfg = Config.get();
+            if (j.setupProblem && cfg.showWizard && !wizardDismissed && mc.screen instanceof TitleScreen) {
+                mc.setScreen(new WizardScreen(mc.screen));
+            }
         });
     }
 
@@ -91,12 +109,20 @@ public final class Traductor {
             mc.execute(mc::reloadResourcePacks);
             return; // al terminar la recarga se vuelve a abrir el menú y se evalúa lo demás
         }
+        // Primera vez (o nunca se completó): el asistente en vez de traducir directamente.
+        Config setup = Config.get();
+        if (!setup.setupDone && setup.showWizard && !wizardDismissed && !isRunning()) {
+            mc.execute(() -> mc.setScreen(new WizardScreen(screen)));
+            return;
+        }
         // Se evalúa una vez por idioma: si el jugador lo cambia a español durante la sesión, arranca.
         String lang = mc.options.languageCode;
         if (lang.equals(autoStartCheckedLang)) return;
         autoStartCheckedLang = lang;
         Config cfg = Config.get();
         if (!cfg.autoStart || isRunning()) return;
+        // Cerró el asistente sin terminarlo: no se traduce por su cuenta hasta que lo complete (o lo desactive).
+        if (!cfg.setupDone && cfg.showWizard) return;
         if (SpanishTarget.resolve(cfg.targetLanguage, lang) == null) {
             TraductorES.LOG.info("[Traductor ES] El idioma del juego es {}, no es una variante del español: no se traduce automáticamente", lang);
             return;
@@ -127,18 +153,56 @@ public final class Traductor {
         if (j != null && j.isRunning()) j.flushCache();
     }
 
-    /** Después de dibujar cualquier pantalla: en el menú principal muestra el progreso. */
+    /** Después de dibujar cualquier pantalla: en el menú principal muestra el aviso de progreso en la esquina. */
     public static void onScreenRender(Screen screen, GuiGraphics g) {
         if (!(screen instanceof TitleScreen)) return;
         TranslationJob j = job;
         if (j == null) return;
         if (!j.isRunning() && System.currentTimeMillis() - finishedAtMs > SHOW_RESULT_MS) return;
-        List<Component> lines = statusLines(j);
         Font font = Minecraft.getInstance().font;
-        int y = 4;
-        for (Component line : lines) {
-            g.drawString(font, line, 4, y, 0xFFFFFF, true);
-            y += font.lineHeight + 2;
+        int w = 176, h = 38, x = screen.width - w - 4, y = 4;
+        UiKit.overlay(g, x, y, w, h);
+        int tx = x + 26, tw = w - 32;
+        switch (j.state) {
+            case SCANNING -> {
+                UiKit.icon(g, x + 6, y + 11, 1);
+                g.drawString(font, "Traductor ES", tx, y + 8, UiKit.YELLOW, false);
+                g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
+            }
+            case TRANSLATING, PAUSED -> {
+                UiKit.icon(g, x + 6, y + 11, 1);
+                boolean paused = j.state == TranslationJob.State.PAUSED;
+                int pct = j.total == 0 ? 0 : j.done * 100 / j.total;
+                g.drawString(font, paused ? "En pausa" : "Traduciendo mods…", tx, y + 6, paused ? UiKit.YELLOW : UiKit.YELLOW, false);
+                String p = pct + " %";
+                g.drawString(font, p, x + w - 6 - font.width(p), y + 6, UiKit.WHITE, false);
+                UiKit.progressBar(g, tx, y + 17, tw, 5, j.total == 0 ? 0 : (double) j.done / j.total);
+                String waiting = j.waitingMessage;
+                String sub;
+                int color = UiKit.MUTED;
+                if (waiting != null) { sub = waiting; color = UiKit.YELLOW; }
+                else {
+                    double rate = j.ratePerMinute();
+                    sub = j.currentNamespace + (rate > 0 ? " · quedan " + duration((long) ((j.total - j.done) / rate * 60_000)) : "");
+                }
+                g.drawString(font, font.plainSubstrByWidth(sub, tw), tx, y + 26, color, false);
+            }
+            case DONE -> {
+                UiKit.check(g, x + 6, y + 11, 1);
+                g.drawString(font, "¡Traducción terminada!", tx, y + 8, UiKit.GREEN, false);
+                String sub = j.done > 0 ? Traductor.fmt(j.done - j.failed) + " textos nuevos en español" : "No había textos nuevos";
+                g.drawString(font, font.plainSubstrByWidth(sub, tw), tx, y + 21, UiKit.MUTED, false);
+            }
+            case CANCELLED -> {
+                UiKit.icon(g, x + 6, y + 11, 1);
+                g.drawString(font, "Traducción cancelada", tx, y + 8, UiKit.YELLOW, false);
+                g.drawString(font, "Lo hecho quedó guardado", tx, y + 21, UiKit.MUTED, false);
+            }
+            case ERROR -> {
+                UiKit.icon(g, x + 6, y + 11, 1);
+                g.drawString(font, "Traductor ES: hay un problema", tx, y + 8, UiKit.RED, false);
+                g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
+            }
         }
     }
 

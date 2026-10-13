@@ -28,8 +28,15 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [ ] Probar una traducción completa con un servicio en la nube
 
 ## Etapa visual
-- [ ] Maquetas para elegir (panel, progreso, asistente de primera vez, guía)
-- [ ] Implementar el diseño elegido
+- [x] Maquetas para elegir: https://claude.ai/artifact/5EXWcX5416X7ArPw8Ua8S3
+- Elegido: panel A (pestañas) con botón Guía visible arriba · progreso B (aviso en la esquina) ·
+  asistente de 3 pasos que aparece la primera vez y cada vez que algo no está listo · guía A (índice lateral)
+- [x] Base visual común (paneles, barra, ícono, pestañas) para las dos versiones
+- [x] Panel con pestañas
+- [x] Progreso como aviso en la esquina
+- [x] Asistente
+- [x] Guía con índice
+- [ ] Probar todo en el juego (las dos versiones)
 
 ## Fase 3: Fabric
 - [ ] Fabric 1.20.1

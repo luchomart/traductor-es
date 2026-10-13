@@ -1,0 +1,417 @@
+package com.luchomart.traductores;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Asistente de 3 pasos: dónde trabaja la IA, comprobación automática y resumen.
+ * Aparece la primera vez y cada vez que una traducción falla por algo de configuración.
+ */
+public class WizardScreen extends BaseScreen {
+    private enum Mode { LOCAL, CLOUD }
+
+    private enum Status { PENDING, OK, FAIL, WARN }
+
+    /** Una fila de la comprobación: estado, texto y un botón opcional para arreglarlo. */
+    private static final class Check {
+        volatile Status status = Status.PENDING;
+        volatile String title = "", detail = "";
+        volatile String actionLabel;
+        volatile Runnable action;
+
+        void set(Status s, String t, String d) { status = s; title = t; detail = d; actionLabel = null; action = null; }
+
+        void action(String label, Runnable r) { actionLabel = label; action = r; }
+    }
+
+    private static final int ROW = 28;
+
+    private final Screen parent;
+    private int step = 1;
+    private Mode mode;
+    /** null mientras se busca; después, si Ollama respondió en esta PC. */
+    private volatile Boolean ollamaFound;
+    private final Check cAi = new Check(), cModel = new Check(), cLang = new Check(), cTexts = new Check();
+    private volatile Estimator.Result estimate;
+    private volatile boolean checking;
+    private int W, left, checksTop;
+    /** Idioma con el que se hizo la última comprobación (si cambia, se vuelve a comprobar). */
+    private String checkedLang;
+
+    public WizardScreen(Screen parent) {
+        super(Component.literal("Asistente de Traductor ES"));
+        this.parent = parent;
+        mode = Preset.fromUrl(Config.get().apiUrl).isCloud() ? Mode.CLOUD : Mode.LOCAL;
+        detectOllama();
+    }
+
+    private void detectOllama() {
+        Thread t = new Thread(() -> {
+            Config probe = new Config();
+            probe.apiUrl = Preset.OLLAMA.url;
+            probe.apiKey = "";
+            try {
+                new LlmClient().listModels(probe);
+                ollamaFound = true;
+            } catch (Exception e) {
+                ollamaFound = false;
+            }
+        }, "Traductor ES - buscar Ollama");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // ---------- Construcción ----------
+
+    @Override
+    protected void init() {
+        W = Math.min(width - 24, 440);
+        left = (width - W) / 2;
+        int by = height - 28;
+        switch (step) {
+            case 1 -> initStep1(by);
+            case 2 -> {
+                if (!checking && checkedLang != null && !checkedLang.equals(minecraft.options.languageCode)) runChecks();
+                initStep2(by);
+            }
+            default -> initStep3(by);
+        }
+    }
+
+    private void initStep1(int by) {
+        int cw = (W - 8) / 2, cy = 70, ch = Math.min(100, by - cy - 10);
+        addRenderableWidget(new OptionCard(left, cy, cw, ch, Component.literal("En mi PC"), () -> List.of(
+                Component.literal("✓ Gratis · sin internet · sin cuentas").withStyle(ChatFormatting.GREEN),
+                Component.literal("Usa Ollama. Ideal con placa de video de 8 GB o más."),
+                ollamaLine()), b -> mode = Mode.LOCAL, () -> mode == Mode.LOCAL));
+        addRenderableWidget(new OptionCard(left + cw + 8, cy, cw, ch, Component.literal("En la nube"), () -> List.of(
+                Component.literal("✓ Sin placa de video · rápido").withStyle(ChatFormatting.GREEN),
+                Component.literal("Gemini, Groq u OpenRouter. Necesitás una clave gratis; los textos se envían por internet.")),
+                b -> mode = Mode.CLOUD, () -> mode == Mode.CLOUD));
+        addRenderableWidget(Button.builder(Component.literal("Ahora no"), b -> notNow()).bounds(left, by, 80, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("No mostrar más"), b -> neverAgain()).bounds(left + 84, by, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Siguiente"), b -> goTo(2)).bounds(left + W - 100, by, 100, 20).build());
+    }
+
+    private Component ollamaLine() {
+        Boolean found = ollamaFound;
+        if (found == null) return Component.literal("Buscando Ollama en tu PC…").withStyle(ChatFormatting.GRAY);
+        return found ? Component.literal("Detectado: Ollama está abierto en tu PC").withStyle(ChatFormatting.GREEN)
+                : Component.literal("No encontramos Ollama abierto (te ayudamos en el paso 2)").withStyle(ChatFormatting.GRAY);
+    }
+
+    private void initStep2(int by) {
+        Config cfg = Config.get();
+        int y = 46;
+        if (mode == Mode.CLOUD) {
+            int fx = left + 90, fw = W - 90;
+            addRenderableWidget(Button.builder(Component.literal("◀"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).previous()))
+                    .bounds(fx, y, 20, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("▶"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).next()))
+                    .bounds(fx + fw - 20, y, 20, 20).build());
+            y += 24;
+            EditBox key = new EditBox(font, fx, y, fw - 84, 20, Component.literal("Clave"));
+            key.setMaxLength(256);
+            key.setValue(cfg.apiKey);
+            key.setResponder(s -> cfg.apiKey = s.trim());
+            addRenderableWidget(key);
+            addRenderableWidget(Button.builder(Component.literal("Conseguir"), b -> {
+                Preset p = Preset.fromUrl(cfg.apiUrl);
+                if (p.helpUrl != null) Util.getPlatform().openUri(p.helpUrl);
+            }).bounds(fx + fw - 80, y, 80, 20).build());
+            y += 30;
+        }
+        checksTop = y;
+        Check[] checks = {cAi, cModel, cLang, cTexts};
+        for (int i = 0; i < checks.length; i++) {
+            Check c = checks[i];
+            if (c.actionLabel != null && c.action != null && !checking) {
+                Runnable r = c.action;
+                addRenderableWidget(Button.builder(Component.literal(c.actionLabel), b -> r.run())
+                        .bounds(left + W - 96, checksTop + i * ROW + 3, 96, 20).build());
+            }
+        }
+        addRenderableWidget(Button.builder(Component.literal("Atrás"), b -> goTo(1)).bounds(left, by, 70, 20).build());
+        Button again = addRenderableWidget(Button.builder(Component.literal(checking ? "Comprobando…" : "Comprobar de nuevo"),
+                b -> runChecks()).bounds(left + W / 2 - 60, by, 120, 20).build());
+        again.active = !checking;
+        Button next = addRenderableWidget(Button.builder(Component.literal("Siguiente"), b -> goTo(3)).bounds(left + W - 100, by, 100, 20).build());
+        next.active = !checking && cAi.status == Status.OK && cModel.status == Status.OK && cLang.status == Status.OK;
+    }
+
+    private void initStep3(int by) {
+        Config cfg = Config.get();
+        int y = height - 62;
+        addRenderableWidget(Button.builder(autoStartLabel(cfg), b -> {
+            cfg.autoStart = !cfg.autoStart;
+            b.setMessage(autoStartLabel(cfg));
+        }).bounds(left, y, W, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Atrás"), b -> goTo(2)).bounds(left, by, 70, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
+                .bounds(left + W - 140, by, 140, 20).build());
+    }
+
+    private static Component autoStartLabel(Config cfg) {
+        return Component.literal("Traducir cada vez que abro el juego: ").append(cfg.autoStart
+                ? Component.literal("Sí").withStyle(ChatFormatting.GREEN) : Component.literal("No").withStyle(ChatFormatting.RED));
+    }
+
+    // ---------- Acciones ----------
+
+    private void goTo(int s) {
+        step = s;
+        if (s == 2) {
+            prepareService();
+            runChecks();
+        }
+        rebuildWidgets();
+    }
+
+    /** Ajusta el servicio al modo elegido: Ollama en la PC; en la nube, Gemini si no había uno elegido. */
+    private void prepareService() {
+        Config cfg = Config.get();
+        Preset current = Preset.fromUrl(cfg.apiUrl);
+        if (mode == Mode.LOCAL && current.isCloud()) applyPreset(Preset.OLLAMA);
+        if (mode == Mode.CLOUD && !current.isCloud()) applyPreset(Preset.GEMINI);
+    }
+
+    private void switchCloud(Preset p) {
+        while (!p.isCloud()) p = p.next();
+        applyPreset(p);
+        runChecks();
+        rebuildWidgets();
+    }
+
+    private static void applyPreset(Preset p) {
+        Config cfg = Config.get();
+        cfg.apiUrl = p.url;
+        cfg.model = p.model;
+        if (p.parallel > 0) cfg.parallelRequests = p.parallel;
+        if (p.isCloud() && cfg.apiKey.trim().equalsIgnoreCase("ollama")) cfg.apiKey = "";
+        cfg.save();
+    }
+
+    /** Comprueba IA, modelo, idioma y cuánto falta traducir. Lo lento va en otro hilo. */
+    private void runChecks() {
+        Config cfg = Config.get();
+        cfg.save();
+        Minecraft mc = Minecraft.getInstance();
+        checking = true;
+        checkedLang = mc.options.languageCode;
+        for (Check c : new Check[]{cAi, cModel, cLang, cTexts}) c.set(Status.PENDING, "Comprobando…", "");
+
+        String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
+        if (target != null) {
+            cLang.set(Status.OK, "El juego está en " + SpanishTarget.displayName(target), "se traduce a esa variante");
+        } else {
+            cLang.set(Status.FAIL, "El juego no está en español", "elegí cualquier español en el idioma del juego");
+        }
+        cLang.action("Cambiar", () -> mc.setScreen(Platform.languageScreen(this)));
+
+        Preset preset = Preset.fromUrl(cfg.apiUrl);
+        Thread t = new Thread(() -> {
+            try {
+                checkAi(cfg, preset);
+                if (target != null) {
+                    // Leer los recursos va en el hilo del juego; contar, acá.
+                    CompletableFuture<Map<String, Map<String, Map<String, String>>>> scan = new CompletableFuture<>();
+                    mc.execute(() -> {
+                        try {
+                            scan.complete(LangScanner.scan(mc.getResourceManager()));
+                        } catch (Throwable e) {
+                            scan.completeExceptionally(e);
+                        }
+                    });
+                    Estimator.Result r = Estimator.estimate(scan.join(), target, cfg);
+                    estimate = r;
+                    if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada", "todo está en tu español");
+                    else cTexts.set(Status.WARN, Traductor.fmt(r.texts()) + " textos sin traducir en " + r.mods() + " mods",
+                            "la primera vez tarda: " + r.duration(preset.isCloud()) + " aprox.");
+                } else {
+                    cTexts.set(Status.WARN, "Textos por traducir", "se calculan cuando el juego esté en español");
+                }
+            } catch (Throwable e) {
+                TraductorES.LOG.error("[Traductor ES] Error en la comprobación del asistente", e);
+                if (cTexts.status == Status.PENDING) cTexts.set(Status.WARN, "No se pudo calcular cuánto falta", LlmClient.describe(e));
+            } finally {
+                checking = false;
+                mc.execute(this::rebuildWidgets);
+            }
+        }, "Traductor ES - asistente");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private void checkAi(Config cfg, Preset preset) {
+        boolean cloud = preset.isCloud();
+        if (cloud && cfg.apiKey.isBlank()) {
+            cAi.set(Status.FAIL, "Falta la clave de " + preset.label.replace(" (nube)", ""), "creala con «Conseguir» y pegala arriba");
+            cAi.action("Conseguir", () -> Util.getPlatform().openUri(preset.helpUrl));
+            cModel.set(Status.PENDING, "Modelo", "primero tiene que responder la IA");
+            return;
+        }
+        LlmClient client = new LlmClient();
+        List<String> models;
+        try {
+            models = client.listModels(cfg);
+        } catch (Exception e) {
+            failAi(preset, e);
+            return;
+        }
+        String where = cloud ? preset.label.replace(" (nube)", "") : cfg.apiUrl.replaceFirst("^https?://", "").replaceFirst("/v1/.*$", "");
+        if (models.isEmpty() && !cloud) {
+            cAi.set(Status.OK, "La IA responde", "en " + where);
+            cModel.set(Status.FAIL, "No hay ningún modelo instalado", "en una terminal: ollama pull gemma3:12b");
+            cModel.action("Copiar comando", () -> Minecraft.getInstance().keyboardHandler.setClipboard("ollama pull gemma3:12b"));
+            return;
+        }
+        if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
+            String pick = !cloud && models.contains("gemma3:12b") ? "gemma3:12b" : ModelPicker.recommend(preset, models);
+            if (pick != null) {
+                cfg.model = pick;
+                cfg.save();
+            }
+        }
+        try {
+            client.ping(cfg);
+        } catch (Exception e) {
+            failAi(preset, e);
+            return;
+        }
+        Traductor.setConnection(Traductor.Connection.OK, cfg.model);
+        cAi.set(Status.OK, "La IA responde", "en " + where);
+        cModel.set(Status.OK, "Modelo: " + cfg.model, cloud ? "elegido automáticamente" : "instalado en tu PC");
+    }
+
+    private void failAi(Preset preset, Exception e) {
+        Traductor.setConnection(Traductor.Connection.FAIL, LlmClient.describe(e));
+        cAi.set(Status.FAIL, preset.isCloud() ? "La IA no responde" : "Ollama no responde", LlmClient.describe(e));
+        if (preset.helpUrl != null) cAi.action(preset.isCloud() ? "Conseguir" : "Descargar", () -> Util.getPlatform().openUri(preset.helpUrl));
+        cModel.set(Status.PENDING, "Modelo", "primero tiene que responder la IA");
+    }
+
+    private void notNow() {
+        Traductor.wizardDismissed = true;
+        minecraft.setScreen(parent);
+    }
+
+    private void neverAgain() {
+        Config cfg = Config.get();
+        cfg.showWizard = false;
+        cfg.save();
+        minecraft.setScreen(parent);
+    }
+
+    private void finish() {
+        Config cfg = Config.get();
+        cfg.setupDone = true;
+        cfg.save();
+        TraductorES.LOG.info("[Traductor ES] Asistente completado: {} · {}", Preset.fromUrl(cfg.apiUrl).label, cfg.model);
+        minecraft.setScreen(parent);
+        Traductor.start();
+    }
+
+    @Override
+    public void tick() {
+        // La detección de Ollama y las comprobaciones terminan en otro hilo: el paso 1 se redibuja solo.
+    }
+
+    // ---------- Dibujo ----------
+
+    @Override
+    protected void renderPanels(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (step == 2) UiKit.panel(g, left - 6, checksTop - 4, W + 12, ROW * 4 + 6);
+        if (step == 3) {
+            int cw = (W - 12) / 3;
+            for (int i = 0; i < 3; i++) UiKit.card(g, left + i * (cw + 6), 46, cw, 34);
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
+        // Encabezado: "Paso N de 3" y los tres segmentos.
+        g.drawString(font, "Paso " + step + " de 3", left, 8, UiKit.DIM, false);
+        for (int i = 0; i < 3; i++) {
+            int sx = left + W - 3 * 34 + i * 34;
+            g.fill(sx, 10, sx + 30, 14, i < step ? UiKit.GOLD : 0xFF3A3A3A);
+        }
+        switch (step) {
+            case 1 -> {
+                g.drawString(font, "¡Hola! Vamos a poner tus mods en español", left, 24, UiKit.GOLD, true);
+                UiKit.wrapped(g, font, Component.literal("Una IA traduce los textos de los mods que no tienen español. Primero, ¿dónde querés que trabaje?"),
+                        left, 40, W, UiKit.MUTED);
+            }
+            case 2 -> {
+                g.drawString(font, "Comprobando que todo esté listo", left, 24, UiKit.GOLD, true);
+                if (mode == Mode.CLOUD) {
+                    Preset p = Preset.fromUrl(Config.get().apiUrl);
+                    g.drawString(font, "Servicio", left, 52, UiKit.MUTED, false);
+                    g.drawCenteredString(font, p.label, left + 90 + (W - 90) / 2, 52, UiKit.WHITE);
+                    g.drawString(font, "Clave (API key)", left, 76, UiKit.MUTED, false);
+                }
+                Check[] checks = {cAi, cModel, cLang, cTexts};
+                for (int i = 0; i < checks.length; i++) drawCheck(g, checks[i], checksTop + i * ROW);
+            }
+            default -> {
+                g.drawString(font, "¡Todo listo!", left, 24, UiKit.GOLD, true);
+                Config cfg = Config.get();
+                String target = SpanishTarget.resolve(cfg.targetLanguage, minecraft.options.languageCode);
+                Estimator.Result r = estimate;
+                Preset p = Preset.fromUrl(cfg.apiUrl);
+                String[][] cards = {
+                        {"IA", p.label.replaceFirst(" \\(.*\\)", "") + " · " + cfg.model},
+                        {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
+                        {"Por traducir", r == null ? "—" : Traductor.fmt(r.texts()) + " textos · " + r.duration(p.isCloud())}};
+                int cw = (W - 12) / 3;
+                for (int i = 0; i < 3; i++) {
+                    int cx = left + i * (cw + 6);
+                    g.drawString(font, cards[i][0], cx + 6, 51, UiKit.DIM, false);
+                    g.drawString(font, font.plainSubstrByWidth(cards[i][1], cw - 12), cx + 6, 64, UiKit.WHITE, false);
+                }
+                int y = 92;
+                for (String line : new String[]{
+                        "• Traduce mientras estás en el menú. Al entrar a un mundo se pausa, y sigue al volver.",
+                        "• Si cerrás el juego, lo traducido queda guardado.",
+                        "• Las próximas veces solo traduce lo nuevo, en segundos."}) {
+                    y = UiKit.wrapped(g, font, Component.literal(line), left, y, W, UiKit.MUTED) + 4;
+                }
+            }
+        }
+    }
+
+    private void drawCheck(GuiGraphics g, Check c, int y) {
+        int color = switch (c.status) {
+            case OK -> 0xFF2F7A35;
+            case FAIL -> 0xFF8A2020;
+            case WARN -> 0xFF8A6D1A;
+            default -> 0xFF3A3A3A;
+        };
+        String mark = switch (c.status) {
+            case OK -> "✓";
+            case FAIL -> "✗";
+            case WARN -> "!";
+            default -> "…";
+        };
+        g.fill(left, y + 4, left + 14, y + 18, color);
+        g.drawCenteredString(font, mark, left + 7, y + 7, UiKit.WHITE);
+        int tw = W - 22 - (c.actionLabel != null ? 100 : 0);
+        g.drawString(font, font.plainSubstrByWidth(c.title, tw), left + 22, y + 3, UiKit.TEXT, false);
+        g.drawString(font, font.plainSubstrByWidth(c.detail, tw), left + 22, y + 14, UiKit.DIM, false);
+    }
+
+    @Override
+    public void onClose() {
+        notNow();
+    }
+}

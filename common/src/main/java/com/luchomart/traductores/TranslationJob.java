@@ -56,7 +56,10 @@ public class TranslationJob implements Runnable {
     }
 
     private static class FatalException extends Exception {
-        FatalException(String msg, Throwable cause) { super(msg, cause); }
+        /** El problema es de configuración (sin conexión, sin modelo, clave inválida): lo resuelve el asistente. */
+        final boolean setup;
+        FatalException(String msg, Throwable cause) { this(msg, cause, false); }
+        FatalException(String msg, Throwable cause, boolean setup) { super(msg, cause); this.setup = setup; }
     }
 
     /** Cancelación pedida mientras se esperaba (para salir de lo que se esté haciendo). */
@@ -77,6 +80,8 @@ public class TranslationJob implements Runnable {
     public volatile int official, fromVariants, fromCache, corrected, bookFiles;
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
+    /** Terminó con un error de configuración (lo puede resolver el asistente). */
+    public volatile boolean setupProblem;
     /** Motivo de la espera actual antes de reintentar (null si no se está esperando). */
     public volatile String waitingMessage;
 
@@ -139,6 +144,8 @@ public class TranslationJob implements Runnable {
         } catch (Cancelled e) {
             finish(State.CANCELLED, "Cancelado. Lo traducido se guardó y se retoma la próxima vez");
         } catch (FatalException e) {
+            setupProblem = e.setup;
+            Traductor.setConnection(Traductor.Connection.FAIL, e.getMessage());
             TraductorES.LOG.error("[Traductor ES] {}", e.getMessage(), e.getCause());
             finish(State.ERROR, e.getMessage());
         } catch (Throwable t) {
@@ -426,13 +433,14 @@ public class TranslationJob implements Runnable {
         while (true) {
             try {
                 raw = client.translate(cfg, prompt, masked);
+                Traductor.setConnection(Traductor.Connection.OK, cfg.model);
                 waitingMessage = null;
                 consecutiveFailures.set(0);
                 break;
             } catch (ConnectException | HttpConnectTimeoutException e) {
                 // Ollama cerrado o reiniciándose: se espera un rato antes de rendirse.
                 if (++connectFails > CONNECT_RETRIES) {
-                    throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e);
+                    throw new FatalException("No se pudo conectar con la IA en " + cfg.apiUrl + ". ¿Está Ollama encendido?", e, true);
                 }
                 backoff(Math.min(30, 5L << (connectFails - 1)), "No hay conexión con la IA, reintentando");
             } catch (InterruptedException e) {
@@ -446,10 +454,10 @@ public class TranslationJob implements Runnable {
                     continue;
                 }
                 if (e.isModelNotFound()) {
-                    throw new FatalException("El servidor respondió 404: revisá que el modelo \"" + cfg.model + "\" exista y que la URL sea correcta", e);
+                    throw new FatalException("El servidor respondió 404: revisá que el modelo \"" + cfg.model + "\" exista y que la URL sea correcta", e, true);
                 }
                 if (e.isAuthError()) {
-                    throw new FatalException("La IA rechazó la conexión: " + e.getMessage() + ". Revisá el campo Clave", e);
+                    throw new FatalException("La IA rechazó la conexión: " + e.getMessage() + ". Revisá el campo Clave", e, true);
                 }
                 if (e.isTransient() && ++transientFails <= TRANSIENT_RETRIES) {
                     long wait = e.retryAfterSeconds > 0 ? Math.min(e.retryAfterSeconds, 120) : Math.min(60, 5L << (transientFails - 1));
@@ -487,7 +495,7 @@ public class TranslationJob implements Runnable {
                 others.remove(old);
                 pick = ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
             }
-            if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause);
+            if (pick == null) throw new FatalException("No hay un modelo elegido. Elegí uno en el panel (Probar conexión muestra los disponibles)", cause, true);
             cfg.model = pick;
             cfg.save();
             TraductorES.LOG.info("[Traductor ES] Modelo elegido automáticamente: {}{}", pick, old.isBlank() ? "" : " (antes: " + old + ")");
@@ -497,7 +505,7 @@ public class TranslationJob implements Runnable {
             Thread.currentThread().interrupt();
             throw new FatalException("Traducción interrumpida", e);
         } catch (IOException e) {
-            throw new FatalException("No se pudo elegir un modelo: " + LlmClient.describe(e), e);
+            throw new FatalException("No se pudo elegir un modelo: " + LlmClient.describe(e), e, true);
         }
     }
 

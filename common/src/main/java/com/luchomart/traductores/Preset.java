@@ -39,8 +39,19 @@ public enum Preset {
         return CUSTOM;
     }
 
+    /** Siguiente servicio predefinido ("Personalizado" no entra en el ciclo: aparece al escribir una URL propia). */
     public Preset next() {
-        return values()[(ordinal() + 1) % values().length];
+        return step(1);
+    }
+
+    public Preset previous() {
+        return step(-1);
+    }
+
+    private Preset step(int dir) {
+        int n = values().length - 1; // sin CUSTOM, que es el último
+        int i = this == CUSTOM ? (dir > 0 ? -1 : 0) : ordinal();
+        return values()[Math.floorMod(i + dir, n)];
     }
 
     public boolean isCloud() {

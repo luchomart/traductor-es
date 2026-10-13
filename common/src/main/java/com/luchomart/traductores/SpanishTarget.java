@@ -18,7 +18,17 @@ public final class SpanishTarget {
             "es_ve", "español de Venezuela",
             "es_ec", "español de Ecuador");
 
+    private static final Map<String, String> DISPLAY = Map.of(
+            "es_es", "Español (España)", "es_mx", "Español (México)", "es_ar", "Español (Argentina)",
+            "es_cl", "Español (Chile)", "es_uy", "Español (Uruguay)", "es_ve", "Español (Venezuela)",
+            "es_ec", "Español (Ecuador)");
+
     private SpanishTarget() {}
+
+    /** Nombre para mostrar en pantalla ("Español (México)"). */
+    public static String displayName(String code) {
+        return DISPLAY.getOrDefault(code, code);
+    }
 
     public static boolean isSupported(String code) {
         return CODES.contains(code);

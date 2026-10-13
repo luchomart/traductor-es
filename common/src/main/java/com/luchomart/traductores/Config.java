@@ -31,6 +31,10 @@ public class Config {
     public double temperature = 0.2;
     /** Pedir al servidor respuesta en modo JSON (Ollama y LM Studio lo soportan). */
     public boolean jsonMode = true;
+    /** Ya se completó el asistente de primera vez. */
+    public boolean setupDone = false;
+    /** Mostrar el asistente cuando falta configurar algo (el jugador puede desactivarlo). */
+    public boolean showWizard = true;
     /** Traducir solo al llegar a la pantalla de título si hay textos nuevos. */
     public boolean autoStart = true;
     /** Recargar los recursos al terminar si se está en el menú principal. */

@@ -164,6 +164,39 @@ public class TranslationJob implements Runnable {
 
     public boolean isPauseRequested() { return pauseRequested; }
 
+    /**
+     * Va mucho más lento de lo normal para el servicio (menos de la mitad) y falta más de media hora.
+     * Se mira después de 3 minutos traduciendo, para no avisar por un arranque lento.
+     */
+    public boolean isSlow() {
+        if (state != State.TRANSLATING || isPaused() || translateStartMs == 0) return false;
+        if (System.currentTimeMillis() - translateStartMs - totalPausedMs() < 180_000) return false;
+        double rate = ratePerMinute();
+        int left = total - done;
+        if (rate <= 0) return left > 0;
+        return rate < ServiceGuide.current(cfg).perMinute() * 0.5 && left / rate > 30;
+    }
+
+    /** Qué probar cuando va lento (para el panel y el aviso). */
+    public String slowAdvice() {
+        return usesLocalAi()
+                ? "Un modelo más chico (por ejemplo gemma3:4b) o un servicio en la nube va más rápido."
+                : "Cada modelo tiene su propio límite: probá otro en «Elegir…» o cambiá de servicio con «¿Cuál conviene?», y tocá «Usar este servicio».";
+    }
+
+    private volatile boolean slowNotified;
+
+    /** Avisa una sola vez por traducción si va lento. */
+    private void checkSlow() {
+        if (slowNotified || applyOnly || !isSlow()) return;
+        slowNotified = true;
+        String msg = "Va lento (~" + Math.round(ratePerMinute()) + " textos/min). "
+                + (usesLocalAi() ? "Probá un modelo más chico o la nube: mirá el panel." : "Probá con otro modelo: mirá el panel.");
+        TraductorES.LOG.info("[Traductor ES] {}", msg);
+        Minecraft.getInstance().execute(() -> Platform.toast(net.minecraft.network.chat.Component.literal("Traductor ES"),
+                net.minecraft.network.chat.Component.literal(msg)));
+    }
+
     /** Tiempo en pausa, contando la pausa actual. */
     public synchronized long totalPausedMs() {
         return pausedMs + (pauseRequested ? System.currentTimeMillis() - pauseStartMs : 0);
@@ -546,6 +579,7 @@ public class TranslationJob implements Runnable {
 
     /** Cada minuto se guarda el caché y se actualiza el pack, por si el juego se cierra. */
     private void maybeFlush() throws IOException {
+        checkSlow();
         if (System.currentTimeMillis() - lastFlushMs < 60_000) return;
         cache.flush();
         failureLog.save();

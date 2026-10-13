@@ -559,6 +559,12 @@ public class ConfigScreen extends BaseScreen {
                     my = UiKit.wrapped(g, font, Component.literal("Ahora se está traduciendo con " + other.aiLabel()
                             + ". Para seguir con el de arriba, tocá «Usar este servicio»; si no, se usa en la próxima traducción.")
                             .withStyle(ChatFormatting.GOLD), innerX, my, innerW, UiKit.WHITE) + 4;
+                } else {
+                    TranslationJob j = Traductor.job();
+                    if (j != null && j.isRunning() && j.isSlow()) {
+                        my = UiKit.wrapped(g, font, Component.literal("Va lento: ~" + Math.round(j.ratePerMinute()) + " textos/min con "
+                                + j.aiLabel() + ". " + j.slowAdvice()).withStyle(ChatFormatting.GOLD), innerX, my, innerW, UiKit.WHITE) + 4;
+                    }
                 }
                 drawMessage(g, my);
             }

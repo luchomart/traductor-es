@@ -442,7 +442,11 @@ public class TranslationJob implements Runnable {
     private String usableCache(String ns, String key, String text) {
         String cached = cache.get(ns, key, text);
         if (cached == null || Validator.check(text, cached) != null) return null;
-        if (cfg.retryUnchanged && Validator.looksUntranslated(text, cached) && !cache.isConfirmed(ns, key)) return null;
+        if (cfg.retryUnchanged && Validator.looksUntranslated(text, cached)) {
+            if (!cache.isConfirmed(ns, key)) return null;
+            // Se aceptó como nombre propio, pero hay textos parecidos del mismo mod traducidos: se revisa una vez más.
+            if (!cache.wasReviewed(ns, key) && !cache.translatedLike(ns, text, 1).isEmpty()) return null;
+        }
         // Traducciones anteriores con mayúsculas al estilo inglés: se corrigen sin volver a traducir.
         String fixed = caps.apply(text, cached);
         if (!fixed.equals(cached)) cache.updateText(ns, key, fixed);
@@ -1032,8 +1036,10 @@ public class TranslationJob implements Runnable {
             else fail(it, reason);
             return;
         }
+        List<String[]> examples = UNCHANGED.equals(reason) ? similarTranslated(it) : List.of();
         String note = UNCHANGED.equals(reason)
                 ? "ATENCIÓN: en el intento anterior devolviste este texto sin traducir. Tradúcelo al " + SpanishTarget.describe(target) + " salvo que sea un nombre propio o una marca; en ese caso devuélvelo igual."
+                        + examplesNote(examples)
                 : "ATENCIÓN: en el intento anterior la traducción de este texto fue rechazada (" + reason + "). Corrígelo y conserva exactamente los marcadores del original.";
         String t, why;
         try {
@@ -1044,13 +1050,30 @@ public class TranslationJob implements Runnable {
             t = null;
             why = e.getMessage();
         }
-        if (why == null) accept(it, t); // un "sin cambios" en el reintento se acepta: es un nombre propio
+        if (why == null) {
+            accept(it, t); // un "sin cambios" en el reintento se acepta: es un nombre propio
+            if (!examples.isEmpty()) for (Target tg : it.targets) cache.markReviewed(tg.ns(), tg.key());
+        }
         else if (attempt < 2) translateSingle(it, why, attempt + 1);
         else if (hasLineBreaks(it.text) && !Validator.NEWLINES.equals(reason)) {
             String joined = translateByLines(it);
             if (joined != null) accept(it, joined);
             else fail(it, why);
         } else fail(it, why);
+    }
+
+    /** Textos ya traducidos del mismo mod que comparten palabras con este (para el reintento de un "sin cambios"). */
+    private List<String[]> similarTranslated(Item it) {
+        return it.targets.isEmpty() ? List.of() : cache.translatedLike(it.targets.get(0).ns(), it.text, 4);
+    }
+
+    private static String examplesNote(List<String[]> examples) {
+        if (examples.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(" Otros textos de este mismo mod, con las mismas palabras, ya se tradujeron así: ");
+        for (int i = 0; i < examples.size(); i++) {
+            sb.append(i > 0 ? "; " : "").append('«').append(examples.get(i)[0]).append("» → «").append(examples.get(i)[1]).append('»');
+        }
+        return sb.append(". Así que no es un nombre propio: tradúcelo de la misma forma.").toString();
     }
 
     private static boolean hasLineBreaks(String s) {

@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,8 @@ public class TranslationCache {
         public Boolean r;
         /** Modelo que la tradujo (para poder rehacer lo de un modelo que tradujo mal). Falta en las anteriores. */
         public String m;
+        /** true si el "sin cambios" se confirmó mostrándole a la IA textos parecidos ya traducidos: no se revisa más. */
+        public Boolean s;
         public Entry() {}
         public Entry(String o, String t, boolean confirmed, String model) {
             this.o = o;
@@ -75,6 +78,33 @@ public class TranslationCache {
     public boolean isConfirmed(String ns, String key) {
         Entry e = namespace(ns).get(key);
         return e != null && Boolean.TRUE.equals(e.r);
+    }
+
+    /** Marca un "sin cambios" como revisado con ejemplos (ver {@link #translatedLike}). */
+    public void markReviewed(String ns, String key) {
+        Entry e = namespace(ns).get(key);
+        if (e == null || Boolean.TRUE.equals(e.s)) return;
+        e.s = Boolean.TRUE;
+        dirty.add(ns);
+    }
+
+    public boolean wasReviewed(String ns, String key) {
+        Entry e = namespace(ns).get(key);
+        return e != null && Boolean.TRUE.equals(e.s);
+    }
+
+    /**
+     * Textos del mismo namespace ya traducidos (distintos del original) que comparten alguna palabra con este.
+     * Sirven de prueba de que el texto no es un nombre propio: "ME Chemical DISK Housing" → "Carcasa de disco químico ME"
+     * muestra que "ME DISK Housing" también se traduce. Devuelve pares {original, traducción}.
+     */
+    public List<String[]> translatedLike(String ns, String text, int max) {
+        List<String[]> out = new ArrayList<>();
+        for (Entry e : namespace(ns).values()) {
+            if (out.size() >= max) break;
+            if (e.o != null && e.t != null && !e.o.equals(e.t) && !e.o.equals(text) && Validator.related(e.o, text)) out.add(new String[]{e.o, e.t});
+        }
+        return out;
     }
 
     public void put(String ns, String key, String source, String translation, boolean confirmed, String model) {

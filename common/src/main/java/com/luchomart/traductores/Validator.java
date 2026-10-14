@@ -105,4 +105,25 @@ public final class Validator {
         if (ROMAN.matcher(rest).matches()) return true;
         return !WORD.matcher(rest).find();
     }
+
+    private static final Pattern LONG_WORD = Pattern.compile("\\p{L}{4,}");
+    /** Palabras demasiado comunes para decir que dos textos hablan de lo mismo. */
+    private static final java.util.Set<String> COMMON = java.util.Set.of("with", "from", "this", "that", "your", "have", "when", "will", "into", "more", "than");
+
+    /** Comparten alguna palabra de 4 letras o más que no sea de las muy comunes. */
+    public static boolean related(String a, String b) {
+        java.util.Set<String> words = words(a);
+        words.retainAll(words(b));
+        return !words.isEmpty();
+    }
+
+    private static java.util.Set<String> words(String s) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        Matcher m = LONG_WORD.matcher(s);
+        while (m.find()) {
+            String w = m.group().toLowerCase(java.util.Locale.ROOT);
+            if (!COMMON.contains(w)) out.add(w);
+        }
+        return out;
+    }
 }

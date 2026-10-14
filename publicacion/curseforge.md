@@ -50,7 +50,7 @@ With a cloud service, your mods' texts are sent to that service, and your API ke
 
 ## Made with AI assistance
 
-This mod was developed with the help of an AI assistant (Claude, by Anthropic). The design, decisions and testing are mine. The source code is on GitHub under the MIT license.
+This mod was developed with the help of an AI assistant (Claude, by Anthropic). The design, decisions and testing are mine. The source code is on [GitHub](https://github.com/luchomart/traductor-es) under the MIT license.
 
 ---
 
@@ -85,4 +85,4 @@ Con un servicio en la nube, los textos de tus mods se envían a ese servicio y l
 
 ## Hecho con ayuda de IA
 
-Este mod se desarrolló con ayuda de un asistente de IA (Claude, de Anthropic). El diseño, las decisiones y las pruebas son míos. El código está en GitHub con licencia MIT.
+Este mod se desarrolló con ayuda de un asistente de IA (Claude, de Anthropic). El diseño, las decisiones y las pruebas son míos. El código está en [GitHub](https://github.com/luchomart/traductor-es) con licencia MIT.

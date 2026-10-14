@@ -40,7 +40,7 @@ Son unos 8 GB, así que tarda un rato. **TranslateGemma** es un Gemma 3 que Goog
 
 ### 3. Instalar el mod
 
-Copiá el archivo del mod en la carpeta `mods` de tu modpack. Usá el que corresponda a tu versión:
+Bajá el mod de la [página de versiones en GitHub](https://github.com/luchomart/traductor-es/releases/latest) y copiá el archivo en la carpeta `mods` de tu modpack. Usá el que corresponda a tu versión:
 
 - `traductor_es-forge-1.20.1-….jar` para modpacks de **Forge 1.20.1**
 - `traductor_es-neoforge-1.21.1-….jar` para modpacks de **NeoForge 1.21.1**

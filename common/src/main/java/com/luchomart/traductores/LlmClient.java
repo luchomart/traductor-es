@@ -117,14 +117,19 @@ public class LlmClient {
 
     /**
      * Si la cuenta puede usar modelos de pago. Solo lo sabe OpenRouter (consulta el saldo); en el resto, true.
-     * Si no se pudo saber, false: es mejor proponer uno gratis que uno que va a fallar.
+     * Sin saldo conocido, se mira si alguna vez cargó crédito; si tampoco se sabe, false: es mejor proponer uno
+     * gratis que uno que va a fallar.
      */
     public boolean canPay(Config cfg) {
         if (Preset.fromUrl(cfg.apiUrl) != Preset.OPENROUTER) return true;
         if (ModelStatus.noCredit(cfg.apiUrl)) return false;
+        // Lo de una consulta anterior puede ser de otra clave.
+        Quota.openRouterBalance = null;
+        Quota.openRouterFreeTier = null;
         quota(cfg);
         Double balance = Quota.openRouterBalance;
-        return balance != null && balance > 0;
+        if (balance != null) return balance > 0;
+        return Boolean.FALSE.equals(Quota.openRouterFreeTier);
     }
 
     /** GET con la clave; null si falla (es información opcional). */

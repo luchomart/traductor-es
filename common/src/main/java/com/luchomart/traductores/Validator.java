@@ -117,7 +117,8 @@ public final class Validator {
         return !words.isEmpty();
     }
 
-    private static java.util.Set<String> words(String s) {
+    /** Las palabras de 4 letras o más (en minúscula), sin las muy comunes. */
+    public static java.util.Set<String> words(String s) {
         java.util.Set<String> out = new java.util.HashSet<>();
         Matcher m = LONG_WORD.matcher(s);
         while (m.find()) {

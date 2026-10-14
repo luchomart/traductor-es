@@ -4,3 +4,10 @@ plugins {
     id 'net.neoforged.moddev.legacyforge' version '2.0.148' apply false
     id 'fabric-loom' version '1.15.5' apply false
 }
+
+// La licencia viaja dentro de cada jar.
+subprojects {
+    tasks.withType(Jar).configureEach {
+        from(rootProject.file('LICENSE')) { rename { 'LICENSE_traductor_es' } }
+    }
+}

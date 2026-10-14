@@ -100,9 +100,14 @@ public class TranslationCache {
      */
     public List<String[]> translatedLike(String ns, String text, int max) {
         List<String[]> out = new ArrayList<>();
+        Set<String> words = Validator.words(text);
+        if (words.isEmpty()) return out;
         for (Entry e : namespace(ns).values()) {
             if (out.size() >= max) break;
-            if (e.o != null && e.t != null && !e.o.equals(e.t) && !e.o.equals(text) && Validator.related(e.o, text)) out.add(new String[]{e.o, e.t});
+            if (e.o == null || e.t == null || e.o.equals(e.t) || e.o.equals(text)) continue;
+            // Primero un filtro barato (se llama una vez por cada nombre propio guardado, con todo el mod).
+            String low = e.o.toLowerCase(java.util.Locale.ROOT);
+            if (words.stream().anyMatch(low::contains) && Validator.related(e.o, text)) out.add(new String[]{e.o, e.t});
         }
         return out;
     }

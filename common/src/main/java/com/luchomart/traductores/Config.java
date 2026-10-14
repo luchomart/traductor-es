@@ -24,6 +24,8 @@ public class Config {
     /** Clave de cada servicio en la nube, para no perderla al cambiar de uno a otro. */
     public java.util.Map<String, String> apiKeys = new java.util.HashMap<>();
     public String model = "translategemma:12b";
+    /** Último modelo elegido en cada servicio, para no perderlo al pasar por las flechas de servicio. */
+    public java.util.Map<String, String> serviceModels = new java.util.HashMap<>();
     /** Máximo de textos por petición. */
     public int batchSize = 20;
     /** Peticiones a la IA al mismo tiempo. 1 para una IA local; más para servicios en la nube. */
@@ -128,6 +130,7 @@ public class Config {
         if (apiUrl == null || apiUrl.isBlank()) apiUrl = Preset.OLLAMA.url;
         if (model == null) model = "";
         if (apiKeys == null) apiKeys = new java.util.HashMap<>();
+        if (serviceModels == null) serviceModels = new java.util.HashMap<>();
         if (apiKey == null) apiKey = "";
         if (!"si".equals(whilePlaying) && !"no".equals(whilePlaying)) whilePlaying = "auto";
         // Una IA en la PC no usa clave: si quedó una de otro servicio, no se muestra ni se manda.
@@ -154,8 +157,10 @@ public class Config {
     /** Cambia de servicio: URL, modelo y peticiones a la vez; trae la clave guardada de ese servicio. */
     public void applyPreset(Preset p) {
         save(); // guarda la clave del servicio actual antes de cambiar
+        Preset from = Preset.fromUrl(apiUrl);
+        if (from != Preset.CUSTOM && model != null && !model.isBlank()) serviceModels.put(from.name(), model);
         apiUrl = p.url;
-        model = p.model;
+        model = serviceModels.getOrDefault(p.name(), p.model);
         if (p.parallel > 0) parallelRequests = p.parallel;
         apiKey = p.isCloud() ? apiKeys.getOrDefault(p.name(), "") : "";
         save();

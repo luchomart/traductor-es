@@ -581,7 +581,13 @@ public class TranslationJob implements Runnable {
             Iterator<List<Item>> it = batches.iterator();
             List<Future<?>> running = new ArrayList<>();
             while (it.hasNext() || !running.isEmpty()) {
-                // Con pausa o cancelación no se mandan lotes nuevos; los que están en curso terminan.
+                // Al cancelar (o «Usar este servicio») no se espera a las peticiones en curso: con un servicio saturado
+                // pueden tardar minutos. Se cortan y esos lotes se traducen la próxima vez.
+                if (cancelRequested && !running.isEmpty()) {
+                    for (Future<?> f : running) f.cancel(true);
+                    return;
+                }
+                // Con pausa no se mandan lotes nuevos; los que están en curso terminan.
                 while (running.size() < parallel && it.hasNext() && !pauseRequested && !cancelRequested) {
                     List<Item> batch = it.next();
                     running.add(pool.submit(() -> {
@@ -753,8 +759,14 @@ public class TranslationJob implements Runnable {
                 pick = old.endsWith(":free") ? ModelPicker.recommendFree(others) : ModelPicker.recommend(Preset.fromUrl(cfg.apiUrl), others);
                 if (pick != null && pick.equals(failed)) pick = null;
             }
+            ModelStatus.Info exhausted = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
+            // Se acabó el cupo de un modelo rápido y en este servicio solo quedan más pesados (en Gemini, de «flash-lite»
+            // a «flash»: cupo diario chico y a menudo saturados): primero otro servicio gratis con clave.
+            if (pick != null && exhausted != null && exhausted.state() == ModelStatus.State.EXHAUSTED && autoSwitchOn()
+                    && ModelPicker.kind(pick).ordinal() > ModelPicker.kind(failed).ordinal()
+                    && switchAway("se acabó el cupo de " + failed + " y en este servicio quedan modelos más lentos", failed, true)) return;
             if (pick == null) {
-                ModelStatus.Info why = failed == null ? null : ModelStatus.get(cfg.apiUrl, failed);
+                ModelStatus.Info why = exhausted;
                 // No queda otro modelo en este servicio: se prueba con otro servicio gratis con clave.
                 if (why != null && autoSwitchOn() && switchAway("se acabó el cupo de " + failed, failed)) return;
                 if (why != null) {
@@ -843,7 +855,7 @@ public class TranslationJob implements Runnable {
 
     /** Cada tanto: anota el ritmo y, si va muy lenta (o lenta con mucho por delante), cambia sola. */
     private void monitorSpeed() {
-        if (state != State.TRANSLATING || isPaused() || applyOnly || translateStartMs == 0) return;
+        if (state != State.TRANSLATING || isPaused() || applyOnly || translateStartMs == 0 || cancelRequested) return;
         long now = activeMs();
         synchronized (samples) {
             long[] last = samples.peekLast();
@@ -869,12 +881,18 @@ public class TranslationJob implements Runnable {
      * de una IA en la PC a la nube. failedModel: el que se agotó (null si es por velocidad). Devuelve si cambió.
      */
     boolean switchAway(String reason, String failedModel) {
+        return switchAway(reason, failedModel, false);
+    }
+
+    /** otherServiceOnly: no probar otro modelo del mismo servicio (ya se sabe que los que quedan no convienen). */
+    private boolean switchAway(String reason, String failedModel, boolean otherServiceOnly) {
         synchronized (switchLock) {
+            if (cancelRequested) return false; // se está cerrando (cancelada o «Usar este servicio»): no cambiar nada
             Config cur = cfg;
             if (failedModel != null && !failedModel.equals(cur.model)) return true; // otra petición ya cambió
             if (cur.isLocalAi() || modelSwitches.get() >= MAX_MODEL_SWITCHES) return false;
             triedAis.add(FailureLog.aiId(cur));
-            Config next = sameServiceAlternative(cur);
+            Config next = otherServiceOnly ? null : sameServiceAlternative(cur);
             if (next == null) next = otherServiceAlternative(cur);
             if (next == null) {
                 TraductorES.LOG.info("[Traductor ES] {}, pero no hay otro modelo ni servicio gratis con clave", reason);
@@ -1144,6 +1162,8 @@ public class TranslationJob implements Runnable {
     }
 
     private synchronized void fail(Item it, String why) {
+        // Cortada al cancelar: no es culpa del texto (si se anotara, se saltearía en las próximas traducciones).
+        if (cancelRequested) return;
         failed++;
         done++;
         perMod.computeIfAbsent(it.modNs, k -> new int[2])[1]++;

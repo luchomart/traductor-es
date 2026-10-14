@@ -193,7 +193,10 @@ public final class Books {
             Resource top = null;
             for (Resource r : e.getValue()) if (!PackWriter.PACK_ID.equals(r.sourcePackId())) top = r;
             if (top == null) continue;
-            index.computeIfAbsent(id, k -> new TreeMap<>()).computeIfAbsent(lang, k -> new TreeMap<>()).put(rel, top);
+            Map<String, Resource> files = index.computeIfAbsent(id, k -> new TreeMap<>()).computeIfAbsent(lang, k -> new TreeMap<>());
+            // GuideME: si hay una versión en _en_us/, es la que ve un jugador en inglés (gana a la de la raíz).
+            if (m.group(2) == null && files.containsKey(rel)) continue;
+            files.put(rel, top);
         }
 
         List<Book> books = new ArrayList<>();

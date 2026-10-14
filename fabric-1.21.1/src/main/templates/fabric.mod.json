@@ -7,6 +7,10 @@
   "authors": ["luchomart"],
   "contributors": ["Hecho con ayuda de IA (Claude, de Anthropic)"],
   "license": "${mod_license}",
+  "contact": {
+    "sources": "https://github.com/luchomart/traductor-es",
+    "issues": "https://github.com/luchomart/traductor-es/issues"
+  },
   "icon": "traductor_es.png",
   "environment": "client",
   "entrypoints": {

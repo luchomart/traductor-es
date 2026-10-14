@@ -1,11 +1,13 @@
 modLoader="javafml"
 loaderVersion="${loader_version_range}"
 license="${mod_license}"
+issueTrackerURL="https://github.com/luchomart/traductor-es/issues"
 
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
+displayURL="https://github.com/luchomart/traductor-es"
 authors="luchomart"
 description='''
 Traduce al español los textos de tus mods, desde cualquier idioma, usando una IA: en tu PC (Ollama, LM Studio) o en la nube (Gemini, Groq, OpenRouter).

@@ -112,4 +112,16 @@ class ModelPickerTest {
         assertEquals("gemma3:12b", ModelPicker.recommend(Preset.OLLAMA, List.of("qwen3:14b", "gemma3:12b", "gemma3:4b")));
         assertEquals("qwen3:14b", ModelPicker.recommend(Preset.OLLAMA, List.of("llama3.2:3b", "qwen3:14b")));
     }
+
+    @Test
+    void openRouterSinSaldoProponeUnoGratis() {
+        List<String> models = List.of("google/gemini-3.8-flash", "google/gemma-4-31b-it:free", "deepseek/deepseek-v4:free");
+        assertEquals("google/gemini-3.8-flash", ModelPicker.recommend(Preset.OPENROUTER, models, true));
+        assertEquals("google/gemma-4-31b-it:free", ModelPicker.recommend(Preset.OPENROUTER, models, false));
+        // Sin modelos gratis en la lista, queda el de siempre (y el error de saldo lo explica).
+        assertEquals("google/gemini-3.8-flash", ModelPicker.recommend(Preset.OPENROUTER, List.of("google/gemini-3.8-flash"), false));
+        // En otros servicios no cambia nada.
+        assertEquals(ModelPicker.recommend(Preset.GEMINI, List.of("gemini-3.5-flash-lite")),
+                ModelPicker.recommend(Preset.GEMINI, List.of("gemini-3.5-flash-lite"), false));
+    }
 }

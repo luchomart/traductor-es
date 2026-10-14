@@ -355,8 +355,11 @@ public class WizardScreen extends BaseScreen {
             }
             return;
         }
-        if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
-            String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
+        // OpenRouter sin saldo: un modelo de pago (aunque lo haya elegido antes) falla apenas empieza a traducir.
+        boolean canPay = models.isEmpty() || client.canPay(cfg);
+        boolean paidWithoutCredit = preset == Preset.OPENROUTER && !canPay && !cfg.model.endsWith(":free");
+        if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model) || paidWithoutCredit)) {
+            String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models), canPay);
             if (pick != null) {
                 cfg.model = pick;
                 applyModel(cfg);
@@ -373,7 +376,7 @@ public class WizardScreen extends BaseScreen {
                 ModelStatus.Info info = ModelStatus.get(cfg.apiUrl, cfg.model); // ya lo aprendió pingPatiently
                 List<String> usable = ModelStatus.usable(cfg.apiUrl, models);
                 usable.remove(cfg.model);
-                String alt = info == null || attempt >= 3 ? null : ModelPicker.recommend(preset, usable);
+                String alt = info == null || attempt >= 3 ? null : ModelPicker.recommend(preset, usable, canPay);
                 if (alt == null) {
                     failAi(preset, e);
                     if (info != null) cModel.set(Status.FAIL, "Modelo: " + cfg.model, info.tag().toLowerCase(java.util.Locale.ROOT) + " · elegí otro en el panel");

@@ -115,6 +115,18 @@ public class LlmClient {
         return p == Preset.GROQ ? lastQuota : null;
     }
 
+    /**
+     * Si la cuenta puede usar modelos de pago. Solo lo sabe OpenRouter (consulta el saldo); en el resto, true.
+     * Si no se pudo saber, false: es mejor proponer uno gratis que uno que va a fallar.
+     */
+    public boolean canPay(Config cfg) {
+        if (Preset.fromUrl(cfg.apiUrl) != Preset.OPENROUTER) return true;
+        if (ModelStatus.noCredit(cfg.apiUrl)) return false;
+        quota(cfg);
+        Double balance = Quota.openRouterBalance;
+        return balance != null && balance > 0;
+    }
+
     /** GET con la clave; null si falla (es información opcional). */
     private String get(String url, Config cfg) {
         try {

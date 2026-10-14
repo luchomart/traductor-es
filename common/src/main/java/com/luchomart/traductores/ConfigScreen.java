@@ -380,8 +380,9 @@ public class ConfigScreen extends BaseScreen {
             StringBuilder note = new StringBuilder();
             try {
                 List<String> models = client.listModels(cfg);
+                boolean canPay = models.isEmpty() || client.canPay(cfg);
                 if (!models.isEmpty() && (cfg.model.isBlank() || !models.contains(cfg.model))) {
-                    String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models));
+                    String pick = ModelPicker.recommend(preset, ModelStatus.usable(cfg.apiUrl, models), canPay);
                     if (pick != null) {
                         note.append(cfg.model.isBlank() ? " Se eligió el modelo recomendado." : " «" + cfg.model + "» no estaba; se eligió el recomendado.");
                         setModel(cfg, pick);
@@ -401,7 +402,7 @@ public class ConfigScreen extends BaseScreen {
                         List<String> usable = ModelStatus.usable(cfg.apiUrl, models);
                         usable.remove(old);
                         String alt = ModelPicker.suggestedReplacement(e.getMessage());
-                        if (alt == null || !usable.contains(alt)) alt = ModelPicker.recommend(preset, usable);
+                        if (alt == null || !usable.contains(alt)) alt = ModelPicker.recommend(preset, usable, canPay);
                         note.append(" ").append(info.explain(old));
                         if (alt == null) throw new LlmClient.LlmException("no queda otro modelo disponible en este servicio: probá otro servicio con «¿Cuál conviene?»");
                         note.append(" Se probó con «").append(alt).append("».");

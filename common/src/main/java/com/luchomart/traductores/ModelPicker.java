@@ -86,6 +86,18 @@ public final class ModelPicker {
         return good.isEmpty() ? chat : new ArrayList<>(good);
     }
 
+    /**
+     * Como {@link #recommend(Preset, List)}, pero en OpenRouter sin saldo propone un modelo gratis (":free"): los de
+     * pago responden "sin saldo" apenas empieza la traducción.
+     */
+    public static String recommend(Preset preset, List<String> available, boolean canPay) {
+        if (preset == Preset.OPENROUTER && !canPay) {
+            String free = recommendFree(available);
+            if (free != null) return free;
+        }
+        return recommend(preset, available);
+    }
+
     /** El modelo recomendado para el servicio, o null si no hay ninguno de chat. */
     public static String recommend(Preset preset, List<String> available) {
         List<String> chat = usable(available);

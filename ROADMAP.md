@@ -1,5 +1,10 @@
 # Hoja de ruta hacia la publicación
 
+## 📍 Dónde quedamos (actualizado 2026-10-15)
+- **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
+- **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
+- Próximo posible: link de CurseForge en el README, atender los primeros reportes, pendientes sin tildar de abajo.
+
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
 
@@ -54,6 +59,7 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [ ] Forge 1.19.2
 
 ## Publicación
-- [ ] Nombre en inglés para CurseForge, descripción en inglés primero
-- [ ] Ícono 400×400 hecho por el autor
-- [ ] Changelog, esquema de versiones, repositorio en GitHub
+- [x] Nombre en inglés para CurseForge, descripción en inglés primero
+- [x] Ícono 400×400 hecho por el autor
+- [x] Changelog, esquema de versiones, repositorio en GitHub
+- [x] Subido a CurseForge (v1.0.0)

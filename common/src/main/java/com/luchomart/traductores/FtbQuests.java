@@ -215,7 +215,7 @@ public final class FtbQuests {
 
     /** Recorre un archivo buscando title, subtitle, description y hover, a cualquier profundidad. */
     static void collectOldTexts(String snbt, java.util.function.Consumer<String> out) {
-        Reader r = new Reader(snbt);
+        Reader r = new Reader(snbt, true);
         while (!r.eof()) {
             char c = r.peek();
             if (c == '"' || c == '\'') { r.string(); continue; }
@@ -257,21 +257,49 @@ public final class FtbQuests {
         return true;
     }
 
+    /** Traducción → original de lo aplicado en memoria, para no guardar el español si se edita una misión. */
+    private static volatile Map<String, String> originals = Map.of();
+
+    /** Solo si el juego está en el español de destino y la opción "Libros y misiones" está prendida. */
+    static boolean shouldApplyOld(String configuredTarget, String gameLanguage, boolean translateBooks) {
+        return translateBooks && gameLanguage != null && gameLanguage.equals(SpanishTarget.resolve(configuredTarget, gameLanguage));
+    }
+
     /**
      * Cambia los textos de las misiones ya cargadas en el cliente. FTB Quests es opcional: se llega a sus objetos
      * por reflexión y, si algo no coincide, las misiones quedan en inglés.
      */
-    public static void applyOld(Object questFile, String target) {
-        Path file = oldFile(target);
+    public static void applyOld(Object questFile, String gameLanguage) {
+        originals = Map.of();
+        Config cfg = Config.get();
+        if (!shouldApplyOld(cfg.targetLanguage, gameLanguage, cfg.translateBooks)) return;
+        Path file = oldFile(gameLanguage);
         if (!Files.isRegularFile(file)) return;
         try {
             Map<String, String> texts = new java.util.HashMap<>();
             JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject()
                     .entrySet().forEach(e -> texts.put(e.getKey(), e.getValue().getAsString()));
             TraductorES.LOG.info("[Traductor ES] Misiones: {} textos en español", applyTexts(questFile, texts));
+            originals = reverse(texts);
         } catch (Exception e) {
             TraductorES.LOG.warn("[Traductor ES] No se pudieron aplicar las misiones traducidas: {}", e.toString());
         }
+    }
+
+    /** Traducción → original. Si dos originales dieron la misma traducción no se sabe cuál era: se deja afuera. */
+    static Map<String, String> reverse(Map<String, String> texts) {
+        Map<String, String> out = new java.util.HashMap<>();
+        java.util.Set<String> ambiguous = new java.util.HashSet<>();
+        texts.forEach((original, translated) -> {
+            if (out.putIfAbsent(translated, original) != null) ambiguous.add(translated);
+        });
+        out.keySet().removeAll(ambiguous);
+        return out;
+    }
+
+    /** El original de un texto ya aplicado en memoria, o null si no es una traducción nuestra. */
+    public static String originalOf(String translated) {
+        return originals.get(translated);
     }
 
     static int applyTexts(Object questFile, Map<String, String> texts) throws ReflectiveOperationException {
@@ -459,7 +487,24 @@ public final class FtbQuests {
         private final String s;
         private int i;
 
-        Reader(String s) { this.s = s; }
+        /** Como lee FTB Library los capítulos: \\n y compañía son el carácter real y un escape desconocido se descarta. */
+        private final boolean ftbEscapes;
+
+        Reader(String s) { this(s, false); }
+
+        Reader(String s, boolean ftbEscapes) { this.s = s; this.ftbEscapes = ftbEscapes; }
+
+        private void appendFtbEscape(StringBuilder sb, char n) {
+            switch (n) {
+                case 'n' -> sb.append('\n');
+                case 't' -> sb.append('\t');
+                case 'r' -> sb.append('\r');
+                case 'f' -> sb.append('\f');
+                case 'b' -> sb.append('\b');
+                case '"', '\\' -> sb.append(n);
+                default -> {}
+            }
+        }
 
         boolean eof() { return i >= s.length(); }
 
@@ -491,6 +536,7 @@ public final class FtbQuests {
                 if (c == '\\' && !eof()) {
                     // Solo \" y \\ son escapes; "\&" (un & literal de FTB Quests) se conserva tal cual.
                     char n = s.charAt(i++);
+                    if (ftbEscapes) { appendFtbEscape(sb, n); continue; }
                     if (n != '"' && n != '\'' && n != '\\') sb.append('\\');
                     sb.append(n);
                 }

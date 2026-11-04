@@ -20,6 +20,9 @@ public final class Validator {
     /** Guion bajo de resaltado de Create (_Palabra_): el que está al borde de una palabra, no el de stone_bricks. */
     static final Pattern HIGHLIGHT = Pattern.compile("(?<![\\p{L}\\p{N}])_(?=[\\p{L}\\p{N}])|(?<=[\\p{L}\\p{N}.!?)])_(?![\\p{L}\\p{N}])");
 
+    /** Macros de libros de Patchouli que define cada libro: @item@, @!. */
+    static final Pattern BOOK_MACRO = Pattern.compile("@[a-zA-Z_]+@|@!");
+
     /** Devuelve null si es válida, o el motivo del rechazo. */
     public static String check(String source, String translated) {
         if (translated == null) return "sin traducción";
@@ -29,6 +32,7 @@ public final class Validator {
         if (why == null) why = compare("códigos &", AMP_FORMAT, source, translated);
         if (why == null) why = compare("marcadores {}", BRACES, source, translated);
         if (why == null) why = compare("marcadores $()", PATCHOULI, source, translated);
+        if (why == null) why = compare("macros @", BOOK_MACRO, source, translated);
         if (why == null) why = compare("etiquetas <>", TAGS, source, translated);
         if (why == null) why = compare("resaltados _ _", HIGHLIGHT, source, translated);
         if (why == null && count(source, '\n') != count(translated, '\n')) why = NEWLINES;
@@ -99,6 +103,7 @@ public final class Validator {
      */
     public static boolean isTrivial(String s) {
         String rest = PATCHOULI.matcher(BRACES.matcher(FORMAT.matcher(PRINTF.matcher(s).replaceAll("")).replaceAll("")).replaceAll("")).replaceAll("");
+        rest = BOOK_MACRO.matcher(rest).replaceAll("");
         rest = NOT_WORDS.matcher(rest).replaceAll(" ").strip();
         // Una mayúscula sola es la sigla de un botón (B de negrita, I de cursiva): sí se traduce.
         if (rest.length() == 1 && rest.charAt(0) >= 'A' && rest.charAt(0) <= 'Z') return false;

@@ -70,4 +70,13 @@ class MaskerTest {
         assertEquals("⟦1⟧Access Points⟦2⟧ allow ⟦3⟧inserting⟦4⟧ items. ⟦5⟧More", m.text());
         assertEquals("nadie@ejemplo.com", Masker.mask("nadie@ejemplo.com").text());
     }
+
+    @Test
+    void elValidadorControlaLosMacrosDeLibros() {
+        assertNull(Validator.check("@item@Points@! here", "@item@Puntos@! acá"));
+        assertNotNull(Validator.check("@item@Points@! here", "@objeto@Puntos@! acá"));
+        assertNotNull(Validator.check("@item@Points@! here", "@item@Puntos acá"));
+        assertTrue(Validator.isTrivial("@item@"));
+        assertFalse(Validator.isTrivial("@item@Points@!"));
+    }
 }

@@ -211,7 +211,7 @@ class BooksTest {
                 base + "es_ar/entries/oficial.json", "{\"name\": \"Oficial\"}",
                 base + "es_mx/entries/variante.json", "{\"name\": \"Variante\"}",
                 base + "ru_ru/entries/lanza.json", "{\"name\": \"Копьё\"}"));
-        List<Books.Book> books = Books.scanDataBooks(dir, "es_ar", List.of("es_mx"));
+        List<Books.Book> books = Books.scanDataBooks(Books.readJarBooks(dir), "es_ar", List.of("es_mx"));
         assertEquals(1, books.size());
         Books.Book book = books.get(0);
         assertEquals("@patchouli/espadas/guia", book.pseudoNamespace());
@@ -225,7 +225,7 @@ class BooksTest {
         String base = "data/espadas/patchouli_books/guia/";
         jar(dir, Map.of(base + "book.json", "{\"use_resource_pack\": true}",
                 base + "en_us/entries/lanza.json", "{\"name\": \"Spear\"}"));
-        assertTrue(Books.scanDataBooks(dir, "es_ar", List.of()).isEmpty());
+        assertTrue(Books.scanDataBooks(Books.readJarBooks(dir), "es_ar", List.of()).isEmpty());
     }
 
     @Test
@@ -239,5 +239,22 @@ class BooksTest {
         assertEquals(3, out.size());
         JsonObject done = Books.apply(entry.getAsJsonObject(), Map.of("/pages/0", "Permiten insertar objetos.")).getAsJsonObject();
         assertEquals("Permiten insertar objetos.", done.getAsJsonArray("pages").get(0).getAsString());
+    }
+
+    @Test
+    void libroEnJarAnidadoTambienSeEncuentra(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        java.io.ByteArrayOutputStream inner = new java.io.ByteArrayOutputStream();
+        try (var zip = new java.util.zip.ZipOutputStream(inner)) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("data/agregado/patchouli_books/guia/en_us/entries/a.json"));
+            zip.write("{\"name\": \"Inner\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        try (var zip = new java.util.zip.ZipOutputStream(java.nio.file.Files.newOutputStream(dir.resolve("mod.jar")))) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("META-INF/jars/agregado.jar"));
+            zip.write(inner.toByteArray());
+            zip.closeEntry();
+        }
+        List<Books.Book> books = Books.scanDataBooks(Books.readJarBooks(dir), "es_ar", List.of());
+        assertEquals("@patchouli/agregado/guia", books.get(0).pseudoNamespace());
     }
 }

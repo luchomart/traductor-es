@@ -320,7 +320,9 @@ public class TranslationJob implements Runnable {
         aiId = FailureLog.aiId(cfg);
         Scan scan = scanOnMainThread();
         Map<String, Map<String, Map<String, String>>> all = scan.lang();
-        if (cfg.translateBooks) addBookTexts(all);
+        Map<String, byte[]> jarBooks = cfg.translateBooks
+                ? Books.readJarBooks(Minecraft.getInstance().gameDirectory.toPath().resolve("mods")) : Map.of();
+        addBookTexts(all, jarBooks);
         corrections = Corrections.load();
 
         Map<String, Map<String, String>> vanilla = all.getOrDefault("minecraft", Map.of());
@@ -365,8 +367,7 @@ public class TranslationJob implements Runnable {
         if (cfg.translateBooks) {
             List<Books.Book> allBooks = new ArrayList<>(scan.books());
             if (Platform.readsDataBooks()) {
-                allBooks.addAll(Books.scanDataBooks(Minecraft.getInstance().gameDirectory.toPath().resolve("mods"), target,
-                        cfg.useSpanishVariants ? fallbacks : List.of()));
+                allBooks.addAll(Books.scanDataBooks(jarBooks, target, cfg.useSpanishVariants ? fallbacks : List.of()));
             }
             prepareBooks(allBooks);
             prepareQuests();
@@ -410,8 +411,8 @@ public class TranslationJob implements Runnable {
      * Portadas de libros de Patchouli (book.json con "i18n"): el texto mismo es la clave de idioma. Se suman como
      * claves en inglés del mod, salvo que ya existan.
      */
-    private void addBookTexts(Map<String, Map<String, Map<String, String>>> all) {
-        Books.bookTexts(Minecraft.getInstance().gameDirectory.toPath().resolve("mods")).forEach((ns, texts) -> {
+    private void addBookTexts(Map<String, Map<String, Map<String, String>>> all, Map<String, byte[]> jarBooks) {
+        Books.bookTexts(jarBooks).forEach((ns, texts) -> {
             Map<String, Map<String, String>> langs = all.computeIfAbsent(ns, k -> new LinkedHashMap<>());
             // Si el mod no tiene inglés pero sí otro idioma de origen, no se agrega: taparía ese idioma.
             if (!langs.isEmpty() && !langs.containsKey("en_us")) return;
@@ -437,15 +438,7 @@ public class TranslationJob implements Runnable {
         quests = q;
         official += q.official();
         fromVariants += q.fromVariant();
-        Map<String, String> questOut = output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>());
-        FtbQuests.extract(q, (key, text) -> {
-            if (Validator.isTrivial(text)) return;
-            questTexts++;
-            if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
-            String cached = usableCache(FtbQuests.NS, key, text);
-            if (cached != null) { questOut.put(key, cached); fromCache++; return; }
-            enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
-        });
+        FtbQuests.extract(q, this::queueQuestText);
     }
 
     /** Misiones con los textos dentro de los capítulos, donde la plataforma sabe aplicarlas. */
@@ -460,16 +453,17 @@ public class TranslationJob implements Runnable {
         }
         if (lines == null) return;
         oldQuests = lines;
-        Map<String, String> questOut = output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>());
-        lines.forEach((key, line) -> {
-            String text = FtbQuests.translatable(line);
-            if (Validator.isTrivial(text)) return;
-            questTexts++;
-            if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
-            String cached = usableCache(FtbQuests.NS, key, text);
-            if (cached != null) { questOut.put(key, cached); fromCache++; return; }
-            enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
-        });
+        lines.forEach((key, line) -> queueQuestText(key, FtbQuests.translatable(line)));
+    }
+
+    /** Un texto de misión: si no está en las correcciones ni en el caché, va a la IA. */
+    private void queueQuestText(String key, String text) {
+        if (Validator.isTrivial(text)) return;
+        questTexts++;
+        if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
+        String cached = usableCache(FtbQuests.NS, key, text);
+        if (cached != null) { output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>()).put(key, cached); fromCache++; return; }
+        enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
     }
 
     /** Traducción del caché si sigue valiendo: mismo original, marcadores bien y no "olvidada" sin traducir. */

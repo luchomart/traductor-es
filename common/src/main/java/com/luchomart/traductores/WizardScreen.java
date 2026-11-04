@@ -9,8 +9,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Asistente de 3 pasos: dónde trabaja la IA, comprobación automática y resumen.
@@ -90,7 +88,7 @@ public class WizardScreen extends BaseScreen {
         String assumed = target != null ? target : "es_es";
         Thread t = new Thread(() -> {
             try {
-                Estimator.Result r = Estimator.estimate(scanResources(mc), assumed, Config.get());
+                Estimator.Result r = Estimator.estimateModpack(mc, assumed, Config.get());
                 if (estimate == null) estimate = r;
             } catch (Throwable e) {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
@@ -98,19 +96,6 @@ public class WizardScreen extends BaseScreen {
         }, "Traductor ES - contar textos");
         t.setDaemon(true);
         t.start();
-    }
-
-    /** Leer los recursos va en el hilo del juego; el resto, en el hilo que llama. */
-    static Map<String, Map<String, Map<String, String>>> scanResources(Minecraft mc) {
-        CompletableFuture<Map<String, Map<String, Map<String, String>>>> scan = new CompletableFuture<>();
-        mc.execute(() -> {
-            try {
-                scan.complete(LangScanner.scan(mc.getResourceManager()));
-            } catch (Throwable e) {
-                scan.completeExceptionally(e);
-            }
-        });
-        return scan.join();
     }
 
     /** Abre "¿Cuál conviene?"; al elegir una opción, la aplica y vuelve al paso 2 a comprobarla. */
@@ -302,7 +287,7 @@ public class WizardScreen extends BaseScreen {
             try {
                 checkAi(cfg, preset);
                 if (target != null) {
-                    Estimator.Result r = Estimator.estimate(scanResources(mc), target, cfg);
+                    Estimator.Result r = Estimator.estimateModpack(mc, target, cfg);
                     estimate = r;
                     if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada", "todo está en tu español");
                     else {

@@ -126,33 +126,27 @@ public final class Books {
     /** Textos de book.json que Patchouli pasa por el traductor del juego cuando el libro tiene "i18n": true. */
     private static final List<String> BOOK_FIELDS = List.of("name", "landing_text", "subtitle");
 
+    private static final Pattern DATA_CONTENT = Pattern.compile("data/([a-z0-9_.-]+)/patchouli_books/([^/]+)/([a-z]{2,3}_[a-z]{2,3})/(.+\\.json)");
+    /** Mods dentro de otro .jar: Fabric (META-INF/jars) y Forge (META-INF/jarjar). */
+    private static final Pattern NESTED_JAR = Pattern.compile("META-INF/(?:jars|jarjar)/.+\\.jar");
+    private static final int MAX_NESTED = 3;
+
     /**
-     * Textos sueltos de los book.json (portada del libro). Esos archivos están en los datos de cada mod, no en los
-     * recursos, así que se leen de los .jar. Con "i18n": true, Patchouli busca el texto como clave de idioma: si no
-     * es una clave (por ejemplo, la frase de la portada escrita tal cual), alcanza con agregarla en nuestro pack con
-     * ese texto como clave. Devuelve namespace → textos.
+     * Los archivos de libros de Patchouli que están en data/ dentro de los .jar, también los anidados: ruta → contenido.
+     * Esos archivos no son recursos del juego, así que hay que leerlos de ahí.
      */
-    public static Map<String, Set<String>> bookTexts(Path modsDir) {
-        Map<String, Set<String>> out = new TreeMap<>();
+    public static Map<String, byte[]> readJarBooks(Path modsDir) {
+        Map<String, byte[]> out = new TreeMap<>();
         if (!Files.isDirectory(modsDir)) return out;
         try (Stream<Path> jars = Files.list(modsDir)) {
-            for (Path jar : jars.filter(p -> p.toString().endsWith(".jar")).toList()) {
+            for (Path jar : jars.filter(p -> p.toString().endsWith(".jar")).sorted().toList()) {
                 try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jar.toFile())) {
                     for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zip.entries(); en.hasMoreElements(); ) {
                         java.util.zip.ZipEntry entry = en.nextElement();
-                        Matcher m = DATA_BOOK.matcher(entry.getName());
-                        if (!m.matches()) continue;
-                        try (Reader r = new java.io.InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8)) {
-                            JsonElement el = JsonParser.parseReader(r);
-                            if (!el.isJsonObject()) continue;
-                            JsonObject book = el.getAsJsonObject();
-                            if (!book.has("i18n") || !book.get("i18n").getAsBoolean()) continue;
-                            for (String field : BOOK_FIELDS) {
-                                JsonElement v = book.get(field);
-                                if (v == null || !v.isJsonPrimitive()) continue;
-                                String text = v.getAsString();
-                                if (!text.isBlank() && !KEY_LIKE.matcher(text).matches()) out.computeIfAbsent(m.group(1), k -> new java.util.TreeSet<>()).add(text);
-                            }
+                        if (isBookFile(entry.getName())) {
+                            try (java.io.InputStream in = zip.getInputStream(entry)) { out.putIfAbsent(entry.getName(), in.readAllBytes()); }
+                        } else if (NESTED_JAR.matcher(entry.getName()).matches()) {
+                            try (java.io.InputStream in = zip.getInputStream(entry)) { readNestedJar(in, out, 1); }
                         }
                     }
                 } catch (Exception e) {
@@ -165,84 +159,107 @@ public final class Books {
         return out;
     }
 
-    private static final Pattern DATA_CONTENT = Pattern.compile("data/([a-z0-9_.-]+)/patchouli_books/([^/]+)/([a-z]{2,3}_[a-z]{2,3})/(.+\\.json)");
+    private static void readNestedJar(java.io.InputStream jar, Map<String, byte[]> out, int depth) throws IOException {
+        java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(jar);
+        for (java.util.zip.ZipEntry entry; (entry = zip.getNextEntry()) != null; ) {
+            if (isBookFile(entry.getName())) out.putIfAbsent(entry.getName(), zip.readAllBytes());
+            else if (depth < MAX_NESTED && NESTED_JAR.matcher(entry.getName()).matches()) {
+                readNestedJar(new java.io.ByteArrayInputStream(zip.readAllBytes()), out, depth + 1);
+            }
+        }
+    }
+
+    private static boolean isBookFile(String name) {
+        if (DATA_BOOK.matcher(name).matches()) return true;
+        Matcher m = DATA_CONTENT.matcher(name);
+        return m.matches() && (m.group(3).equals("en_us") || m.group(3).startsWith("es_"));
+    }
 
     /**
-     * Libros de Patchouli con el contenido en data/ dentro del .jar: el juego no los ve como recursos y un pack no los
-     * reemplaza, así que se leen de los .jar. La traducción se escribe en el pack como la de cualquier libro y un
-     * mixin de la plataforma se la entrega a Patchouli (ver Platform.readsDataBooks).
+     * Textos sueltos de los book.json (portada del libro). Con "i18n": true, Patchouli busca el texto como clave de
+     * idioma: si no es una clave (por ejemplo, la frase de la portada escrita tal cual), alcanza con agregarla en
+     * nuestro pack con ese texto como clave. jarBooks: lo que devuelve readJarBooks. Devuelve namespace → textos.
      */
-    public static List<Book> scanDataBooks(Path modsDir, String target, List<String> variants) {
-        List<Book> books = new ArrayList<>();
-        if (!Files.isDirectory(modsDir)) return books;
-        try (Stream<Path> jars = Files.list(modsDir)) {
-            for (Path jar : jars.filter(p -> p.toString().endsWith(".jar")).sorted().toList()) {
-                try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jar.toFile())) {
-                    books.addAll(scanDataBooks(zip, target, variants));
-                } catch (Exception e) {
-                    TraductorES.LOG.debug("[Traductor ES] No se pudo revisar {}: {}", jar.getFileName(), e.toString());
-                }
+    public static Map<String, Set<String>> bookTexts(Map<String, byte[]> jarBooks) {
+        Map<String, Set<String>> out = new TreeMap<>();
+        jarBooks.forEach((name, content) -> {
+            Matcher m = DATA_BOOK.matcher(name);
+            if (!m.matches()) return;
+            JsonElement el = parseJson(content);
+            if (el == null || !el.isJsonObject()) return;
+            JsonObject book = el.getAsJsonObject();
+            if (!book.has("i18n") || !book.get("i18n").getAsBoolean()) return;
+            for (String field : BOOK_FIELDS) {
+                JsonElement v = book.get(field);
+                if (v == null || !v.isJsonPrimitive()) continue;
+                String text = v.getAsString();
+                if (!text.isBlank() && !KEY_LIKE.matcher(text).matches()) out.computeIfAbsent(m.group(1), k -> new java.util.TreeSet<>()).add(text);
             }
-        } catch (IOException e) {
-            TraductorES.LOG.warn("[Traductor ES] No se pudo leer la carpeta de mods: {}", e.toString());
-        }
-        return books;
+        });
+        return out;
     }
 
-    private static List<Book> scanDataBooks(java.util.zip.ZipFile zip, String target, List<String> variants) {
-        // ns/libro → idioma → archivo → entrada del .jar
-        Map<String, Map<String, Map<String, java.util.zip.ZipEntry>>> index = new TreeMap<>();
-        for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zip.entries(); en.hasMoreElements(); ) {
-            java.util.zip.ZipEntry entry = en.nextElement();
-            Matcher m = DATA_CONTENT.matcher(entry.getName());
-            if (!m.matches()) continue;
-            String lang = m.group(3), rel = m.group(4);
-            // Las plantillas tienen variables ("#text"), no textos.
-            if (rel.startsWith("templates/") || (!lang.equals("en_us") && !lang.startsWith("es_"))) continue;
+    /**
+     * Libros de Patchouli con el contenido en data/: un pack no los reemplaza. La traducción se escribe en el pack como
+     * la de cualquier libro y un mixin de la plataforma se la entrega a Patchouli (ver Platform.readsDataBooks).
+     */
+    public static List<Book> scanDataBooks(Map<String, byte[]> jarBooks, String target, List<String> variants) {
+        // ns/libro → idioma → archivo → contenido
+        Map<String, Map<String, Map<String, byte[]>>> index = new TreeMap<>();
+        jarBooks.forEach((name, content) -> {
+            Matcher m = DATA_CONTENT.matcher(name);
+            if (!m.matches()) return;
             index.computeIfAbsent(m.group(1) + "/" + m.group(2), k -> new TreeMap<>())
-                    .computeIfAbsent(lang, k -> new TreeMap<>()).put(rel, entry);
-        }
+                    .computeIfAbsent(m.group(3), k -> new TreeMap<>()).put(m.group(4), content);
+        });
         List<Book> books = new ArrayList<>();
-        for (Map.Entry<String, Map<String, Map<String, java.util.zip.ZipEntry>>> e : index.entrySet()) {
-            Map<String, java.util.zip.ZipEntry> english = e.getValue().get("en_us");
-            String[] parts = e.getKey().split("/", 2);
-            if (english == null || usesResourcePack(zip, parts[0], parts[1])) continue;
-            Book book = new Book(Format.PATCHOULI, parts[0], parts[1]);
-            Map<String, java.util.zip.ZipEntry> es = e.getValue().getOrDefault(target, Map.of());
-            for (Map.Entry<String, java.util.zip.ZipEntry> file : english.entrySet()) {
-                String rel = file.getKey();
-                if (es.containsKey(rel)) { book.official++; continue; }
-                java.util.zip.ZipEntry variant = null;
-                for (String v : variants) {
-                    variant = e.getValue().getOrDefault(v, Map.of()).get(rel);
-                    if (variant != null) break;
-                }
-                JsonElement parsed = readJson(zip, variant != null ? variant : file.getValue());
-                if (parsed == null) continue;
-                if (variant != null) book.fromVariant.put(rel, parsed);
-                else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
-            }
-            if (!book.english.isEmpty() || !book.fromVariant.isEmpty()) books.add(book);
-        }
+        index.forEach((id, byLang) -> {
+            String[] parts = id.split("/", 2);
+            // Con "use_resource_pack", el contenido está en assets/ y ya lo encuentra el escaneo de recursos.
+            JsonElement meta = parseJson(jarBooks.getOrDefault("data/" + parts[0] + "/patchouli_books/" + parts[1] + "/book.json", new byte[0]));
+            if (meta != null && meta.isJsonObject() && meta.getAsJsonObject().has("use_resource_pack")
+                    && meta.getAsJsonObject().get("use_resource_pack").getAsBoolean()) return;
+            Book book = classify(Format.PATCHOULI, parts[0], parts[1], byLang, target, variants, (content, rel) -> parseJson(content));
+            if (book != null) books.add(book);
+        });
         return books;
     }
 
-    /** Con "use_resource_pack", el contenido está en assets/ y ya lo encuentra el escaneo de recursos. */
-    private static boolean usesResourcePack(java.util.zip.ZipFile zip, String ns, String book) {
-        java.util.zip.ZipEntry entry = zip.getEntry("data/" + ns + "/patchouli_books/" + book + "/book.json");
-        if (entry == null) return false;
-        JsonElement el = readJson(zip, entry);
-        if (el == null || !el.isJsonObject()) return false;
-        JsonElement flag = el.getAsJsonObject().get("use_resource_pack");
-        return flag != null && flag.isJsonPrimitive() && flag.getAsBoolean();
-    }
-
-    private static JsonElement readJson(java.util.zip.ZipFile zip, java.util.zip.ZipEntry entry) {
-        try (Reader r = new java.io.InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8)) {
-            return JsonParser.parseReader(r);
-        } catch (Exception e) {
+    private static JsonElement parseJson(byte[] content) {
+        if (content.length == 0) return null;
+        try {
+            return JsonParser.parseReader(new java.io.InputStreamReader(new java.io.ByteArrayInputStream(content), StandardCharsets.UTF_8));
+        } catch (RuntimeException e) {
             return null;
         }
+    }
+
+    /**
+     * Decide qué hacer con cada archivo en inglés: oficial (no se toca), copia de otra variante o por traducir.
+     * Devuelve null si no hay nada que hacer.
+     */
+    private static <T> Book classify(Format format, String ns, String name, Map<String, Map<String, T>> byLang, String target,
+                                     List<String> variants, java.util.function.BiFunction<T, String, JsonElement> read) {
+        Map<String, T> en = byLang.get("en_us");
+        if (en == null) return null;
+        Book book = new Book(format, ns, name);
+        Map<String, T> es = byLang.getOrDefault(target, Map.of());
+        for (Map.Entry<String, T> file : en.entrySet()) {
+            String rel = file.getKey();
+            // Las plantillas de Patchouli tienen variables ("#text"), no textos.
+            if (format == Format.PATCHOULI && rel.startsWith("templates/")) continue;
+            if (es.containsKey(rel)) { book.official++; continue; }
+            T variant = null;
+            for (String v : variants) {
+                variant = byLang.getOrDefault(v, Map.of()).get(rel);
+                if (variant != null) break;
+            }
+            JsonElement parsed = read.apply(variant != null ? variant : file.getValue(), rel);
+            if (parsed == null) continue;
+            if (variant != null) book.fromVariant.put(rel, parsed);
+            else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
+        }
+        return book.english.isEmpty() && book.fromVariant.isEmpty() ? null : book;
     }
 
     public static List<Book> scan(ResourceManager rm, String target, List<String> variants) {
@@ -281,25 +298,9 @@ public final class Books {
 
         List<Book> books = new ArrayList<>();
         for (Map.Entry<String, Map<String, Map<String, Resource>>> e : index.entrySet()) {
-            Map<String, Resource> en = e.getValue().get("en_us");
-            if (en == null) continue;
             String[] parts = e.getKey().split("/", 2);
-            Book book = new Book(format, parts[0], parts[1]);
-            Map<String, Resource> es = e.getValue().getOrDefault(target, Map.of());
-            for (Map.Entry<String, Resource> file : en.entrySet()) {
-                String rel = file.getKey();
-                if (es.containsKey(rel)) { book.official++; continue; }
-                Resource variant = null;
-                for (String v : variants) {
-                    variant = e.getValue().getOrDefault(v, Map.of()).get(rel);
-                    if (variant != null) break;
-                }
-                JsonElement parsed = read(format, variant != null ? variant : file.getValue(), rel);
-                if (parsed == null) continue;
-                if (variant != null) book.fromVariant.put(rel, parsed);
-                else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
-            }
-            if (!book.english.isEmpty() || !book.fromVariant.isEmpty()) books.add(book);
+            Book book = classify(format, parts[0], parts[1], e.getValue(), target, variants, (r, rel) -> read(format, r, rel));
+            if (book != null) books.add(book);
         }
         return books;
     }

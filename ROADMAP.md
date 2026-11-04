@@ -3,8 +3,11 @@
 ## 📍 Dónde quedamos (actualizado 2026-11-04)
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
-- **En curso (2026-11-04):** port a Fabric 1.19.2 (capa de interfaz en `common-modern/`). Hecho y probado (dos pasadas seguidas sin perder textos). Libros en `data/` probados en StaTech. **1.2.0 (commit local):** misiones en formato viejo; falta probar StaTech completa. Nada publicado todavía: la 1.1.0 corresponde al commit `58cbb70`.
-- Próximo posible: link de CurseForge en el README, atender los primeros reportes, pendientes sin tildar de abajo.
+- **1.2.0 lista, sin publicar:** Fabric 1.19.2 nueva, con libros de Patchouli en `data/` y misiones en formato viejo (solo esa versión). Probada en StaTech Industry: traducción completa y 2.936 textos de misiones aplicados. Commits solo locales; jars en `publicacion/subir-1.2.0/`.
+- **Antes de publicar:** traducción real con Ollama en una versión de 1.20.1 y una de 1.21.1 (después del refactor solo se abrieron pantallas). En StaTech falta mirar Alt sobre un objeto traducido.
+- **Próximo paso:** esa prueba, después push y tag `v1.2.0`, y subir a CurseForge.
+- **Después:** revisar qué formatos usa "Create- Too Many Addons" para decidir si misiones y libros van a 1.20.1 (1.3.0).
+- También pendiente: link de CurseForge en el README y atender los primeros reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
@@ -58,11 +61,14 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta
 - [x] Probar en el juego (OceanBlock: 17 textos que faltaban en el español oficial, 0 fallidos)
 - [x] Formato viejo (textos dentro de los capítulos), solo Fabric 1.19.2: en memoria, sin tocar el modpack. Probado en cliente de desarrollo con el capítulo `welcome` de StaTech
-- [ ] Formato viejo: probar StaTech completa; llevarlo a otras versiones si aparece un caso
+- [x] Formato viejo: StaTech completa (2.936 textos aplicados)
+- [x] Formato viejo: editar una misión guarda el inglés (`FtbQuestsEditMixin`), probado en cliente de desarrollo
+- [ ] Formato viejo: llevarlo a otras versiones si aparece un caso (revisar 1.20.1)
+- [ ] Fabric Loader 0.14: probar el jar final en un modpack real (en desarrollo anda con 0.14.25)
 
 ## Extras
 - [x] Libros de Patchouli en `data/`, solo Fabric 1.19.2 (`PatchouliContentMixin`): probado en cliente de desarrollo con Extended Drawers (16 de 16 archivos entregados)
-- [ ] Libros en `data/`: abrirlos en StaTech (Runic Grimoire, Spectrum)
+- [x] Libros en `data/`: abrirlos en StaTech (Runic Grimoire, Spectrum)
 - [ ] Libros en `data/` en las otras versiones, si aparece un caso
 - [x] Editor de correcciones dentro del juego (buscador + editor; /traductor corregir)
 - [x] Ver el texto original manteniendo Alt

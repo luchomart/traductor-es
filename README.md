@@ -46,7 +46,7 @@ Bajá el mod de la [página de versiones en GitHub](https://github.com/luchomart
 - `traductor_es-neoforge-1.21.1-….jar` para modpacks de **NeoForge 1.21.1**
 - `traductor_es-fabric-1.20.1-….jar` para modpacks de **Fabric 1.20.1**
 - `traductor_es-fabric-1.21.1-….jar` para modpacks de **Fabric 1.21.1**
-- `traductor_es-fabric-1.19.2-….jar` para modpacks de **Fabric 1.19.2** (también traduce las misiones en el formato viejo, sin tocar los archivos del modpack; si armás modpacks, no edites misiones dentro del juego con el mod activo: pueden guardarse en español)
+- `traductor_es-fabric-1.19.2-….jar` para modpacks de **Fabric 1.19.2** (también traduce las misiones en el formato viejo, sin tocar los archivos del modpack)
 
 En Fabric también necesitás **Fabric API** (casi todos los modpacks ya lo traen). Con **Mod Menu** aparece el botón para abrir el panel desde la lista de mods; sin él, escribí `/traductor panel` en el chat dentro de un mundo.
 

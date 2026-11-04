@@ -41,16 +41,7 @@ public class CompareScreen extends BaseScreen {
         counting = true;
         Thread t = new Thread(() -> {
             try {
-                java.util.concurrent.CompletableFuture<java.util.Map<String, java.util.Map<String, java.util.Map<String, String>>>> scan =
-                        new java.util.concurrent.CompletableFuture<>();
-                mc.execute(() -> {
-                    try {
-                        scan.complete(LangScanner.scan(mc.getResourceManager()));
-                    } catch (Throwable e) {
-                        scan.completeExceptionally(e);
-                    }
-                });
-                texts = Estimator.estimate(scan.join(), assumed, Config.get()).texts();
+                texts = Estimator.estimateModpack(mc, assumed, Config.get()).texts();
             } catch (Throwable e) {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
             } finally {

@@ -468,7 +468,7 @@ public class ConfigScreen extends BaseScreen {
         String line = "Velocidad: " + speed.describe();
         if (target != null) {
             try {
-                int texts = Estimator.estimate(WizardScreen.scanResources(mc), target, cfg).texts();
+                int texts = Estimator.estimateModpack(mc, target, cfg).texts();
                 line += texts == 0 ? " (no falta traducir nada)" : " → faltan " + Traductor.fmt(texts) + " textos: "
                         + ServiceGuide.estimate(cfg).duration(texts);
             } catch (RuntimeException e) {
@@ -526,9 +526,15 @@ public class ConfigScreen extends BaseScreen {
         try {
             Path zip = PackExporter.export();
             Platform.toast(Component.literal("Traductor ES"), Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()));
+            // En Herramientas no se dibuja el mensaje del panel: el aviso tiene que verse igual.
+            if (Platform.readsOldQuests() || Platform.readsDataBooks()) {
+                Platform.toast(Component.literal("Traductor ES"), Component.literal("Ojo: sin este mod, parte de los libros y misiones se ve en inglés."));
+            }
             report(Component.literal("Pack exportado a resourcepacks/" + zip.getFileName()
                     + ". Quien juegue el mismo modpack lo activa como cualquier paquete de recursos, sin IA."
-                    + " Las misiones de FTB Quests no van en el pack: están en config/ftbquests/quests/lang.")
+                    + (Files.isDirectory(FtbQuests.langDir()) ? " Las misiones de FTB Quests no van en el pack: están en config/ftbquests/quests/lang." : "")
+                    + (Platform.readsOldQuests() || Platform.readsDataBooks()
+                            ? " Sin este mod se ven en inglés las misiones en formato viejo y los libros guardados en la carpeta data de un mod." : ""))
                     .withStyle(ChatFormatting.GREEN));
         } catch (Exception e) {
             TraductorES.LOG.error("[Traductor ES] Error al exportar el pack", e);

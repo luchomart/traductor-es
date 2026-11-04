@@ -182,4 +182,27 @@ class FtbQuestsTest {
         assertEquals(List.of("Renglón", "", "{@pagebreak}"), f.quest.description);
         assertTrue(f.cleared);
     }
+
+    @Test
+    void formatoViejoLeeLosEscapesComoFtbLibrary() {
+        List<String> out = new java.util.ArrayList<>();
+        FtbQuests.collectOldTexts("{ title: \"Line\\nTwo\" subtitle: \"A \\\\& B\" description: [\"Say \\\"hi\\\"\", \"Raro\\q\"] }", out::add);
+        assertEquals(List.of("Line\nTwo", "A \\& B", "Say \"hi\"", "Raro"), out);
+    }
+
+    @Test
+    void formatoViejoSoloSeAplicaConElJuegoEnEseEspanol() {
+        assertTrue(FtbQuests.shouldApplyOld("auto", "es_ar", true));
+        assertTrue(FtbQuests.shouldApplyOld("es_ar", "es_ar", true));
+        assertFalse(FtbQuests.shouldApplyOld("es_mx", "en_us", true));
+        assertFalse(FtbQuests.shouldApplyOld("es_mx", "es_ar", true));
+        assertFalse(FtbQuests.shouldApplyOld("auto", "en_us", true));
+        assertFalse(FtbQuests.shouldApplyOld("auto", "es_ar", false));
+    }
+
+    @Test
+    void lasTraduccionesAmbiguasNoVuelvenAlOriginal() {
+        var originals = FtbQuests.reverse(Map.of("Start", "Inicio", "Stone", "Piedra", "stone", "Piedra"));
+        assertEquals(Map.of("Inicio", "Start"), originals);
+    }
 }

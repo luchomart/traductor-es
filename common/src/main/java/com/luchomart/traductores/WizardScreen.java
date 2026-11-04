@@ -3,7 +3,6 @@ package com.luchomart.traductores;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -169,13 +168,13 @@ public class WizardScreen extends BaseScreen {
                 Component.literal("✓ Sin placa de video · rápido").withStyle(ChatFormatting.GREEN),
                 Component.literal("Gemini, Groq u OpenRouter. Necesitás una clave gratis; los textos se envían por internet.")),
                 b -> mode = Mode.CLOUD, () -> mode == Mode.CLOUD));
-        addRenderableWidget(Button.builder(Component.literal("Ahora no"), b -> notNow()).bounds(left, by, 80, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("No mostrar más"), b -> neverAgain()).bounds(left + 84, by, 100, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Ahora no"), b -> notNow()).bounds(left, by, 80, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("No mostrar más"), b -> neverAgain()).bounds(left + 84, by, 100, 20).build());
         // En pantallas angostas no entra entre los otros botones: va arriba de "Siguiente".
         boolean fits = left + W - 214 >= left + 188;
-        addRenderableWidget(Button.builder(Component.literal("¿Cuál conviene?"), b -> openCompare())
+        addRenderableWidget(Widgets.button(Component.literal("¿Cuál conviene?"), b -> openCompare())
                 .bounds(fits ? left + W - 214 : left + W - 110, fits ? by : by - 24, 110, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Siguiente"), b -> goTo(2)).bounds(left + W - 100, by, 100, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Siguiente"), b -> goTo(2)).bounds(left + W - 100, by, 100, 20).build());
     }
 
     private Component ollamaLine() {
@@ -190,9 +189,9 @@ public class WizardScreen extends BaseScreen {
         int y = 46;
         if (mode == Mode.CLOUD) {
             int fx = left + 90, fw = W - 90;
-            addRenderableWidget(Button.builder(Component.literal("◀"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).previous()))
+            addRenderableWidget(Widgets.button(Component.literal("◀"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).previous()))
                     .bounds(fx, y, 20, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("▶"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).next()))
+            addRenderableWidget(Widgets.button(Component.literal("▶"), b -> switchCloud(Preset.fromUrl(cfg.apiUrl).next()))
                     .bounds(fx + fw - 20, y, 20, 20).build());
             y += 24;
             EditBox key = new EditBox(font, fx, y, fw - 84, 20, Component.literal("Clave"));
@@ -200,9 +199,9 @@ public class WizardScreen extends BaseScreen {
             key.setValue(cfg.apiKey);
             key.setResponder(s -> cfg.apiKey = s.trim());
             ConfigScreen.hideSecret(key);
-            key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
+            Widgets.hint(key, Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
             addRenderableWidget(key);
-            addRenderableWidget(Button.builder(Component.literal("Conseguir"), b -> {
+            addRenderableWidget(Widgets.button(Component.literal("Conseguir"), b -> {
                 Preset p = Preset.fromUrl(cfg.apiUrl);
                 if (p.helpUrl != null) Util.getPlatform().openUri(p.helpUrl);
             }).bounds(fx + fw - 80, y, 80, 20).build());
@@ -214,15 +213,15 @@ public class WizardScreen extends BaseScreen {
             Check c = checks[i];
             if (c.actionLabel != null && c.action != null && !checking) {
                 Runnable r = c.action;
-                addRenderableWidget(Button.builder(Component.literal(c.actionLabel), b -> r.run())
+                addRenderableWidget(Widgets.button(Component.literal(c.actionLabel), b -> r.run())
                         .bounds(left + W - 96, checksTop + i * ROW + 3, 96, 20).build());
             }
         }
-        addRenderableWidget(Button.builder(Component.literal("Atrás"), b -> goTo(1)).bounds(left, by, 70, 20).build());
-        Button again = addRenderableWidget(Button.builder(Component.literal(checking ? "Comprobando…" : "Comprobar de nuevo"),
+        addRenderableWidget(Widgets.button(Component.literal("Atrás"), b -> goTo(1)).bounds(left, by, 70, 20).build());
+        Button again = addRenderableWidget(Widgets.button(Component.literal(checking ? "Comprobando…" : "Comprobar de nuevo"),
                 b -> runChecks()).bounds(left + W / 2 - 60, by, 120, 20).build());
         again.active = !checking;
-        Button next = addRenderableWidget(Button.builder(Component.literal("Siguiente"), b -> goTo(3)).bounds(left + W - 100, by, 100, 20).build());
+        Button next = addRenderableWidget(Widgets.button(Component.literal("Siguiente"), b -> goTo(3)).bounds(left + W - 100, by, 100, 20).build());
         next.active = !checking && cAi.status == Status.OK && cModel.status == Status.OK && cLang.status == Status.OK;
     }
 
@@ -230,16 +229,16 @@ public class WizardScreen extends BaseScreen {
         Config cfg = Config.get();
         int y = height - 62;
         int half = (W - 4) / 2;
-        addRenderableWidget(Button.builder(ConfigScreen.whilePlayingLabel(cfg), b -> {
+        addRenderableWidget(Widgets.button(ConfigScreen.whilePlayingLabel(cfg), b -> {
             cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
             b.setMessage(ConfigScreen.whilePlayingLabel(cfg));
         }).bounds(left + half + 4, y, half, 20).build());
-        addRenderableWidget(Button.builder(autoStartLabel(cfg), b -> {
+        addRenderableWidget(Widgets.button(autoStartLabel(cfg), b -> {
             cfg.autoStart = !cfg.autoStart;
             b.setMessage(autoStartLabel(cfg));
         }).bounds(left, y, half, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Atrás"), b -> goTo(2)).bounds(left, by, 70, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
+        addRenderableWidget(Widgets.button(Component.literal("Atrás"), b -> goTo(2)).bounds(left, by, 70, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
                 .bounds(left + W - 140, by, 140, 20).build());
     }
 
@@ -444,7 +443,7 @@ public class WizardScreen extends BaseScreen {
     // ---------- Dibujo ----------
 
     @Override
-    protected void renderPanels(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void renderPanels(Gfx g, int mouseX, int mouseY, float partialTick) {
         if (step == 2) UiKit.panel(g, left - 6, checksTop - 4, W + 12, ROW * 4 + 6);
         if (step == 3) {
             int cw = (W - 12) / 3;
@@ -453,8 +452,7 @@ public class WizardScreen extends BaseScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         // Encabezado: "Paso N de 3" y los tres segmentos.
         g.drawString(font, "Paso " + step + " de 3", left, 8, UiKit.DIM, false);
         for (int i = 0; i < 3; i++) {
@@ -517,7 +515,7 @@ public class WizardScreen extends BaseScreen {
         }
     }
 
-    private void drawCheck(GuiGraphics g, Check c, int y) {
+    private void drawCheck(Gfx g, Check c, int y) {
         int color = switch (c.status) {
             case OK -> 0xFF2F7A35;
             case FAIL -> 0xFF8A2020;

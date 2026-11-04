@@ -12,7 +12,7 @@ Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuent
 
 | | |
 |---|---|
-| **Minecraft** | **1.20.1** (Forge o Fabric) o **1.21.1** (NeoForge o Fabric) |
+| **Minecraft** | **1.19.2** (Fabric), **1.20.1** (Forge o Fabric) o **1.21.1** (NeoForge o Fabric) |
 | **Placa de video** | Recomendado: 12 GB de VRAM o más. Con menos también funciona, usando un modelo más chico (ver abajo). |
 | **Espacio** | Unos 8 GB libres para el modelo de IA |
 | **Ollama** | El programa que hace correr la IA. Se instala una sola vez. (Si no tenés placa de video, mirá [IA en la nube](#ia-en-la-nube).) |
@@ -46,6 +46,7 @@ Bajá el mod de la [página de versiones en GitHub](https://github.com/luchomart
 - `traductor_es-neoforge-1.21.1-….jar` para modpacks de **NeoForge 1.21.1**
 - `traductor_es-fabric-1.20.1-….jar` para modpacks de **Fabric 1.20.1**
 - `traductor_es-fabric-1.21.1-….jar` para modpacks de **Fabric 1.21.1**
+- `traductor_es-fabric-1.19.2-….jar` para modpacks de **Fabric 1.19.2** (las misiones de FTB Quests de esta versión usan un formato viejo y todavía no se traducen)
 
 En Fabric también necesitás **Fabric API** (casi todos los modpacks ya lo traen). Con **Mod Menu** aparece el botón para abrir el panel desde la lista de mods; sin él, escribí `/traductor panel` en el chat dentro de un mundo.
 
@@ -191,7 +192,7 @@ Quiero instalar el mod de Minecraft "Traductor ES" y necesito que me guíes paso
 
 Datos del mod (no inventes opciones que no estén acá):
 - Traduce los textos de los mods al español que el jugador tenga elegido en el juego (España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador) usando una IA. Respeta las traducciones oficiales. Es un mod solo de cliente.
-- Hay un archivo por loader y versión: traductor_es-forge-1.20.1, traductor_es-neoforge-1.21.1, traductor_es-fabric-1.20.1 y traductor_es-fabric-1.21.1 (….jar). Va en la carpeta "mods" del modpack. En Fabric también hace falta Fabric API; Mod Menu es opcional y agrega el botón para abrir el panel.
+- Hay un archivo por loader y versión: traductor_es-forge-1.20.1, traductor_es-neoforge-1.21.1, traductor_es-fabric-1.19.2, traductor_es-fabric-1.20.1 y traductor_es-fabric-1.21.1 (….jar). Va en la carpeta "mods" del modpack. En Fabric también hace falta Fabric API; Mod Menu es opcional y agrega el botón para abrir el panel.
 - El juego tiene que estar en algún español: Opciones → Idioma.
 
 Dos formas de usarlo:
@@ -249,7 +250,8 @@ El proyecto compila las dos versiones a la vez:
 ```
 
 - `common/`: lógica compartida (motor de traducción, validación, glosario, caché, libros y guías (Patchouli, Mantle, Citadel, IE, GuideME), misiones de FTB Quests, interfaz).
-- `neoforge-1.21.1/`, `forge-1.20.1/`, `fabric-1.21.1/` y `fabric-1.20.1/`: solo lo que cambia entre plataformas (`Platform`, registro del pack y eventos). En Fabric el pack se suma con un mixin (`PackRepositoryMixin`).
+- `common-modern/`: la capa de interfaz (`Gfx`, `Widgets`, `CustomButton`, `TextCompat`) para 1.20 en adelante; `fabric-1.19.2/` trae su propia versión.
+- `neoforge-1.21.1/`, `forge-1.20.1/`, `fabric-1.21.1/`, `fabric-1.20.1/` y `fabric-1.19.2/`: solo lo que cambia entre plataformas (`Platform`, registro del pack y eventos). En Fabric el pack se suma con un mixin (`PackRepositoryMixin`).
 
 Los jars quedan en `*/build/libs/`.
 

@@ -3,7 +3,6 @@ package com.luchomart.traductores;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -58,6 +57,7 @@ public class CorrectionScreen extends BaseScreen {
     /** Texto que se está editando (null = viendo la lista). */
     private Entry editing;
     private MultiLineEditBox editor;
+    private int editorBottom;
     private String warning;
     /** Lo escrito en el editor, para no perderlo al rearmar la pantalla (por ejemplo, al mostrar un aviso). */
     private String draft;
@@ -121,7 +121,7 @@ public class CorrectionScreen extends BaseScreen {
         search = new EditBox(font, left, 26, W, 20, Component.literal("Buscar"));
         search.setMaxLength(200);
         search.setValue(query);
-        search.setHint(Component.literal("Buscá en inglés o en español (nombre, descripción, mod…)").withStyle(ChatFormatting.DARK_GRAY));
+        Widgets.hint(search, Component.literal("Buscá en inglés o en español (nombre, descripción, mod…)").withStyle(ChatFormatting.DARK_GRAY));
         search.setResponder(s -> {
             query = s;
             page = 0;
@@ -131,9 +131,9 @@ public class CorrectionScreen extends BaseScreen {
         setInitialFocus(search);
         perPage = Math.max(3, (height - TOP - 34) / ROW);
         int by = height - 28;
-        prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> { page--; refresh(); }).bounds(left, by, 20, 20).build());
-        next = addRenderableWidget(Button.builder(Component.literal(">"), b -> { page++; refresh(); }).bounds(left + 24, by, 20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose()).bounds(left + W - 100, by, 100, 20).build());
+        prev = addRenderableWidget(Widgets.button(Component.literal("<"), b -> { page--; refresh(); }).bounds(left, by, 20, 20).build());
+        next = addRenderableWidget(Widgets.button(Component.literal(">"), b -> { page++; refresh(); }).bounds(left + 24, by, 20, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Volver"), b -> onClose()).bounds(left + W - 100, by, 100, 20).build());
         refresh();
     }
 
@@ -143,6 +143,7 @@ public class CorrectionScreen extends BaseScreen {
         int by = height - 28;
         // Con un aviso, el cuadro se achica para que el aviso entre entre el contador y los botones.
         int boxH = Math.max(40, by - 22 - boxTop - (warning != null ? 34 : 0));
+        editorBottom = boxTop + boxH;
         editor = new MultiLineEditBox(font, left, boxTop, W, boxH, Component.literal("Escribí la traducción correcta"), Component.literal("Traducción"));
         editor.setCharacterLimit(10000);
         // Minecraft dibuja los códigos § como colores y no se ven: en el editor aparecen como &9, &r…
@@ -150,11 +151,11 @@ public class CorrectionScreen extends BaseScreen {
         editor.setValue(draft != null ? draft : visibleCodes(e.current()));
         addRenderableWidget(editor);
         setInitialFocus(editor);
-        Button save = addRenderableWidget(Button.builder(Component.literal("Guardar"), b -> save()).bounds(left + W - 90, by, 90, 20).build());
-        save.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Se guarda en correcciones.json y se aplica enseguida.")));
-        addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> closeEditor(null)).bounds(left + W - 184, by, 90, 20).build());
+        Button save = addRenderableWidget(Widgets.button(Component.literal("Guardar"), b -> save()).bounds(left + W - 90, by, 90, 20).build());
+        Widgets.tooltip(save, Component.literal("Se guarda en correcciones.json y se aplica enseguida."));
+        addRenderableWidget(Widgets.button(Component.literal("Cancelar"), b -> closeEditor(null)).bounds(left + W - 184, by, 90, 20).build());
         if (e.corrected != null && !e.ai.isEmpty()) {
-            addRenderableWidget(Button.builder(Component.literal("Volver a la de la IA"), b -> restore()).bounds(left, by, 130, 20).build());
+            addRenderableWidget(Widgets.button(Component.literal("Volver a la de la IA"), b -> restore()).bounds(left, by, 130, 20).build());
         }
     }
 
@@ -274,8 +275,7 @@ public class CorrectionScreen extends BaseScreen {
     // ---------- Dibujo ----------
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         if (editing != null) {
             renderEditor(g);
             return;
@@ -298,7 +298,7 @@ public class CorrectionScreen extends BaseScreen {
         }
     }
 
-    private void renderEditor(GuiGraphics g) {
+    private void renderEditor(Gfx g) {
         Entry e = editing;
         g.drawString(font, "Corregir · " + sourceLabel(e.ns), left, 10, UiKit.GOLD, true);
         g.drawString(font, font.plainSubstrByWidth(e.ns + ":" + e.key, W), left, 22, UiKit.DIM, false);
@@ -313,7 +313,7 @@ public class CorrectionScreen extends BaseScreen {
         if (SECTION.matcher(e.original + e.current()).find()) label += "  ·  " + codeMark + "9, " + codeMark + "r… son colores: dejalos en su lugar";
         g.drawString(font, font.plainSubstrByWidth(label, W), left, originalBottom() + 4, UiKit.MUTED, false);
         if (warning != null && editor != null) {
-            UiKit.wrapped(g, font, Component.literal(warning), left, editor.getY() + editor.getHeight() + 13, W, UiKit.YELLOW);
+            UiKit.wrapped(g, font, Component.literal(warning), left, editorBottom + 13, W, UiKit.YELLOW);
         }
     }
 
@@ -330,16 +330,16 @@ public class CorrectionScreen extends BaseScreen {
     }
 
     /** Fila de la lista: original arriba, traducción abajo y de dónde es a la derecha. */
-    private class Row extends Button {
+    private class Row extends CustomButton {
         private final Entry e;
 
         Row(int x, int y, int w, int h, Entry e, OnPress onPress) {
-            super(x, y, w, h, Component.literal(e.original), onPress, DEFAULT_NARRATION);
+            super(x, y, w, h, Component.literal(e.original), onPress);
             this.e = e;
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void draw(Gfx g, int mouseX, int mouseY, float partialTick) {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             boolean hover = isHoveredOrFocused();
             g.fill(x, y, x + w, y + h, hover ? 0xFF8A8A8A : 0xFF000000);

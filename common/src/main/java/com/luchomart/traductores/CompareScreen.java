@@ -2,8 +2,6 @@ package com.luchomart.traductores;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -138,12 +136,11 @@ public class CompareScreen extends BaseScreen {
             addRenderableWidget(new Row(left, y, W, rowH - 2, o, o == current, b -> onPick.accept(o)));
             y += rowH;
         }
-        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         g.drawString(font, "¿Cuál conviene?", left, 12, UiKit.GOLD, true);
         String sub = counting ? "Contando los textos de este modpack…" : texts == 0 ? "Este modpack no tiene nada por traducir. Tiempos para " + Traductor.fmt(SAMPLE) + " textos de ejemplo."
                 : texts > 0 ? "Para este modpack: " + Traductor.fmt(texts) + " textos por traducir. Tiempos aproximados."
@@ -191,18 +188,18 @@ public class CompareScreen extends BaseScreen {
     }
 
     /** Una fila: nombre, tiempo, gratis/de pago y la nota debajo. */
-    private class Row extends Button {
+    private class Row extends CustomButton {
         private final ServiceGuide.Option option;
         private final boolean current;
 
         Row(int x, int y, int w, int h, ServiceGuide.Option option, boolean current, OnPress onPress) {
-            super(x, y, w, h, Component.literal(option.name()), onPress, DEFAULT_NARRATION);
+            super(x, y, w, h, Component.literal(option.name()), onPress);
             this.option = option;
             this.current = current;
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void draw(Gfx g, int mouseX, int mouseY, float partialTick) {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             g.fill(x, y, x + w, y + h, current ? UiKit.GREEN : isHoveredOrFocused() ? 0xFF8A8A8A : 0xFF000000);
             g.fill(x + 1, y + 1, x + w - 1, y + h - 1, current ? 0xFF1F2A1F : isHoveredOrFocused() ? 0xFF33363C : 0xFF24262B);

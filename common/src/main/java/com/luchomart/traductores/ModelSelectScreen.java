@@ -1,6 +1,5 @@
 package com.luchomart.traductores;
 
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -57,13 +56,13 @@ public class ModelSelectScreen extends BaseScreen {
         search = new EditBox(font, left, 30, W, 20, Component.literal("Buscar"));
         search.setValue(previous);
         if (Preset.fromUrl(Config.get().apiUrl) == Preset.OPENROUTER) {
-            search.setHint(Component.literal("Escribí «free» para ver solo los gratis").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+            Widgets.hint(search, Component.literal("Escribí «free» para ver solo los gratis").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         }
         search.setResponder(s -> refreshRows());
         addRenderableWidget(search);
         setInitialFocus(search);
         listTop = 56;
-        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
         rows.clear();
         refreshRows();
     }
@@ -124,8 +123,8 @@ public class ModelSelectScreen extends BaseScreen {
         if (st != null) text.append(Component.literal("  " + st.tag()).withStyle(net.minecraft.ChatFormatting.RED));
         else if (weak != null) text.append(Component.literal("  NO RECOMENDADO").withStyle(net.minecraft.ChatFormatting.RED));
         String help = st != null ? st.explain(m) : weak != null ? "No conviene para traducir al español: " + weak + "." : ModelPicker.kind(m).help;
-        return Button.builder(text, btn -> pick(m)).bounds(left, y, W, 20)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(help))).build();
+        return Widgets.button(text, btn -> pick(m)).bounds(left, y, W, 20)
+                .tooltip(Component.literal(help)).build();
     }
 
     private void pick(String m) {
@@ -143,8 +142,7 @@ public class ModelSelectScreen extends BaseScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         g.drawCenteredString(font, "Elegir modelo · " + Preset.fromUrl(Config.get().apiUrl).label, width / 2, 12, UiKit.GOLD);
         List<String> all = models;
         if (all == null) {

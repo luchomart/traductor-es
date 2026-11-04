@@ -2,8 +2,6 @@ package com.luchomart.traductores;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -11,18 +9,18 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /** Tarjeta grande que se elige con un clic (asistente: "En mi PC" / "En la nube"). La elegida tiene borde verde. */
-public class OptionCard extends Button {
+public class OptionCard extends CustomButton {
     private final BooleanSupplier selected;
     private final Supplier<List<Component>> lines;
 
     public OptionCard(int x, int y, int w, int h, Component title, Supplier<List<Component>> lines, OnPress onPress, BooleanSupplier selected) {
-        super(x, y, w, h, title, onPress, DEFAULT_NARRATION);
+        super(x, y, w, h, title, onPress);
         this.selected = selected;
         this.lines = lines;
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void draw(Gfx g, int mouseX, int mouseY, float partialTick) {
         boolean on = selected.getAsBoolean();
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         g.fill(x, y, x + w, y + h, on ? UiKit.GREEN : isHoveredOrFocused() ? 0xFF8A8A8A : 0xFF000000);

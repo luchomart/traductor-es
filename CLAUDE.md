@@ -9,7 +9,8 @@ Para jugadores: `README.md`. Textos de CurseForge: `publicacion/curseforge.md`.
 
 ## Estructura
 - `common/`: toda la lógica (motor, validador, Masker, glosario, caché, libros, FTB Quests, interfaz). Tests en `common/src/test`.
-- `neoforge-1.21.1/`, `forge-1.20.1/` (ModDevGradle legacyforge), `fabric-1.21.1/`, `fabric-1.20.1/` (Loom):
+- `common-modern/`: capa de interfaz para 1.20+ (`Gfx`, `Widgets`, `CustomButton`, `TextCompat`). En `common/` usar esa capa, nunca `GuiGraphics` ni `Button.builder`.
+- `neoforge-1.21.1/`, `forge-1.20.1/` (ModDevGradle legacyforge), `fabric-1.21.1/`, `fabric-1.20.1/`, `fabric-1.19.2/` (Loom; trae su propia capa de interfaz):
   solo `Platform`, registro del pack y eventos. En Fabric el pack entra con un mixin (`PackRepositoryMixin`).
 
 ## Comandos
@@ -29,4 +30,6 @@ Create- Too Many Addons = Forge 1.20.1, carpeta `minecraft/` sin punto). Copiar 
 - Las claves de API van solo en `~/.traductor_es` ("Claves compartidas"), nunca en `config.json` (viaja al exportar modpacks).
 - No fijar nombres de modelos en la nube: caducan. Se eligen solos (ModelPicker).
 - Probar con IA falsa cuando haga falta simular cupos o errores; no gastar ni tocar las claves reales.
+- No leer `record` con Gson por reflexión: 1.19.2 trae Gson 2.8.9 y falla al ejecutar, no al compilar (los tests usan 2.11).
+- Al portar: el pack tiene que informar `PackWriter.PACK_ID` como nombre (`sourcePackId`). Si no, sus traducciones parecen oficiales y se pierden en la pasada siguiente. Probar siempre **dos pasadas** seguidas.
 - Repo público: commits con el email noreply (ya configurado). Nada personal en el repo.

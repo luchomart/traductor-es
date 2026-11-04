@@ -19,7 +19,8 @@ que ya traían chino (142 en FTB OceanBlock 2).
 | Tema | Decisión |
 |---|---|
 | Publicación | CurseForge + GitHub, declarando la ayuda de IA. **Modrinth descartado**: desde agosto de 2026 prohíbe proyectos hechos mayormente con IA. CurseForge pide nombre y descripción en inglés primero, ícono 400×400 y changelog por versión. |
-| Plataformas | NeoForge 1.21.1, Forge 1.20.1, Fabric 1.20.1 y 1.21.1, con un solo `common/`. Forge 1.19.2 quedó como extra sin hacer. |
+| Plataformas | NeoForge 1.21.1, Forge 1.20.1, Fabric 1.19.2, 1.20.1 y 1.21.1, con un solo `common/`. Forge 1.19.2 quedó como extra sin hacer. |
+| Interfaz en varias versiones | `common/` no usa la API de dibujo del juego: usa `Gfx`, `Widgets` y `CustomButton`. Desde 1.20 viven en `common-modern/`; `fabric-1.19.2/` trae los suyos (ahí no existen `GuiGraphics`, `Button.builder`, `Tooltip` ni `setHint`). Copiar las pantallas por versión duplicaría unas 2.500 líneas. |
 | Modelo local recomendado | `translategemma:12b` (ver pruebas abajo). A los modelos locales se les manda `reasoning_effort=none`. |
 | Nube | Presets de Gemini, Groq y OpenRouter, con modelo elegido automáticamente. Si se agota el cupo, cambia de modelo solo; si no quedan, frena y guarda lo hecho. |
 | Claves | Fuera de `config.json`, en `~/.traductor_es`, para que no viajen al exportar un modpack. |

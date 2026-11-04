@@ -22,7 +22,7 @@ public class TraductorES implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             Traductor.onScreenInit(screen);
             // Los eventos de cada pantalla se reinician en cada init, así que no se registran dos veces.
-            ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, partialTick) -> Traductor.onScreenRender(s, g));
+            ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, partialTick) -> Traductor.onScreenRender(s, new Gfx(g)));
         });
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(Traductor.command()));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> Traductor.onWorldJoin());

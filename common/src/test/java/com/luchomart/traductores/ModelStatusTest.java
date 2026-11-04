@@ -8,6 +8,17 @@ class ModelStatusTest {
     private static final long NOW = 1_800_000_000_000L;
 
     @Test
+    void leeModelosJson() {
+        var m = ModelStatus.parse("""
+                {"GEMINI a": {"state": "EXHAUSTED", "until": 1800000000000, "limit": "20 peticiones por día"},
+                 "GROQ b": {"state": "RETIRED", "until": 0},
+                 "GROQ c": {"state": "ESTADO_DE_OTRA_VERSION", "until": 0}}""");
+        assertEquals(new ModelStatus.Info(ModelStatus.State.EXHAUSTED, NOW, "20 peticiones por día"), m.get("GEMINI a"));
+        assertEquals(new ModelStatus.Info(ModelStatus.State.RETIRED, 0, null), m.get("GROQ b"));
+        assertFalse(m.containsKey("GROQ c"));
+    }
+
+    @Test
     void geminiCupoDiarioAgotado() {
         String msg = "el servicio pide bajar el ritmo (límite de peticiones) (HTTP 429: You exceeded your current quota... "
                 + "\\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, "

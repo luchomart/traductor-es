@@ -5,7 +5,6 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -229,7 +228,7 @@ public final class Traductor {
     }
 
     /** Después de dibujar cualquier pantalla: en el menú principal muestra el aviso de progreso en la esquina. */
-    public static void onScreenRender(Screen screen, GuiGraphics g) {
+    public static void onScreenRender(Screen screen, Gfx g) {
         if (!(screen instanceof TitleScreen)) return;
         TranslationJob j = job;
         if (j == null || j.applyOnly) return;

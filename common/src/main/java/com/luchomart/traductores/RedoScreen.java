@@ -1,8 +1,6 @@
 package com.luchomart.traductores;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -39,14 +37,14 @@ public class RedoScreen extends BaseScreen {
         W = Math.min(width - 16, 360);
         left = (width - W) / 2;
         listTop = 70;
-        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Volver"), b -> onClose()).bounds(width / 2 - 50, height - 28, 100, 20).build());
         Map<String, Integer> c = counts;
         if (c == null) return;
         if (selected != null) {
             int n = c.getOrDefault(selected, 0);
-            addRenderableWidget(Button.builder(Component.literal("Rehacer " + Traductor.fmt(n) + " textos").withStyle(ChatFormatting.GOLD),
+            addRenderableWidget(Widgets.button(Component.literal("Rehacer " + Traductor.fmt(n) + " textos").withStyle(ChatFormatting.GOLD),
                     b -> redo()).bounds(width / 2 - 124, listTop + 40, 120, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> {
+            addRenderableWidget(Widgets.button(Component.literal("Cancelar"), b -> {
                 selected = null;
                 rebuildWidgets();
             }).bounds(width / 2 + 4, listTop + 40, 120, 20).build());
@@ -58,7 +56,7 @@ public class RedoScreen extends BaseScreen {
             Component label = Component.literal(model + "  ·  " + Traductor.fmt(c.get(model)) + " textos");
             String weak = ModelPicker.weakReason(model);
             if (weak != null) label = label.copy().append(Component.literal("  NO RECOMENDADO").withStyle(ChatFormatting.RED));
-            addRenderableWidget(Button.builder(label, b -> {
+            addRenderableWidget(Widgets.button(label, b -> {
                 selected = model;
                 message = null;
                 rebuildWidgets();
@@ -107,8 +105,7 @@ public class RedoScreen extends BaseScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         g.drawCenteredString(font, "Rehacer lo que tradujo un modelo", width / 2, 12, UiKit.GOLD);
         UiKit.wrappedCentered(g, font, Component.literal("Si un modelo tradujo mal, elegilo: sus traducciones se guardan en un respaldo y se "
                 + "vuelven a traducir con el modelo elegido en el panel. Tus correcciones no se tocan."), width / 2, 30, W, UiKit.MUTED);

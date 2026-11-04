@@ -9,6 +9,8 @@ group = mod_group_id
 
 // La lógica compartida con la versión de Forge vive en ../common
 sourceSets.main.java.srcDir('../common/src/main/java')
+// Lo que es igual desde 1.20 (GuiGraphics, Button.builder, Tooltip).
+sourceSets.main.java.srcDir('../common-modern/src/main/java')
 sourceSets.main.resources.srcDir('../common/src/main/resources')
 
 sourceSets.main.resources {

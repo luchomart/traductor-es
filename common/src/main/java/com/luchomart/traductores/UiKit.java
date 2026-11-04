@@ -1,7 +1,6 @@
 package com.luchomart.traductores;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -15,24 +14,24 @@ public final class UiKit {
     private UiKit() {}
 
     /** Panel principal: borde negro, relleno gris oscuro y luz arriba a la izquierda. */
-    public static void panel(GuiGraphics g, int x, int y, int w, int h) {
+    public static void panel(Gfx g, int x, int y, int w, int h) {
         bevel(g, x, y, w, h, 0xFF2A2C31, 0xFF3D4047);
     }
 
     /** Tarjeta dentro de un panel, un poco más oscura. */
-    public static void card(GuiGraphics g, int x, int y, int w, int h) {
+    public static void card(Gfx g, int x, int y, int w, int h) {
         bevel(g, x, y, w, h, 0xFF1F2126, 0xFF2E3138);
     }
 
     /** Recuadro semitransparente para mostrar sobre el menú principal. */
-    public static void overlay(GuiGraphics g, int x, int y, int w, int h) {
+    public static void overlay(Gfx g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xE8212121);
         g.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFF555555);
         g.fill(x + 1, y + 1, x + 2, y + h - 1, 0xFF555555);
     }
 
-    private static void bevel(GuiGraphics g, int x, int y, int w, int h, int fill, int light) {
+    private static void bevel(Gfx g, int x, int y, int w, int h, int fill, int light) {
         g.fill(x, y, x + w, y + h, 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
         g.fill(x + 1, y + 1, x + w - 1, y + 2, light);
@@ -40,17 +39,17 @@ public final class UiKit {
     }
 
     /** Barra de progreso verde, como la de experiencia. fraction entre 0 y 1. */
-    public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction) {
+    public static void progressBar(Gfx g, int x, int y, int w, int h, double fraction) {
         progressBar(g, x, y, w, h, fraction, false);
     }
 
     /** Con active, un brillo recorre la barra: se ve que sigue trabajando aunque el número tarde en cambiar. */
-    public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active) {
+    public static void progressBar(Gfx g, int x, int y, int w, int h, double fraction, boolean active) {
         progressBar(g, x, y, w, h, fraction, active, 0xFF7FF23A, 0xFF4CAF1A);
     }
 
     /** Con el color de relleno elegido (por ejemplo, el de la velocidad) y su sombra. */
-    public static void progressBar(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active, int fill, int shade) {
+    public static void progressBar(Gfx g, int x, int y, int w, int h, double fraction, boolean active, int fill, int shade) {
         g.fill(x, y, x + w, y + h, 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF262626);
         int fw = (int) Math.round((w - 2) * Math.max(0, Math.min(1, fraction)));
@@ -68,12 +67,12 @@ public final class UiKit {
     }
 
     /** Cuadradito de estado (verde, rojo, gris). */
-    public static void dot(GuiGraphics g, int x, int y, int color) {
+    public static void dot(Gfx g, int x, int y, int color) {
         g.fill(x, y, x + 5, y + 5, color);
     }
 
     /** Ícono del mod (globo de diálogo con "ES"), 16×16 celdas de scale píxeles. */
-    public static void icon(GuiGraphics g, int x, int y, int scale) {
+    public static void icon(Gfx g, int x, int y, int scale) {
         int gold = 0xFFF2C94C, dark = 0xFF3B2A0A, white = 0xFFFFFFFF;
         rect(g, x, y, scale, 1, 2, 14, 10, gold);
         rect(g, x, y, scale, 2, 3, 12, 8, dark);
@@ -92,7 +91,7 @@ public final class UiKit {
     }
 
     /** Tilde verde de "listo" en 16×16 celdas. */
-    public static void check(GuiGraphics g, int x, int y, int scale) {
+    public static void check(Gfx g, int x, int y, int scale) {
         rect(g, x, y, scale, 2, 2, 12, 12, 0xFF2F7A35);
         int w = 0xFFFFFFFF;
         rect(g, x, y, scale, 4, 8, 2, 2, w);
@@ -102,12 +101,12 @@ public final class UiKit {
         rect(g, x, y, scale, 12, 4, 1, 2, w);
     }
 
-    private static void rect(GuiGraphics g, int ox, int oy, int s, int cx, int cy, int cw, int ch, int color) {
+    private static void rect(Gfx g, int ox, int oy, int s, int cx, int cy, int cw, int ch, int color) {
         g.fill(ox + cx * s, oy + cy * s, ox + (cx + cw) * s, oy + (cy + ch) * s, color);
     }
 
     /** Texto partido en renglones dentro de un ancho. Devuelve la y siguiente. */
-    public static int wrapped(GuiGraphics g, Font font, Component text, int x, int y, int width, int color) {
+    public static int wrapped(Gfx g, Font font, Component text, int x, int y, int width, int color) {
         for (FormattedCharSequence line : font.split(text, width)) {
             g.drawString(font, line, x, y, color, false);
             y += font.lineHeight + 1;
@@ -116,7 +115,7 @@ public final class UiKit {
     }
 
     /** Igual que wrapped, pero centrado. */
-    public static int wrappedCentered(GuiGraphics g, Font font, Component text, int cx, int y, int width, int color) {
+    public static int wrappedCentered(Gfx g, Font font, Component text, int cx, int y, int width, int color) {
         List<FormattedCharSequence> lines = font.split(text, width);
         for (FormattedCharSequence line : lines) {
             g.drawString(font, line, cx - font.width(line) / 2, y, color, false);

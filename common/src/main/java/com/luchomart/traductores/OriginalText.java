@@ -28,9 +28,6 @@ import java.util.stream.Stream;
  * el texto en inglés de su clave, conservando colores y valores (%s). Solo se ofrece en objetos que tradujo este mod.
  */
 public final class OriginalText {
-    /** Clave que nunca existe: así Minecraft usa el texto en inglés como "fallback" y le aplica los argumentos. */
-    private static final String MISSING = "traductor_es.original.";
-
     /** clave → texto en inglés, o null mientras se carga. */
     private static volatile Map<String, String> english;
     /** Claves que da nuestro pack (las traducidas por el mod). */
@@ -70,7 +67,7 @@ public final class OriginalText {
                 if (args[i] instanceof Component arg) args[i] = toEnglish(arg, en);
             }
             String text = en.get(tc.getKey());
-            out = text != null ? Component.translatableWithFallback(MISSING + tc.getKey(), text, args)
+            out = text != null ? TextCompat.fixedTemplate(tc.getKey(), text, args)
                     : Component.translatable(tc.getKey(), args);
         } else {
             out = MutableComponent.create(c.getContents());

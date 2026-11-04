@@ -2,6 +2,9 @@ package com.luchomart.traductores;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import java.nio.charset.StandardCharsets;
@@ -59,7 +62,15 @@ public final class ModelStatus {
         // Depende de la cuenta, no del modpack: con las claves compartidas, también se comparte.
         return (Config.get().shareKeys ? Shared.DIR : Config.DIR).resolve("modelos.json");
     }
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    /** Info se lee a mano: Minecraft 1.19 trae Gson 2.8.9, que no sabe crear records (recién desde 2.10). */
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping()
+            .registerTypeAdapter(Info.class, (JsonDeserializer<Info>) (json, type, ctx) -> {
+                JsonObject o = json.getAsJsonObject();
+                JsonElement limit = o.get("limit");
+                return new Info(ctx.deserialize(o.get("state"), State.class),
+                        o.has("until") ? o.get("until").getAsLong() : 0,
+                        limit == null || limit.isJsonNull() ? null : limit.getAsString());
+            }).create();
     private static Map<String, Info> data;
 
     private ModelStatus() {}
@@ -69,14 +80,21 @@ public final class ModelStatus {
             data = new TreeMap<>();
             try {
                 if (Files.exists(file())) {
-                    Map<String, Info> m = GSON.fromJson(Files.readString(file(), StandardCharsets.UTF_8), new TypeToken<TreeMap<String, Info>>() {}.getType());
-                    if (m != null) m.forEach((k, v) -> { if (v != null && v.state() != null) data.put(k, v); });
+                    data.putAll(parse(Files.readString(file(), StandardCharsets.UTF_8)));
                 }
             } catch (Exception e) {
                 TraductorES.LOG.warn("[Traductor ES] modelos.json dañado, se empieza de cero");
             }
         }
         return data;
+    }
+
+    /** El contenido de modelos.json. Lo que no se entiende (por ejemplo, un estado desconocido) se descarta. */
+    static Map<String, Info> parse(String json) {
+        Map<String, Info> out = new TreeMap<>();
+        Map<String, Info> m = GSON.fromJson(json, new TypeToken<TreeMap<String, Info>>() {}.getType());
+        if (m != null) m.forEach((k, v) -> { if (v != null && v.state() != null) out.put(k, v); });
+        return out;
     }
 
     private static String id(String apiUrl, String model) {

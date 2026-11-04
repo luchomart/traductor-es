@@ -3,10 +3,8 @@ package com.luchomart.traductores;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -72,7 +70,7 @@ public class ConfigScreen extends BaseScreen {
         useBtn = null;
 
         // Encabezado: la guía siempre a la vista.
-        addRenderableWidget(Button.builder(Component.literal("Guía"), b -> openGuide())
+        addRenderableWidget(Widgets.button(Component.literal("Guía"), b -> openGuide())
                 .bounds(left + W - 58, 6, 58, 18).build());
 
         // Pestañas.
@@ -92,24 +90,24 @@ public class ConfigScreen extends BaseScreen {
 
         // Barra inferior: traducir/pausar, cancelar y salir.
         int by = height - 30;
-        runBtn = addRenderableWidget(Button.builder(Component.empty(), b -> toggleRun()).bounds(left + W - 266, by, 92, 20).build());
-        cancelBtn = addRenderableWidget(Button.builder(Component.literal("Cancelar"), b -> {
+        runBtn = addRenderableWidget(Widgets.button(Component.empty(), b -> toggleRun()).bounds(left + W - 266, by, 92, 20).build());
+        cancelBtn = addRenderableWidget(Widgets.button(Component.literal("Cancelar"), b -> {
             TranslationJob j = Traductor.job();
             if (j != null) j.cancel();
         }).bounds(left + W - 170, by, 66, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Guardar y volver"), b -> onClose())
+        addRenderableWidget(Widgets.button(Component.literal("Guardar y volver"), b -> onClose())
                 .bounds(left + W - 100, by, 100, 20).build());
         updateButtons();
     }
 
     private void initConexion(Config cfg, int y) {
-        addRenderableWidget(Button.builder(Component.literal("◀"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).previous()))
-                .bounds(fieldX, y, 20, 20).tooltip(Tooltip.create(Component.literal("Servicio anterior"))).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).next()))
-                .bounds(fieldX + fieldW - 20, y, 20, 20).tooltip(Tooltip.create(Component.literal("Servicio siguiente"))).build());
+        addRenderableWidget(Widgets.button(Component.literal("◀"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).previous()))
+                .bounds(fieldX, y, 20, 20).tooltip(Component.literal("Servicio anterior")).build());
+        addRenderableWidget(Widgets.button(Component.literal("▶"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).next()))
+                .bounds(fieldX + fieldW - 20, y, 20, 20).tooltip(Component.literal("Servicio siguiente")).build());
         y += ROW;
         EditBox url = field(fieldX, y, fieldW, cfg.apiUrl, 512, s -> cfg.apiUrl = s.trim());
-        url.setTooltip(Tooltip.create(Component.literal("Dónde está la IA. Con un servicio elegido no hace falta tocarla.")));
+        Widgets.tooltip(url, Component.literal("Dónde está la IA. Con un servicio elegido no hace falta tocarla."));
         y += ROW;
         EditBox key = field(fieldX, y, fieldW - HELP_W - 4, cfg.apiKey, 256, s -> cfg.apiKey = s.trim());
         hideSecret(key);
@@ -117,36 +115,36 @@ public class ConfigScreen extends BaseScreen {
         if (current.isLocal()) {
             key.setValue("");
             key.setEditable(false);
-            key.setHint(Component.literal("No hace falta con " + current.label.replace(" (en tu PC)", "")).withStyle(ChatFormatting.DARK_GRAY));
+            Widgets.hint(key, Component.literal("No hace falta con " + current.label.replace(" (en tu PC)", "")).withStyle(ChatFormatting.DARK_GRAY));
         } else {
-            key.setHint(Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
+            Widgets.hint(key, Component.literal("Pegá acá tu clave").withStyle(ChatFormatting.DARK_GRAY));
         }
-        key.setTooltip(Tooltip.create(Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en ~/.traductor_es, fuera del modpack (sin «Claves compartidas», en config.json). No compartas esos archivos.")));
-        helpBtn = addRenderableWidget(Button.builder(Component.empty(), b -> openHelpPage())
+        Widgets.tooltip(key, Component.literal("Solo para servicios en la nube. Se ve oculta y queda guardada en ~/.traductor_es, fuera del modpack (sin «Claves compartidas», en config.json). No compartas esos archivos."));
+        helpBtn = addRenderableWidget(Widgets.button(Component.empty(), b -> openHelpPage())
                 .bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20).build());
         y += ROW;
         model = field(fieldX, y, fieldW - HELP_W - 4, cfg.model, 128, s -> cfg.model = s.trim());
-        model.setTooltip(Tooltip.create(Component.literal("Vacío = se elige solo el recomendado del servicio.")));
-        addRenderableWidget(Button.builder(Component.literal("Elegir…"), b -> {
+        Widgets.tooltip(model, Component.literal("Vacío = se elige solo el recomendado del servicio."));
+        addRenderableWidget(Widgets.button(Component.literal("Elegir…"), b -> {
             cfg.save();
             minecraft.setScreen(new ModelSelectScreen(this));
         }).bounds(fieldX + fieldW - HELP_W, y, HELP_W, 20)
-                .tooltip(Tooltip.create(Component.literal("Ver los modelos que tiene el servicio y elegir uno."))).build());
+                .tooltip(Component.literal("Ver los modelos que tiene el servicio y elegir uno.")).build());
         y += ROW + 2;
-        testBtn = addRenderableWidget(Button.builder(Component.literal("Probar conexión"), b -> testConnection(null))
+        testBtn = addRenderableWidget(Widgets.button(Component.literal("Probar conexión"), b -> testConnection(null))
                 .bounds(innerX, y, 120, 20)
-                .tooltip(Tooltip.create(Component.literal("Comprueba que responda y mide la velocidad. No cambia la traducción en curso."))).build());
+                .tooltip(Component.literal("Comprueba que responda y mide la velocidad. No cambia la traducción en curso.")).build());
         // Solo aparece si se está traduciendo con otro servicio o modelo (ver tick).
-        useBtn = addRenderableWidget(Button.builder(Component.literal("Usar este servicio"), b -> testConnection(() -> {
+        useBtn = addRenderableWidget(Widgets.button(Component.literal("Usar este servicio"), b -> testConnection(() -> {
                     Traductor.restartWithCurrentConfig();
                     report(Component.literal("Listo: la traducción sigue con " + Preset.fromUrl(Config.get().apiUrl).label
                             + ". Lo ya traducido quedó guardado.").withStyle(ChatFormatting.GREEN));
                 }))
                 .bounds(innerX + 238, y, 120, 20)
-                .tooltip(Tooltip.create(Component.literal("Prueba la conexión y, si anda, la traducción sigue con este servicio. Lo ya traducido no se pierde."))).build());
-        addRenderableWidget(Button.builder(Component.literal("¿Cuál conviene?"), b -> openCompare())
+                .tooltip(Component.literal("Prueba la conexión y, si anda, la traducción sigue con este servicio. Lo ya traducido no se pierde.")).build());
+        addRenderableWidget(Widgets.button(Component.literal("¿Cuál conviene?"), b -> openCompare())
                 .bounds(innerX + 124, y, 110, 20)
-                .tooltip(Tooltip.create(Component.literal("Cuánto tarda cada servicio y cuáles son gratis."))).build());
+                .tooltip(Component.literal("Cuánto tarda cada servicio y cuáles son gratis.")).build());
     }
 
     /** "¿Cuál conviene?": la pantalla cuenta los textos del modpack por su cuenta. */
@@ -161,17 +159,17 @@ public class ConfigScreen extends BaseScreen {
     }
 
     private void initTraduccion(Config cfg, int y) {
-        addRenderableWidget(Button.builder(targetLabel(cfg), b -> {
+        addRenderableWidget(Widgets.button(targetLabel(cfg), b -> {
             int i = TARGETS.indexOf(cfg.targetLanguage);
             cfg.targetLanguage = TARGETS.get((i + 1) % TARGETS.size());
             b.setMessage(targetLabel(cfg));
-        }).bounds(fieldX, y, fieldW, 20).tooltip(Tooltip.create(Component.literal(
-                "Automático usa el español que tengas elegido en Opciones → Idioma."))).build());
+        }).bounds(fieldX, y, fieldW, 20).tooltip(Component.literal(
+                "Automático usa el español que tengas elegido en Opciones → Idioma.")).build());
         y += ROW + 4;
         int half = (innerW - 4) / 2;
         toggle(innerX, y, half, "Al abrir el juego", () -> cfg.autoStart, v -> cfg.autoStart = v,
                 "Traducir solo lo nuevo cada vez que llegás al menú principal.");
-        addRenderableWidget(Button.builder(whilePlayingLabel(cfg), b -> {
+        addRenderableWidget(Widgets.button(whilePlayingLabel(cfg), b -> {
             cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
             b.setMessage(whilePlayingLabel(cfg));
             if ("si".equals(cfg.whilePlaying) && cfg.isLocalAi()) {
@@ -180,8 +178,8 @@ public class ConfigScreen extends BaseScreen {
             } else {
                 testResult = null;
             }
-        }).bounds(innerX + half + 4, y, half, 20).tooltip(Tooltip.create(Component.literal(
-                "Automático: sigue traduciendo si la IA está en la nube; pausa si está en tu PC (para no bajar los FPS)."))).build());
+        }).bounds(innerX + half + 4, y, half, 20).tooltip(Component.literal(
+                "Automático: sigue traduciendo si la IA está en la nube; pausa si está en tu PC (para no bajar los FPS).")).build());
         y += ROW;
         toggle(innerX, y, half, "Libros y misiones", () -> cfg.translateBooks, v -> cfg.translateBooks = v,
                 "También los manuales del juego (Patchouli, Tinkers', AE2, Immersive Engineering…) y las misiones de FTB Quests (las misiones se ven al volver a entrar al mundo).");
@@ -203,23 +201,23 @@ public class ConfigScreen extends BaseScreen {
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));
-        batch.setTooltip(Tooltip.create(Component.literal("Cuántos textos se mandan juntos a la IA. Si ves «respuesta cortada», bajalo a 10.")));
+        Widgets.tooltip(batch, Component.literal("Cuántos textos se mandan juntos a la IA. Si ves «respuesta cortada», bajalo a 10."));
         EditBox parallel = field(innerX + innerW - 40, y, 40, String.valueOf(cfg.parallelRequests), 2,
                 s -> cfg.parallelRequests = Math.min(16, parsePositive(s, cfg.parallelRequests)));
         parallel.setFilter(s -> s.chars().allMatch(Character::isDigit));
-        parallel.setTooltip(Tooltip.create(Component.literal("Peticiones al mismo tiempo. 1 para una IA en tu PC; 2 a 4 en la nube.")));
+        Widgets.tooltip(parallel, Component.literal("Peticiones al mismo tiempo. 1 para una IA en tu PC; 2 a 4 en la nube."));
     }
 
     private void initHerramientas() {
         int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
         int x1 = innerX, x2 = innerX + cw + 6, y1 = contentTop + 8, y2 = y1 + ch + 6;
         int by1 = y1 + ch - 26, by2 = y2 + ch - 26;
-        addRenderableWidget(Button.builder(Component.literal("Exportar"), b -> exportPack()).bounds(x1 + 6, by1, 80, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Abrir editor"), b -> {
+        addRenderableWidget(Widgets.button(Component.literal("Exportar"), b -> exportPack()).bounds(x1 + 6, by1, 80, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Abrir editor"), b -> {
             Config.get().save();
             minecraft.setScreen(new CorrectionScreen(this, ""));
         }).bounds(x2 + 6, by1, 96, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Rehacer…"), b -> {
+        addRenderableWidget(Widgets.button(Component.literal("Rehacer…"), b -> {
             Config.get().save();
             String target = SpanishTarget.resolve(Config.get().targetLanguage, minecraft.options.languageCode);
             if (target == null) {
@@ -228,12 +226,12 @@ public class ConfigScreen extends BaseScreen {
             }
             minecraft.setScreen(new RedoScreen(this, target));
         }).bounds(x2 + 106, by1, 70, 20)
-                .tooltip(Tooltip.create(Component.literal("Volver a traducir todo lo que hizo un modelo (si tradujo mal)."))).build());
-        addRenderableWidget(Button.builder(Component.literal("Ver informe"), b -> Util.getPlatform().openFile(Config.DIR.resolve("informe.txt").toFile()))
+                .tooltip(Component.literal("Volver a traducir todo lo que hizo un modelo (si tradujo mal).")).build());
+        addRenderableWidget(Widgets.button(Component.literal("Ver informe"), b -> Util.getPlatform().openFile(Config.DIR.resolve("informe.txt").toFile()))
                 .bounds(x1 + 6, by2, 86, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
+        addRenderableWidget(Widgets.button(Component.literal("Abrir carpeta"), b -> Util.getPlatform().openFile(Config.DIR.toFile()))
                 .bounds(x2 + 6, by2, 86, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Asistente"), b -> {
+        addRenderableWidget(Widgets.button(Component.literal("Asistente"), b -> {
             Config.get().save();
             minecraft.setScreen(new WizardScreen(this));
         }).bounds(x2 + 96, by2, 64, 20).build());
@@ -249,10 +247,10 @@ public class ConfigScreen extends BaseScreen {
 
     private void toggle(int x, int y, int w, String label, java.util.function.BooleanSupplier get,
                         java.util.function.Consumer<Boolean> set, String help) {
-        addRenderableWidget(Button.builder(toggleLabel(label, get.getAsBoolean()), b -> {
+        addRenderableWidget(Widgets.button(toggleLabel(label, get.getAsBoolean()), b -> {
             set.accept(!get.getAsBoolean());
             b.setMessage(toggleLabel(label, get.getAsBoolean()));
-        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal(help))).build());
+        }).bounds(x, y, w, 20).tooltip(Component.literal(help)).build());
     }
 
     private static Component toggleLabel(String label, boolean on) {
@@ -581,7 +579,7 @@ public class ConfigScreen extends BaseScreen {
     // ---------- Dibujo ----------
 
     @Override
-    protected void renderPanels(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void renderPanels(Gfx g, int mouseX, int mouseY, float partialTick) {
         UiKit.panel(g, left, contentTop, W, contentBottom - contentTop);
         if (tab == Tab.HERRAMIENTAS) {
             int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
@@ -594,8 +592,7 @@ public class ConfigScreen extends BaseScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         Config cfg = Config.get();
 
         // Encabezado: ícono, título e indicador de conexión.
@@ -651,17 +648,17 @@ public class ConfigScreen extends BaseScreen {
         }
     }
 
-    private void card(GuiGraphics g, int x, int y, int w, String title, String text) {
+    private void card(Gfx g, int x, int y, int w, String title, String text) {
         g.drawString(font, title, x + 6, y + 6, UiKit.YELLOW, false);
         UiKit.wrapped(g, font, Component.literal(text), x + 6, y + 18, w - 12, UiKit.MUTED);
     }
 
-    private void drawMessage(GuiGraphics g, int y) {
+    private void drawMessage(Gfx g, int y) {
         Component msg = testResult;
         if (msg != null) UiKit.wrapped(g, font, msg, innerX, y, innerW, UiKit.WHITE);
     }
 
-    private void drawConnectionChip(GuiGraphics g) {
+    private void drawConnectionChip(Gfx g) {
         String text;
         int color, box;
         TranslationJob j = Traductor.job();
@@ -685,7 +682,7 @@ public class ConfigScreen extends BaseScreen {
     }
 
     /** Estado de la traducción abajo a la izquierda: texto y barra. */
-    private void drawProgress(GuiGraphics g) {
+    private void drawProgress(Gfx g) {
         int x = left, y = height - 30, w = W - 274;
         TranslationJob j = Traductor.job();
         if (j == null) {

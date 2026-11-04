@@ -1,23 +1,21 @@
 package com.luchomart.traductores;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.BooleanSupplier;
 
 /** Pestaña: Minecraft no trae una, así que se dibuja a mano (la elegida, más clara y en amarillo). */
-public class TabButton extends Button {
+public class TabButton extends CustomButton {
     private final BooleanSupplier selected;
 
     public TabButton(int x, int y, int w, int h, Component message, OnPress onPress, BooleanSupplier selected) {
-        super(x, y, w, h, message, onPress, DEFAULT_NARRATION);
+        super(x, y, w, h, message, onPress);
         this.selected = selected;
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void draw(Gfx g, int mouseX, int mouseY, float partialTick) {
         boolean on = selected.getAsBoolean();
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         int fill = on ? 0xFF4E5157 : isHoveredOrFocused() ? 0xFF3E4147 : 0xFF2C2E33;

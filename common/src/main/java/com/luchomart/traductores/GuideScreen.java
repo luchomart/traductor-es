@@ -2,7 +2,6 @@ package com.luchomart.traductores;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -118,10 +117,10 @@ public class GuideScreen extends BaseScreen {
         }
 
         int by = height - 26, bw = 90;
-        prev = addRenderableWidget(Button.builder(Component.literal("< Anterior"), b -> turn(-1)).bounds(cx, by, bw, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Volver"), b -> onClose()).bounds(cx + cw / 2 - 40, by, 80, 20).build());
-        next = addRenderableWidget(Button.builder(Component.literal("Siguiente >"), b -> turn(1)).bounds(cx + cw - bw, by, bw, 20).build());
-        copy = addRenderableWidget(Button.builder(Component.literal("Copiar prompt"), b -> {
+        prev = addRenderableWidget(Widgets.button(Component.literal("< Anterior"), b -> turn(-1)).bounds(cx, by, bw, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Volver"), b -> onClose()).bounds(cx + cw / 2 - 40, by, 80, 20).build());
+        next = addRenderableWidget(Widgets.button(Component.literal("Siguiente >"), b -> turn(1)).bounds(cx + cw - bw, by, bw, 20).build());
+        copy = addRenderableWidget(Widgets.button(Component.literal("Copiar prompt"), b -> {
             Minecraft.getInstance().keyboardHandler.setClipboard(HelpPrompt.TEXT);
             b.setMessage(Component.literal("¡Copiado!"));
         }).bounds(cx, by - 24, 120, 20).build());
@@ -184,7 +183,7 @@ public class GuideScreen extends BaseScreen {
     }
 
     @Override
-    protected void renderPanels(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void renderPanels(Gfx g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, indexW, height, 0xE016181C);
         g.fill(indexW, 0, indexW + 1, height, 0xFF000000);
         Page p = pages.get(page);
@@ -197,8 +196,7 @@ public class GuideScreen extends BaseScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void renderContent(Gfx g, int mouseX, int mouseY, float partialTick) {
         g.drawString(font, "Guía", 8, 12, UiKit.GOLD, true);
         Page p = pages.get(page);
         Section sec = SECTIONS.get(p.section());
@@ -229,16 +227,16 @@ public class GuideScreen extends BaseScreen {
     }
 
     /** Entrada del índice: sin relieve; la elegida, en amarillo con una barra dorada a la izquierda. */
-    private static final class IndexButton extends Button {
+    private static final class IndexButton extends CustomButton {
         private final java.util.function.BooleanSupplier selected;
 
         IndexButton(int x, int y, int w, int h, Component msg, OnPress onPress, java.util.function.BooleanSupplier selected) {
-            super(x, y, w, h, msg, onPress, DEFAULT_NARRATION);
+            super(x, y, w, h, msg, onPress);
             this.selected = selected;
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void draw(Gfx g, int mouseX, int mouseY, float partialTick) {
             boolean on = selected.getAsBoolean();
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             if (on) {

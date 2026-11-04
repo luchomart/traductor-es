@@ -49,7 +49,7 @@ public final class Books {
     /** Lo que distingue a cada formato. arrayFields: campos que son listas de textos (["Mucho daño", "Poca durabilidad"]). */
     public enum Format {
         PATCHOULI("patchouli_books", "@patchouli/", "json", null,
-                Set.of("name", "title", "text", "description", "subtitle", "link_text", "header"), Set.of()),
+                Set.of("name", "title", "text", "description", "subtitle", "link_text", "header"), Set.of("pages")),
         MANTLE("book", "@mantle/", "json|lang", "index.json",
                 Set.of("title", "text", "description", "subText"), Set.of("effects", "properties", "entity", "block", "tooltip")),
         CITADEL("book", "@citadel/", "txt", "root.json", Set.of(), Set.of()),
@@ -163,6 +163,86 @@ public final class Books {
             TraductorES.LOG.warn("[Traductor ES] No se pudo leer la carpeta de mods: {}", e.toString());
         }
         return out;
+    }
+
+    private static final Pattern DATA_CONTENT = Pattern.compile("data/([a-z0-9_.-]+)/patchouli_books/([^/]+)/([a-z]{2,3}_[a-z]{2,3})/(.+\\.json)");
+
+    /**
+     * Libros de Patchouli con el contenido en data/ dentro del .jar: el juego no los ve como recursos y un pack no los
+     * reemplaza, así que se leen de los .jar. La traducción se escribe en el pack como la de cualquier libro y un
+     * mixin de la plataforma se la entrega a Patchouli (ver Platform.readsDataBooks).
+     */
+    public static List<Book> scanDataBooks(Path modsDir, String target, List<String> variants) {
+        List<Book> books = new ArrayList<>();
+        if (!Files.isDirectory(modsDir)) return books;
+        try (Stream<Path> jars = Files.list(modsDir)) {
+            for (Path jar : jars.filter(p -> p.toString().endsWith(".jar")).sorted().toList()) {
+                try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jar.toFile())) {
+                    books.addAll(scanDataBooks(zip, target, variants));
+                } catch (Exception e) {
+                    TraductorES.LOG.debug("[Traductor ES] No se pudo revisar {}: {}", jar.getFileName(), e.toString());
+                }
+            }
+        } catch (IOException e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudo leer la carpeta de mods: {}", e.toString());
+        }
+        return books;
+    }
+
+    private static List<Book> scanDataBooks(java.util.zip.ZipFile zip, String target, List<String> variants) {
+        // ns/libro → idioma → archivo → entrada del .jar
+        Map<String, Map<String, Map<String, java.util.zip.ZipEntry>>> index = new TreeMap<>();
+        for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zip.entries(); en.hasMoreElements(); ) {
+            java.util.zip.ZipEntry entry = en.nextElement();
+            Matcher m = DATA_CONTENT.matcher(entry.getName());
+            if (!m.matches()) continue;
+            String lang = m.group(3), rel = m.group(4);
+            // Las plantillas tienen variables ("#text"), no textos.
+            if (rel.startsWith("templates/") || (!lang.equals("en_us") && !lang.startsWith("es_"))) continue;
+            index.computeIfAbsent(m.group(1) + "/" + m.group(2), k -> new TreeMap<>())
+                    .computeIfAbsent(lang, k -> new TreeMap<>()).put(rel, entry);
+        }
+        List<Book> books = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Map<String, java.util.zip.ZipEntry>>> e : index.entrySet()) {
+            Map<String, java.util.zip.ZipEntry> english = e.getValue().get("en_us");
+            String[] parts = e.getKey().split("/", 2);
+            if (english == null || usesResourcePack(zip, parts[0], parts[1])) continue;
+            Book book = new Book(Format.PATCHOULI, parts[0], parts[1]);
+            Map<String, java.util.zip.ZipEntry> es = e.getValue().getOrDefault(target, Map.of());
+            for (Map.Entry<String, java.util.zip.ZipEntry> file : english.entrySet()) {
+                String rel = file.getKey();
+                if (es.containsKey(rel)) { book.official++; continue; }
+                java.util.zip.ZipEntry variant = null;
+                for (String v : variants) {
+                    variant = e.getValue().getOrDefault(v, Map.of()).get(rel);
+                    if (variant != null) break;
+                }
+                JsonElement parsed = readJson(zip, variant != null ? variant : file.getValue());
+                if (parsed == null) continue;
+                if (variant != null) book.fromVariant.put(rel, parsed);
+                else if (parsed.isJsonObject()) book.english.put(rel, parsed.getAsJsonObject());
+            }
+            if (!book.english.isEmpty() || !book.fromVariant.isEmpty()) books.add(book);
+        }
+        return books;
+    }
+
+    /** Con "use_resource_pack", el contenido está en assets/ y ya lo encuentra el escaneo de recursos. */
+    private static boolean usesResourcePack(java.util.zip.ZipFile zip, String ns, String book) {
+        java.util.zip.ZipEntry entry = zip.getEntry("data/" + ns + "/patchouli_books/" + book + "/book.json");
+        if (entry == null) return false;
+        JsonElement el = readJson(zip, entry);
+        if (el == null || !el.isJsonObject()) return false;
+        JsonElement flag = el.getAsJsonObject().get("use_resource_pack");
+        return flag != null && flag.isJsonPrimitive() && flag.getAsBoolean();
+    }
+
+    private static JsonElement readJson(java.util.zip.ZipFile zip, java.util.zip.ZipEntry entry) {
+        try (Reader r = new java.io.InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8)) {
+            return JsonParser.parseReader(r);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static List<Book> scan(ResourceManager rm, String target, List<String> variants) {

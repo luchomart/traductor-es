@@ -3,10 +3,14 @@
 ## 1.1.0
 
 **English**
-- New version: Fabric 1.19.2. On 1.19.2, FTB Quests are not translated yet (old format), and neither are books stored in a mod's `data/` folder (for example Spectrum or Simply Swords).
+- New version: Fabric 1.19.2. On 1.19.2, FTB Quests are not translated yet (old format).
+- On Fabric 1.19.2, also translates Patchouli books stored in a mod's `data/` folder (for example Spectrum or Simply Swords). They show up when you enter a world.
+- Patchouli books: pages written as plain text are now translated, and book macros such as `@item@` are protected.
 
 **Español**
-- Nueva versión: Fabric 1.19.2. En 1.19.2 todavía no se traducen las misiones de FTB Quests (formato viejo) ni los libros guardados en la carpeta `data/` de un mod (por ejemplo, Spectrum o Simply Swords).
+- Nueva versión: Fabric 1.19.2. En 1.19.2 todavía no se traducen las misiones de FTB Quests (formato viejo).
+- En Fabric 1.19.2 también se traducen los libros de Patchouli guardados en la carpeta `data/` de un mod (por ejemplo, Spectrum o Simply Swords). Se ven al entrar a un mundo.
+- Libros de Patchouli: ahora se traducen las páginas escritas como texto suelto y se protegen macros como `@item@`.
 
 ## 1.0.0
 

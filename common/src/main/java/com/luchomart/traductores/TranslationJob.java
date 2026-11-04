@@ -361,7 +361,12 @@ public class TranslationJob implements Runnable {
         });
 
         if (cfg.translateBooks) {
-            prepareBooks(scan.books());
+            List<Books.Book> allBooks = new ArrayList<>(scan.books());
+            if (Platform.readsDataBooks()) {
+                allBooks.addAll(Books.scanDataBooks(Minecraft.getInstance().gameDirectory.toPath().resolve("mods"), target,
+                        cfg.useSpanishVariants ? fallbacks : List.of()));
+            }
+            prepareBooks(allBooks);
             prepareQuests();
         }
         glossary.sort();

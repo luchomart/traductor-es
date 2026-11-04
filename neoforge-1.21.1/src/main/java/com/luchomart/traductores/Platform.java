@@ -30,6 +30,11 @@ public final class Platform {
     /** En 1.21 Screen.render ya dibuja el fondo: no hay que hacer nada. */
     public static void renderBackground(Screen screen, GuiGraphics g, int mouseX, int mouseY, float partialTick) {}
 
+    /** Si los libros de Patchouli en data/ se pueden traducir: en esta versión no hay quién los entregue. */
+    public static boolean readsDataBooks() {
+        return false;
+    }
+
     /** La pantalla de idioma del juego (cambia de paquete entre versiones). */
     public static Screen languageScreen(Screen parent) {
         Minecraft mc = Minecraft.getInstance();

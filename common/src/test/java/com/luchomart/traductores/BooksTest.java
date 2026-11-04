@@ -186,4 +186,58 @@ class BooksTest {
         return m.entrySet().stream().filter(e -> e.getValue().equals(startsWith)).findFirst()
                 .or(() -> m.entrySet().stream().filter(e -> e.getValue().startsWith(startsWith)).findFirst()).orElseThrow().getKey();
     }
+
+    private static java.nio.file.Path jar(java.nio.file.Path dir, Map<String, String> files) throws Exception {
+        java.nio.file.Path jar = dir.resolve("mod.jar");
+        try (var zip = new java.util.zip.ZipOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+            for (var f : files.entrySet()) {
+                zip.putNextEntry(new java.util.zip.ZipEntry(f.getKey()));
+                zip.write(f.getValue().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+        }
+        return jar;
+    }
+
+    @Test
+    void libroEnDataSeLeeDelJar(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        String base = "data/espadas/patchouli_books/guia/";
+        jar(dir, Map.of(
+                base + "book.json", "{\"name\": \"Guía\"}",
+                base + "en_us/entries/lanza.json", "{\"name\": \"Spear\"}",
+                base + "en_us/entries/oficial.json", "{\"name\": \"Official\"}",
+                base + "en_us/entries/variante.json", "{\"name\": \"Variant\"}",
+                base + "en_us/templates/plantilla.json", "{\"text\": \"#text\"}",
+                base + "es_ar/entries/oficial.json", "{\"name\": \"Oficial\"}",
+                base + "es_mx/entries/variante.json", "{\"name\": \"Variante\"}",
+                base + "ru_ru/entries/lanza.json", "{\"name\": \"Копьё\"}"));
+        List<Books.Book> books = Books.scanDataBooks(dir, "es_ar", List.of("es_mx"));
+        assertEquals(1, books.size());
+        Books.Book book = books.get(0);
+        assertEquals("@patchouli/espadas/guia", book.pseudoNamespace());
+        assertEquals(List.of("entries/lanza.json"), List.copyOf(book.english.keySet()));
+        assertEquals(List.of("entries/variante.json"), List.copyOf(book.fromVariant.keySet()));
+        assertEquals(1, book.official);
+    }
+
+    @Test
+    void libroConUseResourcePackNoSeLeeDelJar(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        String base = "data/espadas/patchouli_books/guia/";
+        jar(dir, Map.of(base + "book.json", "{\"use_resource_pack\": true}",
+                base + "en_us/entries/lanza.json", "{\"name\": \"Spear\"}"));
+        assertTrue(Books.scanDataBooks(dir, "es_ar", List.of()).isEmpty());
+    }
+
+    @Test
+    void patchouliTomaPaginasEscritasComoTexto() {
+        JsonElement entry = JsonParser.parseString("""
+                {"name": "Access Points", "icon": "mod:access_point", "category": "mod:blocks",
+                 "pages": ["They allow inserting items.", {"type": "patchouli:text", "text": "Second page"}]}""");
+        Map<String, String> out = extract(Books.Format.PATCHOULI, "entries/a.json", entry);
+        assertEquals("They allow inserting items.", out.get("/pages/0"));
+        assertEquals("Second page", out.get("/pages/1/text"));
+        assertEquals(3, out.size());
+        JsonObject done = Books.apply(entry.getAsJsonObject(), Map.of("/pages/0", "Permiten insertar objetos.")).getAsJsonObject();
+        assertEquals("Permiten insertar objetos.", done.getAsJsonArray("pages").get(0).getAsString());
+    }
 }

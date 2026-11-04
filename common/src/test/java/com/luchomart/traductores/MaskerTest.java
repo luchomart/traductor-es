@@ -62,4 +62,12 @@ class MaskerTest {
         assertEquals("Spawns ⟦1⟧Mobs⟦2⟧ with spawn liquid.", Masker.mask("Spawns _Mobs_ with spawn liquid.").text());
         assertEquals("Use stone_bricks", Masker.mask("Use stone_bricks").text());
     }
+
+    @Test
+    void protegeMacrosDeLibros() {
+        Masker.Masked m = Masker.mask("@item@Access Points@! allow @mod@inserting@! items. @p@More");
+        assertEquals(List.of("@item@", "@!", "@mod@", "@!", "@p@"), m.tokens());
+        assertEquals("⟦1⟧Access Points⟦2⟧ allow ⟦3⟧inserting⟦4⟧ items. ⟦5⟧More", m.text());
+        assertEquals("nadie@ejemplo.com", Masker.mask("nadie@ejemplo.com").text());
+    }
 }

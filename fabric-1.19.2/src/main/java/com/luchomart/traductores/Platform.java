@@ -25,6 +25,11 @@ public final class Platform {
         mc.getToasts().addToast(SystemToast.multiline(mc, SystemToast.SystemToastIds.PERIODIC_NOTIFICATION, title, message));
     }
 
+    /** Si los libros de Patchouli en data/ se pueden traducir: acá los entrega PatchouliContentMixin. */
+    public static boolean readsDataBooks() {
+        return FabricLoader.getInstance().isModLoaded("patchouli");
+    }
+
     /** La pantalla de idioma del juego (cambia de paquete entre versiones). */
     public static Screen languageScreen(Screen parent) {
         Minecraft mc = Minecraft.getInstance();

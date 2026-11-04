@@ -20,6 +20,7 @@ public final class Masker {
             + "|\\\\[&\\s]"                                         // \& (un & literal en FTB Quests) y "\ "
             + "|</?[a-zA-Z][a-zA-Z0-9_:#-]{0,30}>"                 // <item>, <r>, <n>, </b>
             + "|\\\\n"                                             // \n escrito como texto
+            + "|@[a-zA-Z_]+@|@!"                                   // macros de libros de Patchouli: @item@, @!
             + "|" + Validator.HIGHLIGHT.pattern());                // _resaltado_ de Create (no el _ de stone_bricks)
     private static final Pattern TOKEN = Pattern.compile("⟦(\\d+)⟧");
 

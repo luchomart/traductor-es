@@ -179,6 +179,143 @@ public final class FtbQuests {
         return true;
     }
 
+    // ---------- Formato viejo: textos dentro de los capítulos ----------
+
+    /** Campos con textos en los archivos del formato viejo. */
+    private static final Set<String> OLD_KEYS = Set.of("title", "subtitle", "description", "hover");
+    /** Campos de texto de los objetos de FTB Quests: un String o una lista de renglones. */
+    private static final List<String> OBJECT_FIELDS = List.of("title", "subtitle", "description");
+
+    /**
+     * Los textos del formato viejo, sin repetir: clave → renglón. Devuelve null si el modpack no tiene misiones. Los
+     * archivos del modpack no se tocan: la traducción va a un archivo propio y {@link #applyOld} la aplica en memoria.
+     */
+    public static Map<String, String> scanOld() throws IOException {
+        Path dir = Platform.configDir().resolve("ftbquests/quests");
+        return Files.isDirectory(dir.resolve("chapters")) ? scanOld(dir) : null;
+    }
+
+    static Map<String, String> scanOld(Path dir) throws IOException {
+        Map<String, String> lines = new LinkedHashMap<>();
+        List<Path> files;
+        try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+            files = walk.filter(p -> p.toString().endsWith(".snbt")).sorted().toList();
+        }
+        for (Path file : files) {
+            try {
+                collectOldTexts(Files.readString(file, StandardCharsets.UTF_8), line -> {
+                    if (translatable(line) != null) lines.putIfAbsent("old." + hash(line).substring(0, 16), line);
+                });
+            } catch (RuntimeException e) {
+                TraductorES.LOG.warn("[Traductor ES] No se pudo leer {}: {}", file.getFileName(), e.toString());
+            }
+        }
+        return lines;
+    }
+
+    /** Recorre un archivo buscando title, subtitle, description y hover, a cualquier profundidad. */
+    static void collectOldTexts(String snbt, java.util.function.Consumer<String> out) {
+        Reader r = new Reader(snbt);
+        while (!r.eof()) {
+            char c = r.peek();
+            if (c == '"' || c == '\'') { r.string(); continue; }
+            if (!Character.isLetterOrDigit(c) && c != '_') { r.i++; continue; }
+            int start = r.i;
+            while (!r.eof() && (Character.isLetterOrDigit(r.peek()) || r.peek() == '_')) r.i++;
+            String word = snbt.substring(start, r.i);
+            r.skip();
+            if (!r.eat(':') || !OLD_KEYS.contains(word)) continue;
+            r.skip();
+            if (r.peek() == '"' || r.peek() == '\'') {
+                out.accept(r.string());
+            } else if (r.eat('[')) {
+                for (r.skip(); r.peek() == '"' || r.peek() == '\''; r.skip()) out.accept(r.string());
+            }
+        }
+    }
+
+    private static Path oldFile(String target) {
+        return Config.DIR.resolve("ftbquests/textos_" + target + ".json");
+    }
+
+    /** Guarda renglón original → traducción. Devuelve true si el archivo cambió. */
+    public static boolean writeOld(String target, Map<String, String> lines, Map<String, String> translations) throws IOException {
+        return writeOld(oldFile(target), lines, translations);
+    }
+
+    static boolean writeOld(Path file, Map<String, String> lines, Map<String, String> translations) throws IOException {
+        Map<String, String> out = new java.util.TreeMap<>();
+        lines.forEach((key, line) -> {
+            String t = translations.get(key);
+            if (t != null) out.put(line, restore(line, t));
+        });
+        String json = new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(out);
+        if (Files.isRegularFile(file) && Files.readString(file, StandardCharsets.UTF_8).equals(json)) return false;
+        if (out.isEmpty() && !Files.exists(file)) return false;
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, json, StandardCharsets.UTF_8);
+        return true;
+    }
+
+    /**
+     * Cambia los textos de las misiones ya cargadas en el cliente. FTB Quests es opcional: se llega a sus objetos
+     * por reflexión y, si algo no coincide, las misiones quedan en inglés.
+     */
+    public static void applyOld(Object questFile, String target) {
+        Path file = oldFile(target);
+        if (!Files.isRegularFile(file)) return;
+        try {
+            Map<String, String> texts = new java.util.HashMap<>();
+            JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject()
+                    .entrySet().forEach(e -> texts.put(e.getKey(), e.getValue().getAsString()));
+            TraductorES.LOG.info("[Traductor ES] Misiones: {} textos en español", applyTexts(questFile, texts));
+        } catch (Exception e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudieron aplicar las misiones traducidas: {}", e.toString());
+        }
+    }
+
+    static int applyTexts(Object questFile, Map<String, String> texts) throws ReflectiveOperationException {
+        int changed = 0;
+        for (Object object : (java.util.Collection<?>) questFile.getClass().getMethod("getAllObjects").invoke(questFile)) {
+            for (String field : OBJECT_FIELDS) changed += replaceField(object, field, texts);
+            if (publicField(object, "images") != null && publicField(object, "images").get(object) instanceof List<?> images) {
+                for (Object image : images) changed += replaceField(image, "hover", texts);
+            }
+        }
+        // Lo que ya se haya armado con el inglés se vuelve a armar.
+        questFile.getClass().getMethod("clearCachedData").invoke(questFile);
+        return changed;
+    }
+
+    private static int replaceField(Object object, String name, Map<String, String> texts) throws IllegalAccessException {
+        java.lang.reflect.Field field = publicField(object, name);
+        if (field == null) return 0;
+        Object value = field.get(object);
+        if (value instanceof String s && texts.containsKey(s)) {
+            field.set(object, texts.get(s));
+            return 1;
+        }
+        int changed = 0;
+        if (value instanceof List<?> list) {
+            @SuppressWarnings("unchecked") List<Object> lines = (List<Object>) list;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i) instanceof String s && texts.containsKey(s)) {
+                    lines.set(i, texts.get(s));
+                    changed++;
+                }
+            }
+        }
+        return changed;
+    }
+
+    private static java.lang.reflect.Field publicField(Object object, String name) {
+        try {
+            return object.getClass().getField(name);
+        } catch (NoSuchFieldException e) {
+            return null;
+        }
+    }
+
     // ---------- Renglones ----------
 
     /**

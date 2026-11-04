@@ -30,6 +30,11 @@ public final class Platform {
         return FabricLoader.getInstance().isModLoaded("patchouli");
     }
 
+    /** Si las misiones en el formato viejo se pueden traducir: acá las aplica FtbQuestsContentMixin. */
+    public static boolean readsOldQuests() {
+        return FabricLoader.getInstance().isModLoaded("ftbquests");
+    }
+
     /** La pantalla de idioma del juego (cambia de paquete entre versiones). */
     public static Screen languageScreen(Screen parent) {
         Minecraft mc = Minecraft.getInstance();

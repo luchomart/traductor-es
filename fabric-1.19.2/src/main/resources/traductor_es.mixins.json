@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "com.luchomart.traductores.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": ["PackRepositoryMixin", "PatchouliContentMixin"],
+  "client": ["PackRepositoryMixin", "PatchouliContentMixin", "FtbQuestsContentMixin"],
   "injectors": {
     "defaultRequire": 1
   }

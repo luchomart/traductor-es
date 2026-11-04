@@ -3,7 +3,7 @@
 ## 📍 Dónde quedamos (actualizado 2026-11-04)
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
-- **En curso (2026-11-04):** port a Fabric 1.19.2 (capa de interfaz en `common-modern/`). Hecho y probado (dos pasadas seguidas sin perder textos). Se sumaron los libros de Patchouli en `data/`. Falta probarlos en StaTech y publicar la 1.1.0.
+- **En curso (2026-11-04):** port a Fabric 1.19.2 (capa de interfaz en `common-modern/`). Hecho y probado (dos pasadas seguidas sin perder textos). Libros en `data/` probados en StaTech. **1.2.0 (commit local):** misiones en formato viejo; falta probar StaTech completa. Nada publicado todavía: la 1.1.0 corresponde al commit `58cbb70`.
 - Próximo posible: link de CurseForge en el README, atender los primeros reportes, pendientes sin tildar de abajo.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
@@ -57,7 +57,8 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 ## Fase 4: FTB Quests
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta
 - [x] Probar en el juego (OceanBlock: 17 textos que faltaban en el español oficial, 0 fallidos)
-- [ ] Formato viejo (textos dentro de los capítulos): lo usa StaTech Industry (1.19.2). Toca archivos del modpack: tiene que poder deshacerse
+- [x] Formato viejo (textos dentro de los capítulos), solo Fabric 1.19.2: en memoria, sin tocar el modpack. Probado en cliente de desarrollo con el capítulo `welcome` de StaTech
+- [ ] Formato viejo: probar StaTech completa; llevarlo a otras versiones si aparece un caso
 
 ## Extras
 - [x] Libros de Patchouli en `data/`, solo Fabric 1.19.2 (`PatchouliContentMixin`): probado en cliente de desarrollo con Extended Drawers (16 de 16 archivos entregados)

@@ -95,4 +95,91 @@ class FtbQuestsTest {
         assertTrue(m.size() > 1000);
         assertEquals(text, FtbQuests.format(m));
     }
+
+    // ---------- Formato viejo ----------
+
+    private static final String CHAPTER = """
+            {
+            \tfilename: "title_is_not_a_key"
+            \timages: [{ hover: ["Wiki", "&oIn case"], image: "ae2:item/blank_pattern", x: -2.5d }]
+            \tquests: [{
+            \t\tdescription: [
+            \t\t\t"Welcome to &eChapter 3&r."
+            \t\t\t""
+            \t\t\t"{@pagebreak}"
+            \t\t\t"{\\"text\\": \\"Purple\\", \\"color\\": \\"#9D7AD0\\"}"
+            \t\t]
+            \t\tsubtitle: "Say \\"hi\\""
+            \t\ttasks: [{ title: "Get it", item: { id: "minecraft:stone" } }]
+            \t\ttitle: "Welcome to &eChapter 3&r."
+            \t}]
+            }
+            """;
+
+    @Test
+    void formatoViejoJuntaLosTextosSinRepetir(@org.junit.jupiter.api.io.TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve("chapters"));
+        Files.writeString(dir.resolve("chapters/a.snbt"), CHAPTER);
+        Files.writeString(dir.resolve("chapter_groups.snbt"), "{ chapter_groups: [{ id: \"1\", title: \"Side\" }] }");
+        var lines = List.copyOf(FtbQuests.scanOld(dir).values());
+        assertEquals(java.util.Set.of("Side", "Wiki", "&oIn case", "Welcome to &eChapter 3&r.",
+                "{\"text\": \"Purple\", \"color\": \"#9D7AD0\"}", "Say \"hi\"", "Get it"), java.util.Set.copyOf(lines));
+        assertEquals(7, lines.size());
+    }
+
+    @Test
+    void formatoViejoAvisaSiElArchivoEstaRoto() {
+        assertThrows(IllegalArgumentException.class, () -> FtbQuests.collectOldTexts("{ title: \"sin cerrar", t -> {}));
+    }
+
+    @Test
+    void formatoViejoGuardaOriginalYTraduccion(@org.junit.jupiter.api.io.TempDir Path dir) throws Exception {
+        Path file = dir.resolve("sub/textos.json");
+        String json = "{\"text\": \"Purple\", \"color\": \"#9D7AD0\"}";
+        var lines = Map.of("a", "Get it", "b", json, "c", "Sin traducir");
+        var translated = Map.of("a", "Conseguilo", "b", "<c0>Violeta</c0>");
+        assertTrue(FtbQuests.writeOld(file, lines, translated));
+        assertFalse(FtbQuests.writeOld(file, lines, translated));
+        var saved = com.google.gson.JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+        assertEquals("Conseguilo", saved.get("Get it").getAsString());
+        assertEquals("Violeta", com.google.gson.JsonParser.parseString(saved.get(json).getAsString()).getAsJsonObject().get("text").getAsString());
+        assertFalse(saved.has("Sin traducir"));
+    }
+
+    public static final class FakeImage {
+        public List<String> hover = new java.util.ArrayList<>(List.of("Wiki"));
+    }
+
+    public static final class FakeChapter {
+        public String title = "Start";
+        public final List<String> subtitle = new java.util.ArrayList<>(List.of("Sub", "Otro"));
+        public final List<FakeImage> images = List.of(new FakeImage());
+    }
+
+    public static final class FakeQuest {
+        public String title = "Start";
+        public String subtitle = "";
+        public final List<String> description = new java.util.ArrayList<>(List.of("Line", "", "{@pagebreak}"));
+    }
+
+    public static final class FakeFile {
+        final FakeChapter chapter = new FakeChapter();
+        final FakeQuest quest = new FakeQuest();
+        boolean cleared;
+        public java.util.Collection<Object> getAllObjects() { return List.of(chapter, quest); }
+        public void clearCachedData() { cleared = true; }
+    }
+
+    @Test
+    void formatoViejoCambiaLosTextosEnMemoria() throws Exception {
+        FakeFile f = new FakeFile();
+        int n = FtbQuests.applyTexts(f, Map.of("Start", "Inicio", "Sub", "Subtítulo", "Wiki", "Guía", "Line", "Renglón"));
+        assertEquals(5, n);
+        assertEquals("Inicio", f.chapter.title);
+        assertEquals(List.of("Subtítulo", "Otro"), f.chapter.subtitle);
+        assertEquals(List.of("Guía"), f.chapter.images.get(0).hover);
+        assertEquals("Inicio", f.quest.title);
+        assertEquals(List.of("Renglón", "", "{@pagebreak}"), f.quest.description);
+        assertTrue(f.cleared);
+    }
 }

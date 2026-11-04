@@ -35,6 +35,11 @@ public final class Platform {
         return false;
     }
 
+    /** Si las misiones en el formato viejo se pueden traducir: en esta versión no hay quién las aplique. */
+    public static boolean readsOldQuests() {
+        return false;
+    }
+
     /** La pantalla de idioma del juego (cambia de paquete entre versiones). */
     public static Screen languageScreen(Screen parent) {
         Minecraft mc = Minecraft.getInstance();

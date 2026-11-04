@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+**English**
+- On Fabric 1.19.2, also translates FTB Quests in the old format (texts inside the chapters), such as StaTech Industry. The modpack's files are not changed: the translation is applied in memory and shows up when you enter a world. If you edit a quest in-game, that quest may be saved in Spanish.
+
+**Español**
+- En Fabric 1.19.2 también se traducen las misiones de FTB Quests en el formato viejo (textos dentro de los capítulos), como las de StaTech Industry. Los archivos del modpack no cambian: la traducción se aplica en memoria y se ve al entrar a un mundo. Si editás una misión dentro del juego, esa misión puede guardarse en español.
+
 ## 1.1.0
 
 **English**

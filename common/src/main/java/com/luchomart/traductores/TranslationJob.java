@@ -115,6 +115,8 @@ public class TranslationJob implements Runnable {
     private List<Books.Book> books = List.of();
     /** Misiones de FTB Quests del modpack, o null si no tiene (o no en el formato con archivos de idioma). */
     private volatile FtbQuests.Quests quests;
+    /** Misiones en el formato viejo (clave → renglón), o null si no corresponde. */
+    private volatile Map<String, String> oldQuests;
     public volatile int questTexts;
     private Glossary glossary;
     private long lastFlushMs;
@@ -428,12 +430,39 @@ public class TranslationJob implements Runnable {
             TraductorES.LOG.warn("[Traductor ES] No se pudieron leer las misiones de FTB Quests: {}", e.toString());
             return;
         }
-        if (q == null) return;
+        if (q == null) {
+            prepareOldQuests();
+            return;
+        }
         quests = q;
         official += q.official();
         fromVariants += q.fromVariant();
         Map<String, String> questOut = output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>());
         FtbQuests.extract(q, (key, text) -> {
+            if (Validator.isTrivial(text)) return;
+            questTexts++;
+            if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
+            String cached = usableCache(FtbQuests.NS, key, text);
+            if (cached != null) { questOut.put(key, cached); fromCache++; return; }
+            enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
+        });
+    }
+
+    /** Misiones con los textos dentro de los capítulos, donde la plataforma sabe aplicarlas. */
+    private void prepareOldQuests() {
+        if (!Platform.readsOldQuests()) return;
+        Map<String, String> lines;
+        try {
+            lines = FtbQuests.scanOld();
+        } catch (Exception e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudieron leer las misiones de FTB Quests: {}", e.toString());
+            return;
+        }
+        if (lines == null) return;
+        oldQuests = lines;
+        Map<String, String> questOut = output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>());
+        lines.forEach((key, line) -> {
+            String text = FtbQuests.translatable(line);
             if (Validator.isTrivial(text)) return;
             questTexts++;
             if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
@@ -527,6 +556,9 @@ public class TranslationJob implements Runnable {
         if (quests != null) {
             // Las misiones no están en el pack: FTB Quests las lee de su carpeta al cargar el mundo.
             questsChanged |= FtbQuests.write(quests, output.getOrDefault(FtbQuests.NS, Map.of()));
+        }
+        if (oldQuests != null) {
+            questsChanged |= FtbQuests.writeOld(target, oldQuests, output.getOrDefault(FtbQuests.NS, Map.of()));
         }
         return changed;
     }
@@ -1228,7 +1260,7 @@ public class TranslationJob implements Runnable {
         sb.append("Reutilizados del caché: ").append(fromCache).append('\n');
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
-                .append(quests == null ? " (el modpack no tiene misiones con archivos de idioma)" : "").append('\n');
+                .append(quests == null && oldQuests == null ? " (el modpack no tiene misiones que se puedan traducir)" : "").append('\n');
         sb.append("Textos únicos enviados a la IA: ").append(done).append(" de ").append(total).append('\n');
         sb.append("Fallidos (quedan en el idioma original): ").append(failed).append('\n');
         sb.append("Omitidos (fallaron ").append(FailureLog.MAX_RUNS).append(" veces con esta IA; se reintentan si cambiás de modelo o de servicio): ")

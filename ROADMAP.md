@@ -1,8 +1,9 @@
 # Hoja de ruta hacia la publicación
 
-## 📍 Dónde quedamos (actualizado 2026-10-15)
+## 📍 Dónde quedamos (actualizado 2026-11-04)
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
+- **En curso (2026-11-04):** port a Fabric 1.19.2 (capa de interfaz en `common-modern/`). Hecho y probado (dos pasadas seguidas sin perder textos). Falta comprobar Liquid Crystal y Alt en StaTech y publicar la 1.1.0.
 - Próximo posible: link de CurseForge en el README, atender los primeros reportes, pendientes sin tildar de abajo.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
@@ -47,13 +48,19 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Fabric 1.20.1 (Loom 1.15, nombres de Mojang, mixin para el pack, Mod Menu opcional)
 - [x] Fabric 1.21.1
 - [x] Probar en el juego con un modpack de Fabric (1.21.1: Farmer's Delight, JEI, Mod Menu)
+- [x] Fabric 1.19.2: compila y arranca en un cliente de desarrollo (asistente y pack)
+- [x] Fabric 1.19.2: panel, tooltips, hints y editor probados en cliente de desarrollo; traducción real en StaTech Industry
+- [x] Regresión tras el refactor: panel abierto en Fabric 1.20.1 y 1.21.1, Forge 1.20.1 y NeoForge 1.21.1
+- [ ] Fabric 1.19.2: probar Alt en un objeto con el jar corregido (se declara solo 1.19.2; 1.19.1 no se probó)
+- [ ] "Última traducción" (Herramientas): un informe largo se sale de la tarjeta y pisa el botón
 
 ## Fase 4: FTB Quests
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta
 - [x] Probar en el juego (OceanBlock: 17 textos que faltaban en el español oficial, 0 fallidos)
-- [ ] Formato viejo (textos dentro de los capítulos), si aparece un modpack que lo use
+- [ ] Formato viejo (textos dentro de los capítulos): lo usa StaTech Industry (1.19.2). Toca archivos del modpack: tiene que poder deshacerse
 
 ## Extras
+- [ ] Libros de Patchouli en `data/` (Spectrum, Simply Swords, Modern Industrialization, Xps, Ad Astra, Extended Drawers en StaTech): un pack de recursos no los reemplaza; idea: mixin opcional sobre `BookContentClasspathLoader`
 - [x] Editor de correcciones dentro del juego (buscador + editor; /traductor corregir)
 - [x] Ver el texto original manteniendo Alt
 - [ ] Forge 1.19.2

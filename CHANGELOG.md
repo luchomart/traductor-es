@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+**English**
+- New version: Fabric 1.19.2. On 1.19.2, FTB Quests are not translated yet (old format), and neither are books stored in a mod's `data/` folder (for example Spectrum or Simply Swords).
+
+**Español**
+- Nueva versión: Fabric 1.19.2. En 1.19.2 todavía no se traducen las misiones de FTB Quests (formato viejo) ni los libros guardados en la carpeta `data/` de un mod (por ejemplo, Spectrum o Simply Swords).
+
 ## 1.0.0
 
 First release. / Primera versión.

@@ -640,10 +640,10 @@ public class ConfigScreen extends BaseScreen {
             case HERRAMIENTAS -> {
                 int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
                 int y1 = contentTop + 8, y2 = y1 + ch + 6, x2 = innerX + cw + 6;
-                card(g, innerX, y1, cw, "Exportar pack", "Un .zip para amigos con el mismo modpack. Lo usan sin IA.");
-                card(g, x2, y1, cw, "Corregir traducciones", "Buscá un texto (objeto, libro o misión) y cambiá su traducción.");
-                card(g, innerX, y2, cw, "Última traducción", lastReport);
-                card(g, x2, y2, cw, "Archivos y asistente", "Configuración, glosario e informe. El asistente comprueba todo de nuevo.");
+                card(g, innerX, y1, cw, ch, "Exportar pack", "Un .zip para amigos con el mismo modpack. Lo usan sin IA.");
+                card(g, x2, y1, cw, ch, "Corregir traducciones", "Buscá un texto (objeto, libro o misión) y cambiá su traducción.");
+                card(g, innerX, y2, cw, ch, "Última traducción", lastReport);
+                card(g, x2, y2, cw, ch, "Archivos y asistente", "Configuración, glosario e informe. El asistente comprueba todo de nuevo.");
             }
         }
         drawProgress(g);
@@ -654,9 +654,11 @@ public class ConfigScreen extends BaseScreen {
         }
     }
 
-    private void card(Gfx g, int x, int y, int w, String title, String text) {
+    private void card(Gfx g, int x, int y, int w, int h, String title, String text) {
         g.drawString(font, title, x + 6, y + 6, UiKit.YELLOW, false);
-        UiKit.wrapped(g, font, Component.literal(text), x + 6, y + 18, w - 12, UiKit.MUTED);
+        // El texto termina donde empieza la fila de botones (a 26 del borde de abajo).
+        int maxLines = (h - 18 - 26) / (font.lineHeight + 1);
+        UiKit.wrapped(g, font, Component.literal(text), x + 6, y + 18, w - 12, maxLines, UiKit.MUTED);
     }
 
     private void drawMessage(Gfx g, int y) {

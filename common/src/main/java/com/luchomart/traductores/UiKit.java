@@ -114,6 +114,20 @@ public final class UiKit {
         return y;
     }
 
+    /** Igual que wrapped, pero si no entra en maxLines renglones corta con «…». */
+    public static void wrapped(Gfx g, Font font, Component text, int x, int y, int width, int maxLines, int color) {
+        List<FormattedCharSequence> lines = font.split(text, width);
+        boolean cut = lines.size() > maxLines;
+        // Al cortar se parte de nuevo un poco más angosto, para que el «…» no se salga del ancho.
+        if (cut) lines = font.split(text, width - font.width("…"));
+        for (int i = 0; i < Math.min(lines.size(), maxLines); i++) {
+            FormattedCharSequence line = lines.get(i);
+            g.drawString(font, line, x, y, color, false);
+            if (cut && i == maxLines - 1) g.drawString(font, "…", x + font.width(line), y, color, false);
+            y += font.lineHeight + 1;
+        }
+    }
+
     /** Igual que wrapped, pero centrado. */
     public static int wrappedCentered(Gfx g, Font font, Component text, int cx, int y, int width, int color) {
         List<FormattedCharSequence> lines = font.split(text, width);

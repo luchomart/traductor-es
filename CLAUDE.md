@@ -19,8 +19,8 @@ Para jugadores: `README.md`. Textos de CurseForge: `publicacion/curseforge.md`.
 - Archivos para CurseForge: `publicacion/subir-X.Y.Z/` (ignorada por git).
 
 ## Instalar en un modpack para probar
-Instancias de Prism en `~/.local/share/PrismLauncher/instances/` (FTB OceanBlock 2 = NeoForge 1.21.1;
-Create- Too Many Addons = Forge 1.20.1; StaTech Industry = Fabric 1.19.2, carpeta `minecraft/` sin punto). Copiar el jar desde `build/libs`.
+Instancia de Prism en `~/.local/share/PrismLauncher/instances/`: StaTech Industry = Fabric 1.19.2, carpeta `minecraft/` sin punto. Copiar el jar desde `build/libs`.
+Para las otras versiones no hay instancia: se prueban en `run/`.
 - **Nunca reemplazar el jar de una instancia con el juego abierto**: crashea con NoClassDefFoundError y parece un bug del mod.
   Ver cuáles están abiertas con `ps -eo comm,args | awk '$1=="java"' | grep -o "instances/[^/]*/" | sort -u`
   y copiar solo en las que no aparecen; si no, pedir que reinicie.
@@ -34,4 +34,6 @@ Create- Too Many Addons = Forge 1.20.1; StaTech Industry = Fabric 1.19.2, carpet
 - Los tests no tienen Minecraft en el classpath: la lógica testeable va separada de lo que usa `net.minecraft`.
 - No leer `record` con Gson por reflexión: 1.19.2 trae Gson 2.8.9 y falla al ejecutar, no al compilar (los tests usan 2.11).
 - Al portar: el pack tiene que informar `PackWriter.PACK_ID` como nombre (`sourcePackId`). Si no, sus traducciones parecen oficiales y se pierden en la pasada siguiente. Probar siempre **dos pasadas** seguidas.
+- No compilar con un modpack abierto: la RAM queda justa (1,4 GB libres con StaTech) y el sistema podría cerrar el juego.
+- `unzip` no está instalado: inspeccionar jars con `bsdtar` o `zipfile` de Python, y sin esconder errores con `2>/dev/null`.
 - Repo público: commits con el email noreply (ya configurado). Nada personal en el repo.

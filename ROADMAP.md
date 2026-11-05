@@ -1,13 +1,14 @@
 # Hoja de ruta hacia la publicación
 
-## 📍 Dónde quedamos (actualizado 2026-11-04)
+## 📍 Dónde quedamos (actualizado 2026-11-05)
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
 - **1.2.0 lista, sin publicar:** Fabric 1.19.2 nueva, con libros de Patchouli en `data/` y misiones en formato viejo (solo esa versión). Probada en StaTech Industry: traducción completa y 2.936 textos de misiones aplicados. Commits solo locales; jars en `publicacion/subir-1.2.0/`.
-- **Antes de publicar:** traducción real con Ollama en una versión de 1.20.1 y una de 1.21.1 (después del refactor solo se abrieron pantallas). En StaTech falta mirar Alt sobre un objeto traducido.
-- **Próximo paso:** esa prueba, después push y tag `v1.2.0`, y subir a CurseForge.
-- **Después:** revisar qué formatos usa "Create- Too Many Addons" para decidir si misiones y libros van a 1.20.1 (1.3.0).
-- También pendiente: link de CurseForge en el README y atender los primeros reportes.
+- **Antes de publicar:** traducción real con Ollama en una versión de 1.20.1 y una de 1.21.1 (después del refactor solo se abrieron pantallas). Alt en StaTech ya probado: funciona.
+- **Commiteado pero sin compilar:** arreglo de la tarjeta "Última traducción" y link de CurseForge en el README. Hay que compilar, correr los tests, mirar la pestaña Herramientas y regenerar los jars de `publicacion/subir-1.2.0/`, que quedaron viejos.
+- **Próximo paso (con el juego cerrado):** compilar y hacer esas pruebas, después push y tag `v1.2.0`, y subir a CurseForge.
+- **Misiones y libros en 1.20.1:** "Create- Too Many Addons" no da motivo para portarlos: no tiene FTB Quests ni Patchouli, y sus libros son de formatos ya soportados (AE2 con GuideME, Alex's Mobs y Citadel). Queda a la espera de un modpack real que lo necesite.
+- También pendiente: atender los primeros reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
@@ -54,8 +55,8 @@ Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda d
 - [x] Fabric 1.19.2: compila y arranca en un cliente de desarrollo (asistente y pack)
 - [x] Fabric 1.19.2: panel, tooltips, hints y editor probados en cliente de desarrollo; traducción real en StaTech Industry
 - [x] Regresión tras el refactor: panel abierto en Fabric 1.20.1 y 1.21.1, Forge 1.20.1 y NeoForge 1.21.1
-- [ ] Fabric 1.19.2: probar Alt en un objeto con el jar corregido (se declara solo 1.19.2; 1.19.1 no se probó)
-- [ ] "Última traducción" (Herramientas): un informe largo se sale de la tarjeta y pisa el botón
+- [x] Fabric 1.19.2: Alt sobre un objeto traducido, probado en StaTech con el jar corregido (se declara solo 1.19.2; 1.19.1 no se probó)
+- [ ] "Última traducción" (Herramientas): un informe largo se sale de la tarjeta y pisa el botón (arreglo escrito: corta con «…»; falta compilar y verlo en el juego)
 
 ## Fase 4: FTB Quests
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta

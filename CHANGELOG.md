@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.1
+
+**English**
+- Community translations download 6 files at a time (the first time on a big modpack goes from about a minute and a half to seconds), with a progress bar in the corner notice and in the panel.
+- Click the corner notice on the main menu to open the panel.
+
+**Español**
+- Las traducciones de la comunidad se bajan de a 6 archivos a la vez (la primera vez en un modpack grande pasa de un minuto y medio a segundos), con una barra de avance en el aviso de la esquina y en el panel.
+- Un clic en el aviso de la esquina del menú principal abre el panel.
+
 ## 1.4.0
 
 **English**

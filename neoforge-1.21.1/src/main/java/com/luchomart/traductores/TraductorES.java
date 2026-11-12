@@ -26,7 +26,10 @@ public class TraductorES {
 
         modBus.addListener(PackRegistration::onAddPackFinders);
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Init.Post.class, e -> Traductor.onScreenInit(e.getScreen()));
-        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post.class, e -> Traductor.onScreenRender(e.getScreen(), new Gfx(e.getGuiGraphics())));
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post.class, e -> Traductor.onScreenRender(e.getScreen(), new Gfx(e.getGuiGraphics()), e.getMouseX(), e.getMouseY()));
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseButtonPressed.Pre.class, e -> {
+            if (Traductor.onScreenClick(e.getScreen(), e.getMouseX(), e.getMouseY(), e.getButton())) e.setCanceled(true);
+        });
         NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class, e -> e.getDispatcher().register(Traductor.command()));
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, e -> Traductor.onWorldJoin());
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, e -> Traductor.onWorldLeave());

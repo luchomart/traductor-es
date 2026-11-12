@@ -79,6 +79,8 @@ public class TranslationJob implements Runnable {
     public volatile String currentNamespace = "";
     public volatile int total, done, failed;
     public volatile int official, fromVariants, fromCache, fromShared, corrected, bookFiles;
+    /** Avance de la descarga de traducciones de la comunidad (total 0 = no está bajando). */
+    public volatile int downloadDone, downloadTotal;
     /** Traducciones de otros jugadores; null si la opción está apagada. */
     private SharedTranslations shared;
     public volatile long translateStartMs, pausedMs;
@@ -501,8 +503,12 @@ public class TranslationJob implements Runnable {
         Set<String> wanted = new HashSet<>(namespaces);
         wanted.removeAll(excluded);
         for (Books.Book b : allBooks) wanted.add(b.pseudoNamespace());
-        message = "Bajando traducciones de la comunidad…";
-        SharedTranslations.Update u = shared.update(wanted, SharedTranslations.BASE_URL, SharedTranslations.HTTP);
+        message = "Bajando de la comunidad…";
+        SharedTranslations.Update u = shared.update(wanted, SharedTranslations.BASE_URL, SharedTranslations.HTTP, (done, all) -> {
+            downloadDone = done;
+            downloadTotal = all;
+        });
+        downloadTotal = 0;
         if (u.error() != null) TraductorES.LOG.warn("[Traductor ES] Traducciones compartidas: {}", u.error());
         TraductorES.LOG.info("[Traductor ES] Traducciones compartidas: {} archivos bajados, {} ya al día", u.downloaded(), u.upToDate());
         message = "Buscando textos en los mods…";

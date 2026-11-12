@@ -733,7 +733,17 @@ public class ConfigScreen extends BaseScreen {
                 UiKit.progressBar(g, x, y + 11, w, 7, j.total == 0 ? 0 : (double) j.done / j.total, !paused && waiting == null,
                         lvl == null ? 0xFF7FF23A : lvl.color, lvl == null ? 0xFF4CAF1A : lvl.shade());
             }
-            case SCANNING -> g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
+            case SCANNING -> {
+                int dTotal = j.downloadTotal, dDone = j.downloadDone;
+                if (dTotal > 0) { // bajando de la comunidad: barra con el avance
+                    String right = Traductor.fmt(dDone) + "/" + Traductor.fmt(dTotal);
+                    g.drawString(font, "Bajando de la comunidad…", x, y, UiKit.GOLD, false);
+                    g.drawString(font, right, x + w - font.width(right), y, UiKit.MUTED, false);
+                    UiKit.progressBar(g, x, y + 11, w, 7, (double) dDone / dTotal, true, 0xFF55C8FF, 0xFF2A8AC0);
+                } else {
+                    g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
+                }
+            }
             case DONE -> {
                 String done = j.applyOnly ? "✓ Correcciones aplicadas" : j.total == 0 ? "✓ Todo traducido" : "✓ Terminado: " + Traductor.fmt(j.done - j.failed) + " nuevos";
                 g.drawString(font, font.plainSubstrByWidth(done, w), x, y + 6, UiKit.GREEN, false);

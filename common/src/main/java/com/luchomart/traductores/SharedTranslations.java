@@ -17,6 +17,12 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Traducciones que otros jugadores ya hicieron, del repo luchomart/traductor-es-traducciones.
@@ -73,7 +79,7 @@ public final class SharedTranslations {
     private final String target;
     /** Variante de destino primero, después las otras en el orden de SpanishTarget.fallbacks. */
     private final List<String> variants;
-    private final Map<String, Data> loaded = new HashMap<>();
+    private final Map<String, Data> loaded = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** @param others otras variantes a consultar para textos cortos (vacía = solo la de destino). */
     public SharedTranslations(Path dir, String target, List<String> others) {
@@ -94,6 +100,23 @@ public final class SharedTranslations {
      * que haya en la carpeta.
      */
     public Update update(Collection<String> namespaces, String baseUrl, Downloader http) {
+        return update(namespaces, baseUrl, http, (done, total) -> {});
+    }
+
+    /** Avance de la descarga: archivos bajados (o fallidos) de los que hay que bajar. */
+    @FunctionalInterface
+    public interface Progress {
+        void update(int done, int total);
+    }
+
+    /** Archivos que se bajan a la vez: GitHub responde rápido, pero de a uno 200 archivos tardan más de un minuto. */
+    static final int PARALLEL = 6;
+
+    /**
+     * Como {@link #update(Collection, String, Downloader)}, avisando el avance. Primero se ve qué falta bajar (así se
+     * sabe el total) y después se baja de a {@link #PARALLEL} archivos.
+     */
+    public Update update(Collection<String> namespaces, String baseUrl, Downloader http, Progress progress) {
         JsonObject files;
         try {
             JsonObject index = JsonParser.parseString(new String(http.get(baseUrl + "index.json"), StandardCharsets.UTF_8)).getAsJsonObject();
@@ -102,32 +125,70 @@ public final class SharedTranslations {
         } catch (Exception e) {
             return new Update(0, 0, "no se pudo bajar el índice: " + e);
         }
-        int downloaded = 0, upToDate = 0;
-        String error = null;
+        List<String> pending = new ArrayList<>();
+        int upToDate = 0;
         for (String v : variants) {
             for (String ns : namespaces) {
                 String rel = v + "/" + fileName(ns);
                 JsonElement info = files.get(rel);
                 if (info == null || !info.isJsonObject() || !info.getAsJsonObject().has("hash")) continue;
-                String hash = info.getAsJsonObject().get("hash").getAsString();
-                Path local = dir.resolve(v).resolve(fileName(ns));
+                Path local = dir.resolve(rel);
                 try {
-                    if (Files.exists(local) && hash.equals(hash(Files.readAllBytes(local)))) { upToDate++; continue; }
-                    byte[] body = http.get(baseUrl + rel);
-                    if (body.length > MAX_BYTES) throw new IOException("archivo demasiado grande");
-                    parse(body); // que sea válido antes de reemplazar lo que había
-                    Files.createDirectories(local.getParent());
-                    Path tmp = local.resolveSibling(local.getFileName() + ".tmp");
-                    Files.write(tmp, body);
-                    Files.move(tmp, local, StandardCopyOption.REPLACE_EXISTING);
-                    loaded.remove(rel);
-                    downloaded++;
-                } catch (Exception e) {
-                    if (error == null) error = rel + ": " + e;
+                    if (Files.exists(local) && info.getAsJsonObject().get("hash").getAsString().equals(hash(Files.readAllBytes(local)))) {
+                        upToDate++;
+                        continue;
+                    }
+                } catch (IOException e) {
+                    // si no se puede leer, se vuelve a bajar
                 }
+                pending.add(rel);
             }
         }
-        return new Update(downloaded, upToDate, error);
+        if (pending.isEmpty()) return new Update(0, upToDate, null);
+
+        AtomicInteger downloaded = new AtomicInteger(), finished = new AtomicInteger();
+        AtomicReference<String> error = new AtomicReference<>();
+        progress.update(0, pending.size());
+        ExecutorService pool = Executors.newFixedThreadPool(Math.min(PARALLEL, pending.size()), r -> {
+            Thread t = new Thread(r, "Traductor ES - descarga");
+            t.setDaemon(true);
+            return t;
+        });
+        try {
+            List<Future<?>> tasks = new ArrayList<>();
+            for (String rel : pending) {
+                tasks.add(pool.submit(() -> {
+                    try {
+                        byte[] body = http.get(baseUrl + rel);
+                        if (body.length > MAX_BYTES) throw new IOException("archivo demasiado grande");
+                        parse(body); // que sea válido antes de reemplazar lo que había
+                        Path local = dir.resolve(rel);
+                        Files.createDirectories(local.getParent());
+                        Path tmp = local.resolveSibling(local.getFileName() + ".tmp");
+                        Files.write(tmp, body);
+                        Files.move(tmp, local, StandardCopyOption.REPLACE_EXISTING);
+                        loaded.remove(rel);
+                        downloaded.incrementAndGet();
+                    } catch (Exception e) {
+                        error.compareAndSet(null, rel + ": " + e);
+                    }
+                    progress.update(finished.incrementAndGet(), pending.size());
+                }));
+            }
+            for (Future<?> f : tasks) {
+                try {
+                    f.get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (ExecutionException e) {
+                    error.compareAndSet(null, e.getCause().toString());
+                }
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        return new Update(downloaded.get(), upToDate, error.get());
     }
 
     /**

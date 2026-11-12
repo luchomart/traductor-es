@@ -28,7 +28,10 @@ final class ForgeClient {
         modBus.addListener(EventPriority.NORMAL, false, AddPackFindersEvent.class, ForgeClient::onAddPackFinders);
         IEventBus bus = MinecraftForge.EVENT_BUS;
         bus.addListener(EventPriority.NORMAL, false, ScreenEvent.Init.Post.class, e -> Traductor.onScreenInit(e.getScreen()));
-        bus.addListener(EventPriority.NORMAL, false, ScreenEvent.Render.Post.class, e -> Traductor.onScreenRender(e.getScreen(), new Gfx(e.getGuiGraphics())));
+        bus.addListener(EventPriority.NORMAL, false, ScreenEvent.Render.Post.class, e -> Traductor.onScreenRender(e.getScreen(), new Gfx(e.getGuiGraphics()), e.getMouseX(), e.getMouseY()));
+        bus.addListener(EventPriority.NORMAL, false, ScreenEvent.MouseButtonPressed.Pre.class, e -> {
+            if (Traductor.onScreenClick(e.getScreen(), e.getMouseX(), e.getMouseY(), e.getButton())) e.setCanceled(true);
+        });
         bus.addListener(EventPriority.NORMAL, false, RegisterClientCommandsEvent.class, e -> e.getDispatcher().register(Traductor.command()));
         bus.addListener(EventPriority.NORMAL, false, ClientPlayerNetworkEvent.LoggingIn.class, e -> Traductor.onWorldJoin());
         bus.addListener(EventPriority.NORMAL, false, ClientPlayerNetworkEvent.LoggingOut.class, e -> Traductor.onWorldLeave());

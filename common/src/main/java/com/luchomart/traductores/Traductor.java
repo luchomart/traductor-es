@@ -229,21 +229,45 @@ public final class Traductor {
         if (j != null && j.isRunning()) j.flushCache();
     }
 
-    /** Después de dibujar cualquier pantalla: en el menú principal muestra el aviso de progreso en la esquina. */
-    public static void onScreenRender(Screen screen, Gfx g) {
+    /** Dónde quedó el aviso en el último dibujo (para saber si un clic cae adentro); ancho 0 = no se ve. */
+    private static int toastX, toastY, toastW, toastH;
+
+    /**
+     * Después de dibujar cualquier pantalla: en el menú principal muestra el aviso de progreso en la esquina.
+     * Con el mouse encima se resalta: un clic abre el panel (ver {@link #onScreenClick}).
+     */
+    public static void onScreenRender(Screen screen, Gfx g, int mouseX, int mouseY) {
+        toastW = 0;
         if (!(screen instanceof TitleScreen)) return;
         TranslationJob j = job;
         if (j == null || j.applyOnly) return;
         if (!j.isRunning() && System.currentTimeMillis() - finishedAtMs > SHOW_RESULT_MS) return;
         Font font = Minecraft.getInstance().font;
         int w = 176, h = 38, x = screen.width - w - 4, y = 4;
+        toastX = x; toastY = y; toastW = w; toastH = h;
         UiKit.overlay(g, x, y, w, h);
+        if (insideToast(mouseX, mouseY)) {
+            int c = UiKit.GOLD;
+            g.fill(x, y, x + w, y + 1, c);
+            g.fill(x, y + h - 1, x + w, y + h, c);
+            g.fill(x, y, x + 1, y + h, c);
+            g.fill(x + w - 1, y, x + w, y + h, c);
+            String hint = "Clic para abrir el panel";
+            g.drawString(font, hint, x + w - font.width(hint), y + h + 3, UiKit.GOLD, true);
+        }
         int tx = x + 26, tw = w - 32;
         switch (j.state) {
             case SCANNING -> {
                 UiKit.icon(g, x + 6, y + 11, 1);
-                g.drawString(font, "Traductor ES", tx, y + 8, UiKit.YELLOW, false);
-                g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
+                int dTotal = j.downloadTotal, dDone = j.downloadDone;
+                if (dTotal > 0) { // bajando de la comunidad: barra con el avance
+                    g.drawString(font, "Bajando de la comunidad", tx, y + 6, UiKit.YELLOW, false);
+                    UiKit.progressBar(g, tx, y + 17, tw, 5, (double) dDone / dTotal, true, 0xFF55C8FF, 0xFF2A8AC0);
+                    g.drawString(font, fmt(dDone) + " de " + fmt(dTotal) + " archivos", tx, y + 26, UiKit.MUTED, false);
+                } else {
+                    g.drawString(font, "Traductor ES", tx, y + 8, UiKit.YELLOW, false);
+                    g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
+                }
             }
             case TRANSLATING, PAUSED -> {
                 UiKit.icon(g, x + 6, y + 11, 1);
@@ -283,6 +307,17 @@ public final class Traductor {
                 g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
             }
         }
+    }
+
+    private static boolean insideToast(double mx, double my) {
+        return toastW > 0 && mx >= toastX && mx < toastX + toastW && my >= toastY && my < toastY + toastH;
+    }
+
+    /** Clic en cualquier pantalla: si cae en el aviso del menú principal, abre el panel. true = el clic se usó. */
+    public static boolean onScreenClick(Screen screen, double mouseX, double mouseY, int button) {
+        if (button != 0 || !(screen instanceof TitleScreen) || !insideToast(mouseX, mouseY)) return false;
+        Minecraft.getInstance().setScreen(new ConfigScreen(screen));
+        return true;
     }
 
     /** El comando /traductor. Genérico en la fuente: cada loader tiene la suya para comandos de cliente. */

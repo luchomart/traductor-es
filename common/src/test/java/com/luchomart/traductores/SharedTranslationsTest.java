@@ -24,7 +24,7 @@ class SharedTranslationsTest {
     /** Un repo falso en memoria: URL → contenido. Anota qué se pidió. */
     private static final class FakeRepo implements SharedTranslations.Downloader {
         final Map<String, String> files = new HashMap<>();
-        final List<String> requested = new ArrayList<>();
+        final List<String> requested = java.util.Collections.synchronizedList(new ArrayList<>());
         boolean down;
 
         void put(String rel, String json) { files.put(rel, json); }
@@ -109,6 +109,17 @@ class SharedTranslationsTest {
         s.update(Set.of("ae2"), BASE, r);
         assertEquals(new SharedTranslations.Hit("CPU de fabricación", true, false), s.get("ae2", "Crafting CPU"));
         assertNull(s.get("ae2", "Click to open the terminal and see what is stored inside."), "texto largo: va a la IA (voseo)");
+    }
+
+    @Test
+    void avisaElAvanceHastaElTotal() {
+        FakeRepo r = repo();
+        List<String> steps = java.util.Collections.synchronizedList(new ArrayList<>());
+        new SharedTranslations(dir, "es_ar", List.of()).update(Set.of("ae2", "@patchouli/ae2/guide", "otro_mod"), BASE, r,
+                (done, total) -> steps.add(done + "/" + total));
+        assertEquals("0/3", steps.get(0));
+        assertTrue(steps.contains("3/3"));
+        assertEquals(4, steps.size());
     }
 
     @Test

@@ -100,7 +100,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 | Bajar de la comunidad | Antes de usar la IA, descargar lo que otros jugadores ya tradujeron. Ver [Traducciones de la comunidad](#traducciones-de-la-comunidad). |
 | Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |
 
-**Pestaña Herramientas**: exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
+**Pestaña Herramientas**: compartir tus traducciones con la comunidad (ver [Compartir lo tuyo](#compartir-lo-tuyo)), exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
 
 También podés usar comandos en el chat: `/traductor estado`, `/traductor panel`, `/traductor corregir`, `/traductor iniciar`, `/traductor pausar`, `/traductor reanudar` y `/traductor cancelar`.
 
@@ -184,7 +184,18 @@ Lo que traduce un jugador le puede servir a otro: hay un repo público con tradu
 - **Se apaga** en Traducción → Bajar de la comunidad. Tus traducciones **nunca se suben solas**.
 - Al bajarlas, GitHub ve tu IP y los nombres de tus mods (como cualquier descarga). No se manda ningún texto.
 
-**Aportar:** las instrucciones están en el [README del repo](https://github.com/luchomart/traductor-es-traducciones#aportar). En corto: `tools/compartir.py` pasa tu caché y tus correcciones al formato del repo (la variante sale sola) y abrís un pull request. Tus correcciones entran como revisadas.
+### Compartir lo tuyo
+
+**Herramientas → Compartir…** muestra cuántas traducciones nuevas tenés (las que todavía no están en el repo) y te da dos caminos:
+
+- **Enviar a la comunidad:** la primera vez te pide conectar tu cuenta de GitHub (gratis): el mod muestra un código, se abre `github.com/login/device`, lo pegás y autorizás. Después es un clic: el mod copia el repo a tu cuenta, sube tus traducciones y abre el pull request. Tus correcciones entran como revisadas.
+- **Exportar carpeta:** sin conectar la cuenta. El mod arma la carpeta en `config/traductor_es/para-compartir/` y abre la página de subida del repo: arrastrás la carpeta (`es_ar`, o la de tu variante) y tocás *Propose changes*.
+
+Cada archivo lleva lo que ya estaba en el repo más lo tuyo, así que no se pisa nada, y lo que ya mandaste no se vuelve a mandar. Solo van textos de mods y libros; las misiones no.
+
+La sesión de GitHub se guarda en `.traductor_es/github.json` dentro de tu carpeta de usuario (nunca en el modpack). Le da permiso al mod para escribir en tus repos públicos, que es lo que hace falta para abrir el pull request: no compartas ese archivo. **Desconectar GitHub** lo borra, y también podés quitarle el acceso desde github.com → Settings → Applications.
+
+Para muchos modpacks a la vez está [`tools/compartir.py`](tools/compartir.py) (instrucciones en el [README del repo](https://github.com/luchomart/traductor-es-traducciones#aportar)).
 
 ## Problemas comunes
 
@@ -253,6 +264,8 @@ Todo está en `config/traductor_es/` dentro de la carpeta del modpack:
 | `informe.txt` | Resumen de la última traducción y textos que fallaron |
 | `cache/` | Todas las traducciones hechas, una carpeta por idioma (si la borrás, se traduce todo de nuevo) |
 | `compartidas/` | Traducciones bajadas de la comunidad (se pueden borrar: se vuelven a bajar) |
+| `para-compartir/` | Lo que arma **Exportar carpeta** para subir al repo |
+| `enviados.json` | Lo que ya mandaste a la comunidad (para no mandarlo dos veces) |
 | `pack/` | El paquete de recursos que usa el juego (se genera solo) |
 
 ---

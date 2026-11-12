@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+**English**
+- Share your translations with the community from the game: *Herramientas → Compartir…* shows how many new translations you have (the ones not in the repo yet). **Enviar a la comunidad** opens a pull request with your GitHub account (the first time you connect it with a code, like on a TV); **Exportar carpeta** builds a folder and opens the repo's upload page, no account connection needed. Each file keeps what was already in the repo, and what you already sent isn't sent again. Your corrections go in as reviewed.
+
+**Español**
+- Compartí tus traducciones con la comunidad desde el juego: *Herramientas → Compartir…* muestra cuántas traducciones nuevas tenés (las que todavía no están en el repo). **Enviar a la comunidad** abre un pull request con tu cuenta de GitHub (la primera vez la conectás con un código, como en un televisor); **Exportar carpeta** arma una carpeta y abre la página de subida del repo, sin conectar la cuenta. Cada archivo conserva lo que ya estaba en el repo, y lo que ya mandaste no se vuelve a mandar. Tus correcciones entran como revisadas.
+
 ## 1.3.0
 
 **English**

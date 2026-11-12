@@ -7,7 +7,10 @@
 - Etapa 2: el mod baja y usa las traducciones (opción "Bajar de la comunidad" en el panel). Probada en `run/` de 1.19.2 sin caché: 469 textos de la comunidad, solo las misiones a la IA; segunda pasada: 0 bajados, 12 al día, nada por traducir.
 - Etapa 3: README (sección "Traducciones de la comunidad"), CurseForge (función + privacidad: GitHub ve IP y nombres de mods), Guía (sección "La comunidad"), prompt de ayuda, CHANGELOG y `mod_version=1.3.0`.
 - Probada en las 5 versiones con Ollama, dos pasadas cada una, sin caché: todas bajan del repo, la 2.ª pasada no baja nada ni deja textos, 0 fallidos. Fabric 1.21.1 (es_es) usó nombres cortos de es_ar.
-- **Próximo paso:** publicar 1.3.0. Jars listos en `publicacion/subir-1.3.0/`. Falta: tag `v1.3.0` en GitHub, subir los 5 jars a CurseForge con el changelog y pegar la descripción nueva (`publicacion/curseforge.md`).
+- **1.3.0 publicada en GitHub (tag `v1.3.0`)**; no hace falta subirla a CurseForge: va directo la 1.4.0, que la incluye.
+- **1.4.0 lista (2026-11-12): compartir desde el juego.** Herramientas → Compartir…: "Enviar a la comunidad" (PR con la cuenta de GitHub del jugador, inicio de sesión por código; OAuth App "Traductor ES" en la cuenta luchomart, Client ID en `GitHubShare`) o "Exportar carpeta" (subida a mano por la web). Título fijo del PR, no se repite lo ya enviado (`enviados.json`). En el repo de datos, `index.json` lo rehace una acción al entrar algo a main.
+  Probado: exportar carpeta en 1.19.2 y envío real como dueño (PR #1 de prueba, cerrado). El camino con fork (otro jugador) solo con el GitHub falso de los tests. Los PR de apps quedan en "Approve and run" hasta aprobarlos.
+- **Próximo paso:** publicar 1.4.0: tag `v1.4.0`, jars de `publicacion/subir-1.4.0/` a CurseForge con el changelog de 1.3.0 + 1.4.0 y la descripción nueva. Opcional: probar el envío con otra cuenta de GitHub (camino con fork).
 - Pendientes chicos de 1.3.0: ajustar "texto corto" para otras variantes (hoy ≤40 caracteres sin punto final) cuando haya datos de otra variante; el estimador del asistente todavía no descuenta lo de la comunidad.
 - Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.

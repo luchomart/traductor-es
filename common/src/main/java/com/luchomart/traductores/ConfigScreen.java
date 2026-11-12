@@ -215,7 +215,18 @@ public class ConfigScreen extends BaseScreen {
         int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
         int x1 = innerX, x2 = innerX + cw + 6, y1 = contentTop + 8, y2 = y1 + ch + 6;
         int by1 = y1 + ch - 26, by2 = y2 + ch - 26;
-        addRenderableWidget(Widgets.button(Component.literal("Exportar"), b -> exportPack()).bounds(x1 + 6, by1, 80, 20).build());
+        addRenderableWidget(Widgets.button(Component.literal("Exportar"), b -> exportPack()).bounds(x1 + 6, by1, 80, 20)
+                .tooltip(Component.literal("Un .zip para amigos con el mismo modpack: lo usan sin IA.")).build());
+        addRenderableWidget(Widgets.button(Component.literal("Compartir…"), b -> {
+            Config.get().save();
+            String target = SpanishTarget.resolve(Config.get().targetLanguage, minecraft.options.languageCode);
+            if (target == null) {
+                report(Component.literal("Elegí un idioma español en Opciones → Idioma.").withStyle(ChatFormatting.YELLOW));
+                return;
+            }
+            minecraft.setScreen(new ShareScreen(this, target));
+        }).bounds(x1 + 90, by1, 86, 20).tooltip(Component.literal(
+                "Mandar lo que tradujiste al repo de la comunidad, para que otros jugadores no tengan que traducirlo.")).build());
         addRenderableWidget(Widgets.button(Component.literal("Abrir editor"), b -> {
             Config.get().save();
             minecraft.setScreen(new CorrectionScreen(this, ""));
@@ -643,7 +654,7 @@ public class ConfigScreen extends BaseScreen {
             case HERRAMIENTAS -> {
                 int cw = (innerW - 6) / 2, ch = (contentBottom - contentTop - 16 - 6) / 2;
                 int y1 = contentTop + 8, y2 = y1 + ch + 6, x2 = innerX + cw + 6;
-                card(g, innerX, y1, cw, ch, "Exportar pack", "Un .zip para amigos con el mismo modpack. Lo usan sin IA.");
+                card(g, innerX, y1, cw, ch, "Exportar y compartir", "Un .zip para amigos con el mismo modpack, o tus traducciones para toda la comunidad.");
                 card(g, x2, y1, cw, ch, "Corregir traducciones", "Buscá un texto (objeto, libro o misión) y cambiá su traducción.");
                 card(g, innerX, y2, cw, ch, "Última traducción", lastReport);
                 card(g, x2, y2, cw, ch, "Archivos y asistente", "Configuración, glosario e informe. El asistente comprueba todo de nuevo.");

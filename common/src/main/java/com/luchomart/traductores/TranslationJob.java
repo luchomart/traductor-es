@@ -1311,6 +1311,7 @@ public class TranslationJob implements Runnable {
         sb.append("Reutilizados del caché: ").append(fromCache).append('\n');
         sb.append("Descargados de la comunidad: ").append(fromShared)
                 .append(cfg.useSharedTranslations ? "" : " (opción apagada)").append('\n');
+        if (done > 0) sb.append("¿Compartir lo nuevo con la comunidad? Herramientas → Compartir…\n");
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
                 .append(quests == null && oldQuests == null ? " (el modpack no tiene misiones que se puedan traducir)" : "").append('\n');

@@ -42,4 +42,13 @@ public final class Gfx {
     public void renderComponentTooltip(Font font, List<Component> lines, int x, int y) {
         g.renderComponentTooltip(font, lines, x, y);
     }
+
+    /** Texto centrado y agrandado (por ejemplo, el código para conectar GitHub). */
+    public void drawScaledCentered(Font font, String text, int x, int y, int color, float scale) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(scale, scale, 1f);
+        g.drawCenteredString(font, text, 0, 0, color);
+        g.pose().popPose();
+    }
 }

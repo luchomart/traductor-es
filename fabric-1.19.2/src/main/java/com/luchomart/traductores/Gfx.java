@@ -45,6 +45,15 @@ public final class Gfx {
         GuiComponent.drawCenteredString(pose, font, text, x, y, color);
     }
 
+    /** Texto centrado y agrandado (por ejemplo, el código para conectar GitHub). */
+    public void drawScaledCentered(Font font, String text, int x, int y, int color, float scale) {
+        pose.pushPose();
+        pose.translate(x, y, 0);
+        pose.scale(scale, scale, 1f);
+        GuiComponent.drawCenteredString(pose, font, text, 0, 0, color);
+        pose.popPose();
+    }
+
     public void renderComponentTooltip(Font font, List<Component> lines, int x, int y) {
         Screen screen = Minecraft.getInstance().screen;
         if (screen != null) screen.renderComponentTooltip(pose, lines, x, y);

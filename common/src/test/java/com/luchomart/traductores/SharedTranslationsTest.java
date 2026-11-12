@@ -68,6 +68,29 @@ class SharedTranslationsTest {
     }
 
     @Test
+    void dosDescargasALaVezNoSePisan() throws Exception {
+        FakeRepo r = repo();
+        Set<String> wanted = Set.of("ae2", "@patchouli/ae2/guide", "otro_mod");
+        // Como el asistente y la traducción bajando lo mismo al mismo tiempo.
+        List<Thread> threads = new ArrayList<>();
+        List<SharedTranslations.Update> results = java.util.Collections.synchronizedList(new ArrayList<>());
+        for (int i = 0; i < 4; i++) {
+            Thread t = new Thread(() -> results.add(new SharedTranslations(dir, "es_ar", List.of()).update(wanted, BASE, r)));
+            threads.add(t);
+            t.start();
+        }
+        for (Thread t : threads) t.join();
+        for (SharedTranslations.Update u : results) assertNull(u.error());
+        SharedTranslations s = new SharedTranslations(dir, "es_ar", List.of());
+        assertEquals("Unidad ME", s.get("ae2", "ME Drive").text());
+        assertEquals("Cosa", s.get("otro_mod", "Thing").text());
+        // No quedan temporales.
+        try (var files = Files.walk(dir)) {
+            assertTrue(files.noneMatch(p -> p.toString().endsWith(".tmp")));
+        }
+    }
+
+    @Test
     void bajaSoloLosModsInstaladosYUsaLaVarianteDeDestino() {
         FakeRepo r = repo();
         SharedTranslations s = new SharedTranslations(dir, "es_ar", List.of());

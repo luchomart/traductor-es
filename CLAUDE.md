@@ -43,3 +43,5 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
   El formato de sus JSON lo escriben Python (`json.dumps(indent=1, ensure_ascii=False)`) y `CommunityExport.toJson`: si cambia uno, cambiar el otro.
 - Para ver la descarga de la comunidad en una prueba, mover `compartidas/` aparte (si está al día no baja nada).
 - Cerrar un cliente de `run/` desde un script: matar solo el `java` cuyo `/proc/<pid>/cwd` es ese `run/`.
+- Ruedita del mouse en pantallas de `common/`: sobreescribir `onScroll` de `BaseScreen`, no `mouseScrolled` (su firma cambia en 1.21).
+- Lo que se testea no puede usar `TraductorES.LOG`: en los tests no está NeoForge y falla con NoClassDefFoundError.

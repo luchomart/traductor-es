@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.5.0
+
+**English**
+- Correction editor, reworked: the list scrolls (mouse wheel, draggable bar, Page Up/Down) instead of pages, and each row shows where the text comes from (AI, Community, ★ yours) and its mod.
+- Filters: tabs **Todo · Sin corregir · Corregidas · Dudosas · Comunidad** ("Dudosas" = texts that look left in English) and a mod picker, combined with the search.
+- **Guardar y siguiente** (Ctrl+Enter): save and open the next text of the list. Everything is applied together when you go back to the list, so the game doesn't reload after each one.
+- Texts downloaded from the community now appear in the editor and can be corrected like the AI ones (after the next translation pass).
+- **Reemplazar…**: change a word or phrase in every text of the list at once (for example "Mena de" → "Mineral de"), with a preview. Whole words only, ignoring case but keeping each capital letter; changes that would break colors or %s are skipped.
+- The setup assistant counts what the community already translated: it downloads it first and only estimates time for what's left for the AI.
+
+**Español**
+- Editor de correcciones renovado: la lista se scrollea (ruedita, barra para arrastrar, Re Pág/Av Pág) en vez de ir por páginas, y cada fila muestra de dónde viene el texto (IA, Comunidad, ★ tuya) y su mod.
+- Filtros: pestañas **Todo · Sin corregir · Corregidas · Dudosas · Comunidad** ("Dudosas" = textos que parecen haber quedado en inglés) y un selector de mod, que se suman a la búsqueda.
+- **Guardar y siguiente** (Ctrl+Enter): guarda y abre el texto siguiente de la lista. Se aplica todo junto al volver a la lista, así el juego no recarga a cada rato.
+- Lo bajado de la comunidad ahora aparece en el editor y se corrige igual que lo de la IA (desde la próxima pasada de traducción).
+- **Reemplazar…**: cambiá una palabra o frase en todos los textos de la lista de una vez (por ejemplo "Mena de" → "Mineral de"), con vista previa. Solo palabras enteras, sin importar mayúsculas pero respetando la inicial de cada lugar; lo que rompería colores o %s se saltea.
+- El asistente cuenta lo que ya tradujo la comunidad: lo baja primero y solo estima el tiempo de lo que le queda a la IA.
+
 ## 1.4.1
 
 **English**

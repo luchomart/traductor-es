@@ -83,6 +83,8 @@ public class TranslationJob implements Runnable {
     public volatile int downloadDone, downloadTotal;
     /** Traducciones de otros jugadores; null si la opción está apagada. */
     private SharedTranslations shared;
+    /** Lo que esta pasada tomó de la comunidad, con su clave: para el editor de correcciones. */
+    private final CommunityUsed communityUsed = new CommunityUsed();
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
     /** Se escribieron misiones nuevas: se ven al volver a entrar al mundo. */
@@ -359,7 +361,7 @@ public class TranslationJob implements Runnable {
 
             for (Map.Entry<String, String> kv : new TreeMap<>(source).entrySet()) {
                 String key = kv.getKey(), text = kv.getValue();
-                if (corr.containsKey(key)) { glossary.addModName(ns, key, text, corr.get(key)); continue; }
+                if (corr.containsKey(key)) { glossary.addModName(ns, key, text, corr.get(key)); noteShared(ns, key, text); continue; }
                 // Si el "oficial" es el inglés copiado, se traduce como si no existiera.
                 if (es.containsKey(key) && !Validator.isEnglishCopy(text, es.get(key))) {
                     official++; glossary.addModName(ns, key, text, es.get(key)); continue;
@@ -388,6 +390,11 @@ public class TranslationJob implements Runnable {
 
         packChanged |= writePack();
         prepared = true;
+        try {
+            communityUsed.write(CommunityUsed.file(Config.DIR.resolve("compartidas"), target));
+        } catch (IOException e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudo anotar lo usado de la comunidad: {}", e.toString());
+        }
         List<Item> pending = new ArrayList<>(byText.values());
         // Primero los nombres: después se usan como glosario en descripciones y libros.
         pending.sort(Comparator.comparing((Item it) -> !it.isName));
@@ -409,7 +416,7 @@ public class TranslationJob implements Runnable {
                 Books.extract(book.format, file.getKey(), file.getValue(), (pointer, text) -> {
                     if (Validator.isTrivial(text)) return;
                     String key = file.getKey() + "#" + pointer;
-                    if (corrections.getOrDefault(pseudo, Map.of()).containsKey(key)) return; // ya está en la salida
+                    if (corrections.getOrDefault(pseudo, Map.of()).containsKey(key)) { noteShared(pseudo, key, text); return; } // ya está en la salida
                     String reused = reuse(pseudo, key, text);
                     if (reused != null) { bookOut.put(key, reused); return; }
                     String field = pointer.substring(pointer.lastIndexOf('/') + 1);
@@ -519,13 +526,38 @@ public class TranslationJob implements Runnable {
      * IA (o de otra variante, solo nombres cortos). Las compartidas pasan por el mismo control que el caché.
      */
     private String reuse(String ns, String key, String text) {
+        Pick p = pick(ns, key, text);
+        if (p == null) return null;
+        if (p.community()) {
+            fromShared++;
+            communityUsed.add(ns, key, text, p.text(), p.revised());
+        } else {
+            fromCache++;
+        }
+        return p.text();
+    }
+
+    /** Una traducción que ya existe: de la comunidad (revisada o no) o del caché propio. */
+    private record Pick(String text, boolean community, boolean revised) {}
+
+    /** El orden de {@link #reuse}, en un solo lugar (también lo usa {@link #noteShared}). null si no hay nada. */
+    private Pick pick(String ns, String key, String text) {
         SharedTranslations.Hit hit = shared == null ? null : shared.get(ns, text);
         if (hit != null && Validator.check(text, hit.text()) != null) hit = null;
-        if (hit != null && hit.revised() && hit.sameVariant()) { fromShared++; return hit.text(); }
+        if (hit != null && hit.revised() && hit.sameVariant()) return new Pick(hit.text(), true, true);
         String cached = usableCache(ns, key, text);
-        if (cached != null) { fromCache++; return cached; }
-        if (hit != null) { fromShared++; return hit.revised() ? hit.text() : caps.apply(text, hit.text()); }
+        if (cached != null) return new Pick(cached, false, false);
+        if (hit != null) return new Pick(hit.revised() ? hit.text() : caps.apply(text, hit.text()), true, hit.revised());
         return null;
+    }
+
+    /**
+     * Un texto con corrección no pasa por {@link #reuse}: si sin la corrección se usaría lo de la comunidad, se anota
+     * igual, para que el editor sepa su original y pueda volver a la versión de la comunidad.
+     */
+    private void noteShared(String ns, String key, String text) {
+        Pick p = pick(ns, key, text);
+        if (p != null && p.community()) communityUsed.add(ns, key, text, p.text(), p.revised());
     }
 
     /** Traducción del caché si sigue valiendo: mismo original, marcadores bien y no "olvidada" sin traducir. */

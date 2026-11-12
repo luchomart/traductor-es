@@ -21,9 +21,9 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 - **Detects fake translations.** Many mods ship a Spanish file that is just English copied. Those texts get translated.
 - **Books and quests.** Patchouli books (pages and covers), Tinkers' Construct manuals, GuideME guides (AE2 and addons, Powah), the Immersive Engineering manual, Alex's Mobs' dictionary and FTB Quests missions (single player).
 - **Keeps formatting safe.** Colors, placeholders (`%s`, `{0}`), Patchouli macros and JSON text with links are protected; broken translations are rejected and retried.
-- **Setup assistant.** Checks everything the first time and tells you what is missing, with buttons to fix it.
+- **Setup assistant.** Checks everything the first time and tells you what is missing, with buttons to fix it. Its time estimate already counts what the community translated.
 - **"Which one should I use?"** Compares services with estimated times for *your* modpack, and which ones are free.
-- **Correction editor.** Search any translated text in game and fix it; applied instantly.
+- **Correction editor.** Search any translated text in game and fix it; applied instantly. Filters (uncorrected, doubtful, community, by mod), "save and next" to fix them in a row, and find & replace across many texts with a preview.
 - **Hold Alt** on an item to see its original English text.
 - **Translates in the background** and only translates new texts after the first time. With a cloud AI it keeps going while you play; with a local AI it pauses in game to keep your FPS.
 - **Community translations.** Before using the AI, it downloads what other players already translated for *your* mods, from a public [GitHub repo](https://github.com/luchomart/traductor-es-traducciones). Saves quota and hours. Can be turned off («Bajar de la comunidad»). **Give back in one click:** *Herramientas → Compartir…* sends your new translations as a pull request with your GitHub account, or exports a folder to upload by hand.
@@ -71,9 +71,9 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 - **Detecta traducciones falsas.** Muchos mods traen un archivo "en español" que es el inglés copiado: esos textos se traducen.
 - **Libros y misiones.** Libros de Patchouli (páginas y portadas), manuales de Tinkers' Construct, guías de GuideME (AE2 y sus agregados, Powah), el manual de Immersive Engineering, el diccionario de Alex's Mobs y misiones de FTB Quests (en un jugador).
 - **Cuida el formato.** Colores, marcadores (`%s`, `{0}`), macros de Patchouli y texto con links quedan protegidos; si la IA rompe algo, se descarta y se reintenta.
-- **Asistente.** La primera vez revisa todo y te dice qué falta, con botones para arreglarlo.
+- **Asistente.** La primera vez revisa todo y te dice qué falta, con botones para arreglarlo. Su estimación de tiempo ya descuenta lo que tradujo la comunidad.
 - **«¿Cuál conviene?»** Compara los servicios con el tiempo estimado para *tu* modpack y cuáles son gratis.
-- **Editor de correcciones.** Buscá cualquier texto traducido dentro del juego y corregilo; se aplica al instante.
+- **Editor de correcciones.** Buscá cualquier texto traducido dentro del juego y corregilo; se aplica al instante. Filtros (sin corregir, dudosas, comunidad, por mod), «guardar y siguiente» para corregir de corrido y reemplazo en muchos textos con vista previa.
 - **Mantené Alt** sobre un objeto para ver su texto original en inglés.
 - **Traduce en segundo plano** y después de la primera vez solo lo nuevo. Con IA en la nube sigue mientras jugás; con IA en tu PC se pausa en el mundo para no bajar los FPS.
 - **Traducciones de la comunidad.** Antes de usar la IA, baja lo que otros jugadores ya tradujeron de *tus* mods, desde un [repo público de GitHub](https://github.com/luchomart/traductor-es-traducciones). Ahorra cupo y horas. Se puede apagar («Bajar de la comunidad»). **Devolvé el favor con un clic:** *Herramientas → Compartir…* manda tus traducciones nuevas como pull request con tu cuenta de GitHub, o exporta una carpeta para subirla a mano.

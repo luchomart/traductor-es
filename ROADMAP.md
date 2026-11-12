@@ -1,16 +1,34 @@
 # Hoja de ruta hacia la publicación
 
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
-- **Versión actual: 1.4.1** (tag `v1.4.1` en GitHub). En CurseForge sigue la 1.2.0 (de sus 3 jars de Fabric, 1 aprobado y 2 en revisión).
-- **Próximo paso:** subir la 1.4.1 a CurseForge: los 5 jars de `publicacion/subir-1.4.1/`, changelog = secciones 1.4.1 + 1.4.0 + 1.3.0 de `CHANGELOG.md`, y pegar la descripción nueva (`publicacion/curseforge.md`, trae la privacidad de bajar/compartir). Antes, conviene un `/revisar`.
-- **Después:** mejorar el editor de correcciones (Luciano quiere encararlo; todavía sin plan).
+- **Versión actual: 1.5.0** (sin tag todavía; jars en `*/build/libs/`). En CurseForge sigue la 1.2.0 (de sus 3 jars de Fabric, 1 aprobado y 2 en revisión); la 1.4.1 no se subió (Luciano prefirió no subir varias seguidas el mismo día).
+- **1.5.0 hecha:** editor de correcciones renovado (lista con scroll, pestañas Todo/Sin corregir/Corregidas/Dudosas/Comunidad + selector de mod, «Guardar y siguiente» con Ctrl+Enter que aplica todo junto al volver, lo de la comunidad visible y corregible vía `compartidas/usadas-<variante>.json`, «Reemplazar…» con vista previa) y el asistente baja y descuenta lo de la comunidad. `/revisar` hecho y sus 10 hallazgos arreglados. Probado en 1.19.2, 1.20.1 y 1.21.1.
+- **Falta antes de subir:** ver un minuto en el juego los arreglos de la revisión que tocan la pantalla (aplicar lo pendiente si se cierra la pantalla de golpe, buscar el texto nuevo después de reemplazar, lista ubicada al volver con filtro "Sin corregir"). Después, armar `publicacion/subir-1.5.0/` y subir a CurseForge con changelog 1.5.0 + 1.4.1 + 1.4.0 + 1.3.0 y la descripción de `publicacion/curseforge.md`.
+- **Próximo paso: 1.6.0 "solo comunidad"** (plan abajo).
 - Traducciones de la comunidad (1.3.0–1.4.1): repo de datos `luchomart/traductor-es-traducciones` (local en `../traductor-es-traducciones/`, CC BY-NC-SA; 350 archivos es_ar de StaTech + Valhelsia). El mod baja solo lo de los mods instalados (de a 6, con barra) y lo usa en este orden: correcciones → comunidad revisada → caché propio → comunidad IA → IA. Herramientas → Compartir… manda lo nuevo como PR (device flow; OAuth App "Traductor ES" en la cuenta luchomart, Client ID en `GitHubShare`) o exporta una carpeta. Probado en las 5 versiones y con envíos reales (PR #1 y #2 de prueba, cerrados).
 - Revisar aportes: en cada PR, "Approve and run" (solo corre el control: formato y marcadores, no ortografía), mirar el diff y recién ahí "Merge". `index.json` se rehace solo.
-- Opcionales: probar el envío con otra cuenta de GitHub (camino con fork; hoy solo con el GitHub falso de los tests); ajustar "texto corto" para otras variantes (≤40 caracteres sin punto final) cuando haya datos; el estimador del asistente no descuenta lo de la comunidad; tag `v1.1.0` en `784f1ce`; "Mena de"/"Mineral de" en las fichas.
+- Opcionales: probar el envío con otra cuenta de GitHub (camino con fork; hoy solo con el GitHub falso de los tests); ajustar "texto corto" para otras variantes (≤40 caracteres sin punto final) cuando haya datos; tag `v1.1.0` en `784f1ce`; "Mena de"/"Mineral de" en las fichas.
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
+
+## Idea para 1.6.0: solo comunidad (decidido 2026-11-12)
+Objetivo: que quien tiene un modpack ya cubierto por la comunidad no tenga que conectar Ollama ni una clave, y que pueda completar lo que falta.
+- [ ] Asistente, paso 1: opción "Usar solo las traducciones de la comunidad (sin IA, sin claves)", recomendada si cubre ≥ 90 % del modpack; con menos, se ofrece igual avisando que lo que falte queda en inglés. Elegirla saltea la comprobación de la IA (paso 2).
+- [ ] Traducción en ese modo: nunca llama a una IA ni elige modelo; usa comunidad, caché y correcciones. El informe y el aviso dicen cuánto quedó en inglés.
+- [ ] Configuración: "Modo: solo comunidad" y un botón "Completar con IA" para configurar una más adelante.
+- [ ] Editor: pestaña "Faltan" con lo que quedó sin traducir (la pasada lo anota, como `usadas`), para traducirlo a mano con «Guardar y siguiente».
+- [ ] Invitar a completar el 100 %: el aviso de fin de pasada lleva al editor; lo corregido sale como revisado en Herramientas → Compartir.
+- Archivos: `Config`, `WizardScreen`, `TranslationJob`, `ConfigScreen`, el panel y `CorrectionScreen`; después README, Guía y CurseForge.
+
+## 1.5.0: editor de correcciones (2026-11-12)
+- [x] Lista con scroll (ruedita, barra, Re Pág/Av Pág; `onScroll` en los 5 `BaseScreen`) y filas con origen (IA, Comunidad, ★ Tuya) y mod
+- [x] Filtros: Todo · Sin corregir · Corregidas · Dudosas · Comunidad, y selector de mod
+- [x] «Guardar y siguiente» (Ctrl+Enter), aplicando todo junto al volver a la lista
+- [x] Lo de la comunidad en el editor (`CommunityUsed`, anotado en cada pasada)
+- [x] «Reemplazar…» (`BulkReplace` + `ReplaceScreen`), con vista previa
+- [x] Asistente: baja la comunidad antes de estimar y la descuenta (`Estimator`)
 
 ## Idea para 1.3.0: traducciones compartidas (después de publicar 1.2.0)
 Objetivo: que la gente **descargue** lo que otro ya tradujo para ahorrar cupo y tiempo (colaborar corrigiendo es secundario).

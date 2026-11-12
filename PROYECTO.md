@@ -31,6 +31,7 @@ que ya traían chino (142 en FTB OceanBlock 2).
 | Ícono | El de 128 px escalado sin suavizar (`publicacion/icono-512.png`), elegido por el autor. |
 | Traducciones de la comunidad | Repo público aparte (`traductor-es-traducciones`, CC BY-NC-SA), por mod y variante, con el inglés como clave. Se bajan solas (apagable). Prioridad: correcciones → revisadas → caché propio → IA de otros → IA. Otra variante solo para nombres cortos. |
 | Compartir | Pull request con la cuenta de GitHub del jugador (device flow, sin servidor) o carpeta para subir a mano. Servidor propio descartado por ahora (mantenimiento y spam). |
+| Editor de correcciones | Cada aplicación recarga todos los recursos (segundos en modpacks grandes): «Guardar» aplica enseguida, pero «Guardar y siguiente» y «Reemplazar…» aplican una sola vez al volver a la lista (o al cerrarse la pantalla). Lo bajado de la comunidad no queda en el caché: cada pasada anota qué usó, con su clave, en `compartidas/usadas-<variante>.json`. |
 | Descartado | Arreglar los cortes de renglón del manual de Actually Additions (es un error de su propio dibujado). |
 
 ## Pruebas de modelos locales (2026-10-13)

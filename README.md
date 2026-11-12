@@ -157,11 +157,14 @@ Una clave es como una contraseña que le dice al servicio que sos vos. Los tres 
 
 La IA a veces se equivoca. Para arreglar un texto, abrí el editor: **Herramientas → Abrir editor**, o escribí `/traductor corregir` en el chat. También podés buscar directo: `/traductor corregir lingote`.
 
-1. Buscá el texto en inglés o en español. Aparecen los objetos, los libros y las misiones que tradujo la IA.
-2. Tocá el texto, corregilo y tocá **Guardar**.
-3. Se aplica enseguida. Las misiones se ven al volver a entrar al mundo.
+1. Buscá el texto en inglés o en español. Aparecen los objetos, los libros y las misiones que tradujo la IA o que se bajaron de la comunidad.
+2. Filtrá si querés: **Sin corregir**, **Corregidas**, **Dudosas** (las que parecen haber quedado en inglés), **Comunidad**, y **Mod: …** para ver uno solo.
+3. Tocá el texto, corregilo y tocá **Guardar**: se aplica enseguida (las misiones, al volver a entrar al mundo).
+   Para corregir de corrido, **Guardar y siguiente** (Ctrl+Enter) abre el próximo de la lista; todo se aplica junto al volver a la lista.
 
-Si tu corrección rompe un color o un marcador (`%s`, `{0}`, `&a`…), el editor te avisa antes de guardar. **Volver a la de la IA** deshace la corrección.
+Si tu corrección rompe un color o un marcador (`%s`, `{0}`, `&a`…), el editor te avisa antes de guardar. **Volver a la de la IA** (o *de la comunidad*) deshace la corrección.
+
+Para cambiar lo mismo en muchos textos, **Reemplazar…** busca una palabra o frase en todo lo que muestra la lista (con el filtro de ese momento) y la cambia, con vista previa. Ejemplo: "Mena de" → "Mineral de". Busca palabras enteras sin importar mayúsculas y respeta la inicial de cada lugar; ojo con el género ("la mena" → "el mineral" va aparte).
 
 Las correcciones se guardan en `correcciones.json`, con el formato `"mod:clave": "texto"`, tienen prioridad sobre todo (incluso sobre el español oficial) y no se pierden al volver a traducir. También podés editar ese archivo a mano.
 
@@ -236,7 +239,7 @@ Panel (Mods → Traductor ES → Configurar; en Fabric hace falta Mod Menu para 
 - Herramientas: editor de correcciones, "Rehacer…" (vuelve a traducir todo lo que hizo un modelo que tradujo mal; lo anterior queda en respaldos/), exportar el pack (un .zip para amigos con el mismo modpack, que lo usan sin IA), ver el informe, abrir la carpeta y el asistente.
 - Mientras traduce aparece un aviso arriba a la derecha del menú principal con el progreso y el tiempo restante. El color de la barra indica la velocidad: celeste muy rápida, verde rápida, amarillo normal, naranja lenta, rojo muy lenta. La primera vez puede tardar horas; después solo traduce lo nuevo. F3 + T recarga los textos.
 - Original con Alt: dejando apretada la tecla Alt sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés (se desactiva en Traducción → Original con Alt).
-- Corregir una traducción: Herramientas → Abrir editor (o /traductor corregir en el chat): buscar el texto en inglés o español, corregirlo y Guardar. Se aplica enseguida (las misiones, al volver a entrar al mundo).
+- Corregir una traducción: Herramientas → Abrir editor (o /traductor corregir en el chat): buscar el texto en inglés o español (filtros: Sin corregir, Corregidas, Dudosas, Comunidad y por mod), corregirlo y Guardar. Se aplica enseguida (las misiones, al volver a entrar al mundo). «Guardar y siguiente» (Ctrl+Enter) para corregir de corrido; «Reemplazar…» cambia una palabra en muchos textos con vista previa.
 - Comandos en el chat: /traductor estado, panel, corregir, iniciar, pausar, reanudar, cancelar.
 - Archivos en config/traductor_es/: correcciones.json ("mod:clave": "texto"), glosario.json ("Original": "Traducción") e informe.txt (resumen y textos que fallaron).
 

@@ -27,6 +27,19 @@ public final class Corrections {
         save(all);
     }
 
+    /**
+     * Guarda varias de una vez (una sola escritura del archivo). Clave "namespace:clave"; un valor null quita la
+     * corrección (el texto volvió a ser el de la IA o la comunidad).
+     */
+    public static void putAll(Map<String, String> changes) throws java.io.IOException {
+        Map<String, String> all = raw();
+        changes.forEach((k, v) -> {
+            if (v == null) all.remove(k);
+            else all.put(k, v);
+        });
+        save(all);
+    }
+
     /** Quita una corrección: vuelve la traducción de la IA. */
     public static void remove(String ns, String key) throws java.io.IOException {
         Map<String, String> all = raw();

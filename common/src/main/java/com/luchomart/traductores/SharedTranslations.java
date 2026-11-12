@@ -164,9 +164,15 @@ public final class SharedTranslations {
                         parse(body); // que sea válido antes de reemplazar lo que había
                         Path local = dir.resolve(rel);
                         Files.createDirectories(local.getParent());
-                        Path tmp = local.resolveSibling(local.getFileName() + ".tmp");
-                        Files.write(tmp, body);
-                        Files.move(tmp, local, StandardCopyOption.REPLACE_EXISTING);
+                        // Temporal propio: el asistente y la traducción pueden bajar el mismo archivo a la vez, y con un
+                        // .tmp compartido uno podría mover el del otro a medio escribir.
+                        Path tmp = Files.createTempFile(local.getParent(), local.getFileName().toString(), ".tmp");
+                        try {
+                            Files.write(tmp, body);
+                            Files.move(tmp, local, StandardCopyOption.REPLACE_EXISTING);
+                        } finally {
+                            Files.deleteIfExists(tmp);
+                        }
                         loaded.remove(rel);
                         downloaded.incrementAndGet();
                     } catch (Exception e) {

@@ -88,7 +88,8 @@ public class WizardScreen extends BaseScreen {
         String assumed = target != null ? target : "es_es";
         Thread t = new Thread(() -> {
             try {
-                Estimator.Result r = Estimator.estimateModpack(mc, assumed, Config.get());
+                // Baja lo de la comunidad ya en el paso 1, para que la estimación lo descuente.
+                Estimator.Result r = Estimator.estimateModpack(mc, assumed, Config.get(), (done, all) -> {});
                 if (estimate == null) estimate = r;
             } catch (Throwable e) {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
@@ -287,12 +288,15 @@ public class WizardScreen extends BaseScreen {
             try {
                 checkAi(cfg, preset);
                 if (target != null) {
-                    Estimator.Result r = Estimator.estimateModpack(mc, target, cfg);
+                    Estimator.Result r = Estimator.estimateModpack(mc, target, cfg, (done, all) ->
+                            cTexts.set(Status.PENDING, "Bajando traducciones de la comunidad…", done + " de " + all + " archivos"));
                     estimate = r;
-                    if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada", "todo está en tu español");
+                    String fromCommunity = r.community() > 0 ? "la comunidad ya tenía " + Traductor.fmt(r.community()) : null;
+                    if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada",
+                            fromCommunity != null ? fromCommunity + " textos; el resto ya estaba en tu español" : "todo está en tu español");
                     else {
                         cTexts.set(Status.WARN, Traductor.fmt(r.texts()) + " textos sin traducir en " + r.mods() + " mods",
-                                "la primera vez tarda: " + r.duration(cfg) + " aprox.");
+                                (fromCommunity != null ? fromCommunity + " · " : "") + "la primera vez tarda: " + r.duration(cfg) + " aprox.");
                         cTexts.action("Comparar", this::openCompare);
                     }
                 } else {
@@ -453,7 +457,8 @@ public class WizardScreen extends BaseScreen {
                 int sy = 70 + Math.min(100, height - 28 - 70 - 10) + 6;
                 if (r != null && r.texts() > 0 && sy + 10 < height - 32) {
                     List<ServiceGuide.Option> o = ServiceGuide.OPTIONS;
-                    String line = "Este modpack: " + Traductor.fmt(r.texts()) + " textos · En tu PC " + o.get(o.size() - 1).duration(r.texts())
+                    String line = "Este modpack: " + Traductor.fmt(r.texts()) + " textos"
+                            + (r.community() > 0 ? " (+" + Traductor.fmt(r.community()) + " de la comunidad)" : "") + " · En tu PC " + o.get(o.size() - 1).duration(r.texts())
                             + " · En la nube " + o.get(0).duration(r.texts()) + " a " + o.get(2).duration(r.texts());
                     g.drawString(font, font.plainSubstrByWidth(line, W), left, sy, UiKit.DIM, false);
                 }
@@ -479,6 +484,10 @@ public class WizardScreen extends BaseScreen {
                         {"IA", p.label.replaceFirst(" \\(.*\\)", "") + " · " + cfg.model},
                         {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
                         {"Por traducir", r == null ? "—" : r.texts() == 0 ? "Nada pendiente" : Traductor.fmt(r.texts()) + " textos · " + r.duration(cfg)}};
+                String community = cfg.useSharedTranslations
+                        ? "• Primero usa lo que ya tradujo la comunidad" + (r != null && r.community() > 0 ? " (" + Traductor.fmt(r.community()) + " textos)" : "")
+                          + "; la IA hace solo lo que falta."
+                        : null;
                 int cw = (W - 12) / 3;
                 for (int i = 0; i < 3; i++) {
                     int cx = left + i * (cw + 6);
@@ -491,9 +500,11 @@ public class WizardScreen extends BaseScreen {
                                            : "• Sigue traduciendo mientras jugás: la IA está en la nube y no usa tu placa de video.")
                         : "• Traduce mientras estás en el menú. Al entrar a un mundo se pausa, y sigue al volver.";
                 for (String line : new String[]{
+                        community,
                         playing,
                         "• Si cerrás el juego, lo traducido queda guardado.",
                         "• Las próximas veces solo traduce lo nuevo, en segundos."}) {
+                    if (line == null) continue;
                     y = UiKit.wrapped(g, font, Component.literal(line), left, y, W, UiKit.MUTED) + 4;
                 }
             }

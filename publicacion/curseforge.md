@@ -30,7 +30,7 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 
 ## Requirements
 
-- Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** or **Fabric 1.21.1** (Fabric needs Fabric API; Mod Menu is optional). On 1.19.2, old-format FTB Quests are translated in memory, without changing the modpack's files.
+- Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** or **Fabric 1.21.1** (Fabric needs Fabric API; Mod Menu is optional). On 1.19.2, old-format FTB Quests and REI information pages with fixed text (like StaTech Industry's ore veins, made with KubeJS) are translated in memory, without changing the modpack's files.
 - **Client only.** Servers don't need it.
 - An AI, one of:
   - **On your PC:** Ollama with `translategemma:12b` (about 8 GB, ideal with a 12 GB GPU; a Gemma 3 trained for translation) or `translategemma:4b` for smaller GPUs.
@@ -75,7 +75,7 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 
 ## Qué necesitás
 
-- Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** o **Fabric 1.21.1** (Fabric necesita Fabric API; Mod Menu es opcional). En 1.19.2, las misiones de FTB Quests en formato viejo se traducen en memoria, sin cambiar los archivos del modpack.
+- Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** o **Fabric 1.21.1** (Fabric necesita Fabric API; Mod Menu es opcional). En 1.19.2, las misiones de FTB Quests en formato viejo y las fichas de información de REI con texto fijo (como las vetas de minerales de StaTech Industry, armadas con KubeJS) se traducen en memoria, sin cambiar los archivos del modpack.
 - **Solo cliente.** Los servidores no lo necesitan.
 - Una IA: **en tu PC** (Ollama con `translategemma:12b`, o `translategemma:4b` con menos VRAM) o **en la nube** (clave gratis de Gemini, Groq u OpenRouter). Los tiempos están en la tabla de arriba.
 

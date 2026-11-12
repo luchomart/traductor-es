@@ -2,7 +2,7 @@
 
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
 - **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y 5 jars en CurseForge (https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator). Forge y NeoForge aprobados; los 3 de Fabric estaban en revisión. Probada con Ollama en 1.20.1 y 1.21.1, y en StaTech (fichas de REI y tarjeta "Última traducción").
-- **A medias:** confirmar que CurseForge aprobó los jars de Fabric y pegar en la página la descripción nueva (`publicacion/curseforge.md`: ahora menciona las fichas de REI en 1.19.2).
+- **A medias:** CurseForge aprobó 1 de los 3 jars de Fabric (2026-11-12); falta que aprueben los otros 2. La descripción nueva (fichas de REI en 1.19.2) ya está en la página.
 - **Próximo paso:** la 1.3.0, traducciones compartidas (plan abajo). Empezar por el formato del repo de traducciones y cómo las baja el mod.
 - Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.

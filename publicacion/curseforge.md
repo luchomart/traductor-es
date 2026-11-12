@@ -26,6 +26,7 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 - **Correction editor.** Search any translated text in game and fix it; applied instantly.
 - **Hold Alt** on an item to see its original English text.
 - **Translates in the background** and only translates new texts after the first time. With a cloud AI it keeps going while you play; with a local AI it pauses in game to keep your FPS.
+- **Community translations.** Before using the AI, it downloads what other players already translated for *your* mods, from a public [GitHub repo](https://github.com/luchomart/traductor-es-traducciones). Saves quota and hours. Can be turned off («Bajar de la comunidad»).
 - **Share it:** export the translations as a resource pack so friends with the same modpack don't need an AI.
 
 ## Requirements
@@ -46,7 +47,9 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 
 ## Privacy
 
-With a cloud service, your mods' texts are sent to that service, and your API key is stored in plain text in `.traductor_es/claves.json` in your user folder, so all your modpacks can use it. It is **not** saved inside the modpack, so exporting your `config` folder doesn't leak it. If you turn off «Claves compartidas» (shared keys), each modpack keeps its own key in `config/traductor_es/config.json` instead. Don't share those files. With Ollama nothing leaves your PC.
+With a cloud service, your mods' texts are sent to that service, and your API key is stored in plain text in `.traductor_es/claves.json` in your user folder, so all your modpacks can use it. It is **not** saved inside the modpack, so exporting your `config` folder doesn't leak it. If you turn off «Claves compartidas» (shared keys), each modpack keeps its own key in `config/traductor_es/config.json` instead. Don't share those files. With Ollama your texts never leave your PC.
+
+**Community translations** (on by default): the mod downloads files from GitHub (`raw.githubusercontent.com`), only for the mods you have installed. Like any download, GitHub sees your IP address and the names of those mods. No text is ever uploaded. Turn it off with «Bajar de la comunidad» in the Traducción tab.
 
 ## Made with AI assistance
 
@@ -71,6 +74,7 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 - **Editor de correcciones.** Buscá cualquier texto traducido dentro del juego y corregilo; se aplica al instante.
 - **Mantené Alt** sobre un objeto para ver su texto original en inglés.
 - **Traduce en segundo plano** y después de la primera vez solo lo nuevo. Con IA en la nube sigue mientras jugás; con IA en tu PC se pausa en el mundo para no bajar los FPS.
+- **Traducciones de la comunidad.** Antes de usar la IA, baja lo que otros jugadores ya tradujeron de *tus* mods, desde un [repo público de GitHub](https://github.com/luchomart/traductor-es-traducciones). Ahorra cupo y horas. Se puede apagar («Bajar de la comunidad»).
 - **Compartilo:** exportá las traducciones como resource pack para amigos con el mismo modpack, sin IA.
 
 ## Qué necesitás
@@ -81,7 +85,9 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 
 ## Privacidad
 
-Con un servicio en la nube, los textos de tus mods se envían a ese servicio y la clave queda guardada en `.traductor_es/claves.json` dentro de tu carpeta de usuario, para que la usen todos tus modpacks. **No** se guarda dentro del modpack: si exportás la carpeta `config`, la clave no va adentro. Si desactivás «Claves compartidas», cada modpack guarda la suya en `config/traductor_es/config.json`. No compartas esos archivos. Con Ollama nada sale de tu PC.
+Con un servicio en la nube, los textos de tus mods se envían a ese servicio y la clave queda guardada en `.traductor_es/claves.json` dentro de tu carpeta de usuario, para que la usen todos tus modpacks. **No** se guarda dentro del modpack: si exportás la carpeta `config`, la clave no va adentro. Si desactivás «Claves compartidas», cada modpack guarda la suya en `config/traductor_es/config.json`. No compartas esos archivos. Con Ollama tus textos no salen de tu PC.
+
+**Traducciones de la comunidad** (prendido de entrada): el mod baja archivos de GitHub (`raw.githubusercontent.com`), solo de los mods que tenés instalados. Como en cualquier descarga, GitHub ve tu IP y los nombres de esos mods. Nunca se sube ningún texto. Se apaga con «Bajar de la comunidad» en la pestaña Traducción.
 
 ## Hecho con ayuda de IA
 

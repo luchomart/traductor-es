@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+**English**
+- Community translations: before using the AI, the mod downloads what other players already translated for your installed mods, from the public repo [luchomart/traductor-es-traducciones](https://github.com/luchomart/traductor-es-traducciones). Only files that changed are downloaded again. Translations reviewed by a person come first; your own corrections always win. Mod texts and books only (not quests or REI pages). Turn it off with «Bajar de la comunidad» in the Traducción tab. Nothing is uploaded.
+- If there is no translation for your Spanish variant, another variant is used only for short names; longer texts go to the AI.
+
+**Español**
+- Traducciones de la comunidad: antes de usar la IA, el mod baja lo que otros jugadores ya tradujeron de tus mods instalados, desde el repo público [luchomart/traductor-es-traducciones](https://github.com/luchomart/traductor-es-traducciones). Solo se vuelve a bajar lo que cambió. Primero van las revisadas por una persona; tus correcciones siempre ganan. Solo textos de mods y libros (no misiones ni fichas de REI). Se apaga con «Bajar de la comunidad» en la pestaña Traducción. No se sube nada.
+- Si no hay traducción de tu variante del español, se usa la de otra solo para nombres cortos; los textos largos van a la IA.
+
 ## 1.2.0
 
 **English**

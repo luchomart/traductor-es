@@ -3,9 +3,11 @@
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
 - **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y 5 jars en CurseForge (https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator). Forge y NeoForge aprobados; los 3 de Fabric estaban en revisión. Probada con Ollama en 1.20.1 y 1.21.1, y en StaTech (fichas de REI y tarjeta "Última traducción").
 - **A medias:** CurseForge aprobó 1 de los 3 jars de Fabric (2026-11-12); falta que aprueben los otros 2. La descripción nueva (fichas de REI en 1.19.2) ya está en la página.
-- **1.3.0 en curso, etapas 1 y 2 hechas (2026-11-12):** repo de datos en `../traductor-es-traducciones/` (público en GitHub: luchomart/traductor-es-traducciones), con StaTech + Valhelsia en es_ar (350 archivos, 30.199 textos), `herramientas/validar.py` y CI. Se carga con `tools/compartir.py`.
+- **1.3.0 lista para publicar (2026-11-12), etapas 1 a 3 hechas:** repo de datos en `../traductor-es-traducciones/` (público en GitHub: luchomart/traductor-es-traducciones), con StaTech + Valhelsia en es_ar (350 archivos, 30.199 textos), `herramientas/validar.py` y CI. Se carga con `tools/compartir.py`.
 - Etapa 2: el mod baja y usa las traducciones (opción "Bajar de la comunidad" en el panel). Probada en `run/` de 1.19.2 sin caché: 469 textos de la comunidad, solo las misiones a la IA; segunda pasada: 0 bajados, 12 al día, nada por traducir.
-- **Próximo paso:** ajustar "texto corto" para otras variantes (hoy ≤40 caracteres sin punto final) cuando haya datos de otra variante; el estimador del asistente todavía no descuenta lo de la comunidad. Después etapa 3 (README, CurseForge, Guía) y subir `mod_version` a 1.3.0.
+- Etapa 3: README (sección "Traducciones de la comunidad"), CurseForge (función + privacidad: GitHub ve IP y nombres de mods), Guía (sección "La comunidad"), prompt de ayuda, CHANGELOG y `mod_version=1.3.0`.
+- **Próximo paso:** publicar 1.3.0 (`./gradlew build`, jars a `publicacion/subir-1.3.0/`, tag `v1.3.0`, CurseForge con la descripción nueva). Antes, probarla en otra versión (NeoForge o Fabric 1.21.1) con Ollama.
+- Pendientes chicos de 1.3.0: ajustar "texto corto" para otras variantes (hoy ≤40 caracteres sin punto final) cuando haya datos de otra variante; el estimador del asistente todavía no descuenta lo de la comunidad.
 - Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.
 
@@ -29,7 +31,7 @@ Objetivo: que la gente **descargue** lo que otro ya tradujo para ahorrar cupo y 
 - [x] Etapa 1: `tools/compartir.py` + repo de datos local con validador y CI
 - [x] Subir el repo a GitHub: https://github.com/luchomart/traductor-es-traducciones (CI en verde)
 - [x] Etapa 2: descarga y uso en el mod (`SharedTranslations.java`, `TranslationJob`, `Config`, `ConfigScreen`, tests)
-- [ ] Etapa 3: README, CurseForge y Guía
+- [x] Etapa 3: README, CurseForge y Guía
 
 ## Fase 1: robustez y tests
 - [x] Reintentos con espera ante errores pasajeros (Ollama reiniciado, 429, 5xx, timeouts) en vez de cancelar

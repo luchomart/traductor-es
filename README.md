@@ -2,10 +2,11 @@
 
 Mod de Minecraft que **traduce al español todos los textos de tus mods**: nombres de objetos, descripciones, menús, manuales del juego y misiones. Traduce al español que tengas elegido en el juego: **España, México, Argentina, Chile, Uruguay, Venezuela o Ecuador**, cada uno con sus palabras ("cubo" o "balde", "tienes" o "tenés").
 
-Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuentas y sin mandar nada a internet) o, si tu PC no da, un **servicio en la nube**.
+Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuentas y sin mandar tus textos a internet) o, si tu PC no da, un **servicio en la nube**.
 
 - Si un mod ya trae tu español, lo respeta y no lo toca.
 - Si trae otro español, lo usa en vez de traducir.
+- Si otros jugadores ya tradujeron ese mod, **baja su traducción** en vez de traducirlo ([traducciones de la comunidad](#traducciones-de-la-comunidad)).
 - Lo que falta lo traduce la IA, y lo guarda para no volver a traducirlo.
 
 ## Qué necesitás
@@ -96,6 +97,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 | Libros y misiones | Los manuales y guías del juego (Patchouli, Tinkers' Construct, GuideME —AE2 y sus agregados, Powah—, el manual de Immersive Engineering y el diccionario de Alex's Mobs) y las misiones de FTB Quests. Las misiones se ven al volver a entrar al mundo, y solo en mundos de un jugador (en un servidor las misiones vienen del servidor). En Fabric 1.19.2 incluye las fichas de información de REI con texto fijo: se detectan al entrar a un mundo y se traducen la siguiente vez que trabaja el mod. |
 | Original con Alt | Con **Alt** apretado sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés. Sirve para buscar guías o recetas en internet. |
 | Otras variantes | Si un mod no trae tu español pero sí otro, usarlo en vez de traducir. |
+| Bajar de la comunidad | Antes de usar la IA, descargar lo que otros jugadores ya tradujeron. Ver [Traducciones de la comunidad](#traducciones-de-la-comunidad). |
 | Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |
 
 **Pestaña Herramientas**: exportar el pack (`resourcepacks/TraductorES-traducciones.zip`, para amigos con el mismo modpack: lo activan como cualquier paquete de recursos, sin IA ni este mod), ver el informe, abrir la carpeta y volver a abrir el asistente.
@@ -171,6 +173,19 @@ Si querés que una palabra se traduzca **siempre igual** en todos los mods, agre
 }
 ```
 
+## Traducciones de la comunidad
+
+Lo que traduce un jugador le puede servir a otro: hay un repo público con traducciones por mod, [luchomart/traductor-es-traducciones](https://github.com/luchomart/traductor-es-traducciones). Antes de usar la IA, el mod baja de ahí las de **los mods que tenés instalados** (y solo si cambiaron desde la última vez). Ahorra cupo y horas de traducción.
+
+- **Orden:** tus correcciones → traducciones de la comunidad revisadas por una persona → tu propio caché → traducciones de la comunidad hechas por IA → la IA.
+- Pasan por los mismos controles que lo que traduce tu IA (colores, marcadores…).
+- Si no hay de tu español, usa las de otro país **solo para nombres cortos** ("Unidad ME" es igual en todos lados); los textos largos van a la IA, por el voseo o el "tú".
+- Libros sí; misiones de FTB Quests y fichas de REI no, porque son de cada modpack.
+- **Se apaga** en Traducción → Bajar de la comunidad. Tus traducciones **nunca se suben solas**.
+- Al bajarlas, GitHub ve tu IP y los nombres de tus mods (como cualquier descarga). No se manda ningún texto.
+
+**Aportar:** las instrucciones están en el [README del repo](https://github.com/luchomart/traductor-es-traducciones#aportar). En corto: `tools/compartir.py` pasa tu caché y tus correcciones al formato del repo (la variante sale sola) y abrís un pull request. Tus correcciones entran como revisadas.
+
 ## Problemas comunes
 
 **"No se pudo conectar con la IA".** Ollama no está abierto. En Windows buscá "Ollama" en el menú inicio y abrilo; en Linux, `sudo systemctl start ollama`. Después usá **Probar conexión**.
@@ -237,6 +252,7 @@ Todo está en `config/traductor_es/` dentro de la carpeta del modpack:
 | `glosario.json` | Términos que siempre se traducen igual |
 | `informe.txt` | Resumen de la última traducción y textos que fallaron |
 | `cache/` | Todas las traducciones hechas, una carpeta por idioma (si la borrás, se traduce todo de nuevo) |
+| `compartidas/` | Traducciones bajadas de la comunidad (se pueden borrar: se vuelven a bajar) |
 | `pack/` | El paquete de recursos que usa el juego (se genera solo) |
 
 ---

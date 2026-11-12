@@ -37,3 +37,5 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - No compilar con un modpack abierto: la RAM queda justa (1,4 GB libres con StaTech) y el sistema podría cerrar el juego.
 - `unzip` no está instalado: inspeccionar jars con `bsdtar` o `zipfile` de Python, y sin esconder errores con `2>/dev/null`.
 - Repo público: commits con el email noreply (ya configurado). Nada personal en el repo.
+- Antes de una prueba real en `run/`, mirar el caché: puede tener traducciones de la IA falsa y entonces no se le manda nada a la IA (moverlo aparte).
+- En mixins `@Pseudo` sobre mods opcionales (REI, FTB Quests) no usar `@Shadow`: si el campo cambia de nombre, crashea; leerlo por reflexión.

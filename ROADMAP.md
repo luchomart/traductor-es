@@ -1,15 +1,11 @@
 # Hoja de ruta hacia la publicación
 
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
-- **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
-- **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
-- **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y los 5 jars subidos a CurseForge (Forge y NeoForge aprobados; los de Fabric, en revisión al subirlos). Fabric 1.19.2 nueva, con libros de Patchouli en `data/`, misiones en formato viejo y fichas de REI (solo esa versión). La 1.1.0 nunca se subió a CurseForge (en GitHub tampoco tiene tag). Descargas de la 1.0.0 hasta ese día: 1.035.
-- **Pruebas antes de publicar, hechas (2026-11-12):** traducción real con Ollama en Fabric 1.20.1 (es_ar, 121/121) y Fabric 1.21.1 (es_es, 517/517), sin fallidos. Alt en StaTech ya probado.
-- **Probado en StaTech (2026-11-12):** fichas de información de REI (128 plantillas traducidas, se ven en español) y tarjeta "Última traducción". Jars nuevos en `publicacion/subir-1.2.0/`.
-- Detalle menor: la IA alterna "Mena de" y "Mineral de" en las fichas; se corrige con el editor si molesta.
-- **Próximo paso:** confirmar que CurseForge aprobó los jars de Fabric; después, la 1.3.0 (traducciones compartidas, ver abajo).
-- **Misiones y libros en 1.20.1:** "Create- Too Many Addons" no da motivo para portarlos: no tiene FTB Quests ni Patchouli, y sus libros son de formatos ya soportados (AE2 con GuideME, Alex's Mobs y Citadel). Queda a la espera de un modpack real que lo necesite.
-- También pendiente: atender los primeros reportes.
+- **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y 5 jars en CurseForge (https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator). Forge y NeoForge aprobados; los 3 de Fabric estaban en revisión. Probada con Ollama en 1.20.1 y 1.21.1, y en StaTech (fichas de REI y tarjeta "Última traducción").
+- **A medias:** confirmar que CurseForge aprobó los jars de Fabric y pegar en la página la descripción nueva (`publicacion/curseforge.md`: ahora menciona las fichas de REI en 1.19.2).
+- **Próximo paso:** la 1.3.0, traducciones compartidas (plan abajo). Empezar por el formato del repo de traducciones y cómo las baja el mod.
+- Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
+- Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
@@ -65,7 +61,7 @@ Objetivo: que la gente **descargue** lo que otro ya tradujo para ahorrar cupo y 
 - [x] Fabric 1.19.2: panel, tooltips, hints y editor probados en cliente de desarrollo; traducción real en StaTech Industry
 - [x] Regresión tras el refactor: panel abierto en Fabric 1.20.1 y 1.21.1, Forge 1.20.1 y NeoForge 1.21.1
 - [x] Fabric 1.19.2: Alt sobre un objeto traducido, probado en StaTech con el jar corregido (se declara solo 1.19.2; 1.19.1 no se probó)
-- [ ] "Última traducción" (Herramientas): un informe largo se sale de la tarjeta y pisa el botón (arreglo escrito: corta con «…»; falta compilar y verlo en el juego)
+- [x] "Última traducción" (Herramientas): un informe largo se sale de la tarjeta y pisa el botón (arreglo escrito: corta con «…»; falta compilar y verlo en el juego)
 
 ## Fase 4: FTB Quests
 - [x] Traducir misiones (formato con archivos de idioma, FTB Quests 2101+): conserva el español oficial y agrega lo que falta

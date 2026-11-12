@@ -198,6 +198,9 @@ public class ConfigScreen extends BaseScreen {
         toggle(innerX, y, half, "Cambio automático", () -> cfg.autoSwitch, v -> cfg.autoSwitch = v,
                 "Si se acaba el cupo, va muy lenta 3 minutos o va lenta y faltan más de 2 horas: pasa sola a otro modelo del mismo "
                         + "servicio o a otro servicio gratis del que tengas clave. Nunca a uno de pago ni de tu PC a la nube.");
+        toggle(innerX + half + 4, y, half, "Bajar de la comunidad", () -> cfg.useSharedTranslations, v -> cfg.useSharedTranslations = v,
+                "Antes de usar la IA, descargar las traducciones que la comunidad ya hizo (de GitHub: luchomart/traductor-es-traducciones). "
+                        + "Solo se bajan los mods que tenés instalados; ahorra cupo y tiempo.");
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
         batch.setFilter(s -> s.chars().allMatch(Character::isDigit));

@@ -78,7 +78,9 @@ public class TranslationJob implements Runnable {
     public volatile String message = "Buscando textos…";
     public volatile String currentNamespace = "";
     public volatile int total, done, failed;
-    public volatile int official, fromVariants, fromCache, corrected, bookFiles;
+    public volatile int official, fromVariants, fromCache, fromShared, corrected, bookFiles;
+    /** Traducciones de otros jugadores; null si la opción está apagada. */
+    private SharedTranslations shared;
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
     /** Se escribieron misiones nuevas: se ven al volver a entrar al mundo. */
@@ -333,6 +335,15 @@ public class TranslationJob implements Runnable {
         caps = Capitalization.learn(vanilla.getOrDefault(target, Map.of()));
 
         Set<String> excluded = new HashSet<>(cfg.excludedNamespaces);
+        List<Books.Book> allBooks = new ArrayList<>();
+        if (cfg.translateBooks) {
+            allBooks.addAll(scan.books());
+            if (Platform.readsDataBooks()) {
+                allBooks.addAll(Books.scanDataBooks(jarBooks, target, cfg.useSpanishVariants ? fallbacks : List.of()));
+            }
+        }
+        prepareShared(all.keySet(), excluded, allBooks);
+
         for (Map.Entry<String, Map<String, Map<String, String>>> nsEntry : all.entrySet()) {
             String ns = nsEntry.getKey();
             if (excluded.contains(ns)) continue;
@@ -354,9 +365,9 @@ public class TranslationJob implements Runnable {
                 String variant = cfg.useSpanishVariants ? fromVariant(langs, key, text) : null;
                 if (variant != null) { nsOut.put(key, variant); fromVariants++; glossary.addModName(ns, key, text, variant); continue; }
                 if (Validator.isTrivial(text)) continue;
-                String cached = usableCache(ns, key, text);
-                if (cached != null) {
-                    nsOut.put(key, cached); fromCache++; glossary.addModName(ns, key, text, cached); continue;
+                String reused = reuse(ns, key, text);
+                if (reused != null) {
+                    nsOut.put(key, reused); glossary.addModName(ns, key, text, reused); continue;
                 }
                 enqueue(ns, ns, key, key, text, Glossary.NAME_KEY.matcher(key).matches());
             }
@@ -367,10 +378,6 @@ public class TranslationJob implements Runnable {
         });
 
         if (cfg.translateBooks) {
-            List<Books.Book> allBooks = new ArrayList<>(scan.books());
-            if (Platform.readsDataBooks()) {
-                allBooks.addAll(Books.scanDataBooks(jarBooks, target, cfg.useSpanishVariants ? fallbacks : List.of()));
-            }
             prepareBooks(allBooks);
             prepareQuests();
             prepareInfoTexts();
@@ -383,8 +390,8 @@ public class TranslationJob implements Runnable {
         // Primero los nombres: después se usan como glosario en descripciones y libros.
         pending.sort(Comparator.comparing((Item it) -> !it.isName));
         total = pending.size();
-        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, correcciones: {}, archivos de libros: {}, textos de misiones: {}, omitidos por fallar: {}, por traducir: {}",
-                glossary.size(), official, fromVariants, fromCache, corrected, bookFiles, questTexts, skipped, total);
+        TraductorES.LOG.info("[Traductor ES] Glosario: {} términos. Oficiales: {}, variantes: {}, caché: {}, compartidas: {}, correcciones: {}, archivos de libros: {}, textos de misiones: {}, omitidos por fallar: {}, por traducir: {}",
+                glossary.size(), official, fromVariants, fromCache, fromShared, corrected, bookFiles, questTexts, skipped, total);
         return pending;
     }
 
@@ -401,8 +408,8 @@ public class TranslationJob implements Runnable {
                     if (Validator.isTrivial(text)) return;
                     String key = file.getKey() + "#" + pointer;
                     if (corrections.getOrDefault(pseudo, Map.of()).containsKey(key)) return; // ya está en la salida
-                    String cached = usableCache(pseudo, key, text);
-                    if (cached != null) { bookOut.put(key, cached); fromCache++; return; }
+                    String reused = reuse(pseudo, key, text);
+                    if (reused != null) { bookOut.put(key, reused); return; }
                     String field = pointer.substring(pointer.lastIndexOf('/') + 1);
                     enqueue(pseudo, book.ns, key, book.format.name().toLowerCase(Locale.ROOT) + "." + book.book + "." + field + "." + (++bookCounter), text, false);
                 });
@@ -481,6 +488,38 @@ public class TranslationJob implements Runnable {
         String cached = usableCache(ns, key, text);
         if (cached != null) { output.computeIfAbsent(ns, k -> new TreeMap<>()).put(key, cached); fromCache++; return; }
         enqueue(ns, modNs, key, modNs + "." + key, text, false);
+    }
+
+    /**
+     * Baja (si hace falta) las traducciones compartidas de los mods y libros instalados. Al solo aplicar correcciones
+     * no se baja nada, pero se usa lo que ya estaba. Si falla, se sigue con lo que haya: nunca frena la traducción.
+     */
+    private void prepareShared(Set<String> namespaces, Set<String> excluded, List<Books.Book> allBooks) {
+        if (!cfg.useSharedTranslations) return;
+        shared = new SharedTranslations(Config.DIR.resolve("compartidas"), target, cfg.useSpanishVariants ? fallbacks : List.of());
+        if (applyOnly) return;
+        Set<String> wanted = new HashSet<>(namespaces);
+        wanted.removeAll(excluded);
+        for (Books.Book b : allBooks) wanted.add(b.pseudoNamespace());
+        message = "Bajando traducciones de la comunidad…";
+        SharedTranslations.Update u = shared.update(wanted, SharedTranslations.BASE_URL, SharedTranslations.HTTP);
+        if (u.error() != null) TraductorES.LOG.warn("[Traductor ES] Traducciones compartidas: {}", u.error());
+        TraductorES.LOG.info("[Traductor ES] Traducciones compartidas: {} archivos bajados, {} ya al día", u.downloaded(), u.upToDate());
+        message = "Buscando textos en los mods…";
+    }
+
+    /**
+     * Una traducción que ya existe, en este orden: compartida revisada por una persona → caché propio → compartida de la
+     * IA (o de otra variante, solo nombres cortos). Las compartidas pasan por el mismo control que el caché.
+     */
+    private String reuse(String ns, String key, String text) {
+        SharedTranslations.Hit hit = shared == null ? null : shared.get(ns, text);
+        if (hit != null && Validator.check(text, hit.text()) != null) hit = null;
+        if (hit != null && hit.revised() && hit.sameVariant()) { fromShared++; return hit.text(); }
+        String cached = usableCache(ns, key, text);
+        if (cached != null) { fromCache++; return cached; }
+        if (hit != null) { fromShared++; return hit.revised() ? hit.text() : caps.apply(text, hit.text()); }
+        return null;
     }
 
     /** Traducción del caché si sigue valiendo: mismo original, marcadores bien y no "olvidada" sin traducir. */
@@ -1270,6 +1309,8 @@ public class TranslationJob implements Runnable {
         sb.append("Copiados de otra variante del español: ").append(fromVariants).append('\n');
         sb.append("Correcciones manuales aplicadas: ").append(corrected).append('\n');
         sb.append("Reutilizados del caché: ").append(fromCache).append('\n');
+        sb.append("Descargados de la comunidad: ").append(fromShared)
+                .append(cfg.useSharedTranslations ? "" : " (opción apagada)").append('\n');
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
                 .append(quests == null && oldQuests == null ? " (el modpack no tiene misiones que se puedan traducir)" : "").append('\n');

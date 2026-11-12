@@ -59,6 +59,8 @@ public class Config {
     public String targetLanguage = "auto";
     /** Usar otras variantes del español (es_mx, es_ar…) cuando un mod no trae la de destino. */
     public boolean useSpanishVariants = true;
+    /** Bajar y usar lo que otros ya tradujeron (repo luchomart/traductor-es-traducciones en GitHub) antes de usar la IA. */
+    public boolean useSharedTranslations = true;
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
     /**

@@ -3,7 +3,8 @@
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
 - **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y 5 jars en CurseForge (https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator). Forge y NeoForge aprobados; los 3 de Fabric estaban en revisión. Probada con Ollama en 1.20.1 y 1.21.1, y en StaTech (fichas de REI y tarjeta "Última traducción").
 - **A medias:** CurseForge aprobó 1 de los 3 jars de Fabric (2026-11-12); falta que aprueben los otros 2. La descripción nueva (fichas de REI en 1.19.2) ya está en la página.
-- **Próximo paso:** la 1.3.0, traducciones compartidas (plan abajo). Empezar por el formato del repo de traducciones y cómo las baja el mod.
+- **1.3.0 en curso, etapa 1 hecha (2026-11-12):** repo de datos en `../traductor-es-traducciones/` (local, sin subir a GitHub), con StaTech + Valhelsia en es_ar (350 archivos, 30.199 textos), `herramientas/validar.py` y CI. Se carga con `tools/compartir.py`.
+- **Próximo paso:** crear `luchomart/traductor-es-traducciones` en GitHub (público) y subirlo; después, etapa 2: que el mod las baje (`SharedTranslations.java`).
 - Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.
 
@@ -17,6 +18,17 @@ Objetivo: que la gente **descargue** lo que otro ya tradujo para ahorrar cupo y 
 - Marcar las revisadas por una persona y darles prioridad.
 - Subir desde el juego (servidor propio, moderación) solo si la comunidad lo pide.
 - Precedente: CFPA "Minecraft Mod Language Package" (comunidad china, repo de GitHub + resource pack).
+- Decidido (2026-11-12):
+  - Formato: `es_ar/<archivo del caché>.json` = `{"revisadas": {inglés: español}, "ia": {...}}` + `index.json` con hash por archivo. Libros sí; misiones y REI no.
+  - La variante sale sola de la carpeta del caché (nadie la declara); el CI rechaza variantes desconocidas.
+  - Prioridad en el mod: correcciones → compartidas revisadas → caché propio → compartidas de la IA → IA.
+  - Sin archivo de tu variante: usar otra variante solo para textos cortos (nombres); los largos van a la IA (voseo/tú).
+  - Bajar solo los archivos de los mods instalados y solo si cambió el hash; guardarlas en `compartidas/`, aparte del caché. Si GitHub falla, seguir con la IA.
+  - Licencia del repo de datos: CC BY-NC-SA 4.0 (como CFPA); herramientas MIT.
+- [x] Etapa 1: `tools/compartir.py` + repo de datos local con validador y CI
+- [ ] Subir el repo a GitHub
+- [ ] Etapa 2: descarga y uso en el mod (`SharedTranslations.java`, `TranslationJob`, `Config`, `ConfigScreen`, tests)
+- [ ] Etapa 3: README, CurseForge y Guía
 
 ## Fase 1: robustez y tests
 - [x] Reintentos con espera ante errores pasajeros (Ollama reiniciado, 429, 5xx, timeouts) en vez de cancelar

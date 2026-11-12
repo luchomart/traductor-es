@@ -177,10 +177,11 @@ public final class Traductor {
             return;
         }
         // Se evalúa una vez por idioma: si el jugador lo cambia a español durante la sesión, arranca.
+        // También al volver de un mundo con fichas de REI nuevas: esos textos recién aparecen al entrar.
         String lang = mc.options.languageCode;
-        if (lang.equals(autoStartCheckedLang)) return;
-        autoStartCheckedLang = lang;
         Config cfg = Config.get();
+        if (lang.equals(autoStartCheckedLang) && !(cfg.translateBooks && InfoTexts.hasNew())) return;
+        autoStartCheckedLang = lang;
         if (!cfg.autoStart || isRunning()) return;
         // Cerró el asistente sin terminarlo: no se traduce por su cuenta hasta que lo complete (o lo desactive).
         if (!cfg.setupDone && cfg.showWizard) return;
@@ -223,6 +224,7 @@ public final class Traductor {
 
     /** Al cerrar el juego. */
     public static void onShutdown() {
+        InfoTexts.save();
         TranslationJob j = job;
         if (j != null && j.isRunning()) j.flushCache();
     }

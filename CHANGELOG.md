@@ -5,10 +5,12 @@
 **English**
 - On Fabric 1.19.2, also translates FTB Quests in the old format (texts inside the chapters), such as StaTech Industry. The modpack's files are not changed: the translation is applied in memory and shows up when you enter a world.
 - Time estimates now include books and quests. Exporting the pack warns about what needs the mod. Patchouli templates are no longer sent to the AI, and books inside nested jars are found.
+- On Fabric 1.19.2, also translates REI information pages with fixed text, such as the ore vein pages that StaTech Industry builds with KubeJS. They are detected when you enter a world and translated the next time the mod runs. Controlled by the "Libros y misiones" option.
 
 **Español**
 - En Fabric 1.19.2 también se traducen las misiones de FTB Quests en el formato viejo (textos dentro de los capítulos), como las de StaTech Industry. Los archivos del modpack no cambian: la traducción se aplica en memoria y se ve al entrar a un mundo.
 - Las estimaciones de tiempo ahora cuentan libros y misiones. Al exportar el pack se avisa qué necesita el mod. Las plantillas de Patchouli ya no van a la IA y se encuentran los libros dentro de jars anidados.
+- En Fabric 1.19.2 también se traducen las fichas de información de REI con texto fijo, como las de vetas de minerales que StaTech Industry arma con KubeJS. Se detectan al entrar a un mundo y se traducen la siguiente vez que trabaja el mod. Las controla la opción "Libros y misiones".
 
 ## 1.1.0
 

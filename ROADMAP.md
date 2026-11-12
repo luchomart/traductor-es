@@ -1,17 +1,26 @@
 # Hoja de ruta hacia la publicación
 
-## 📍 Dónde quedamos (actualizado 2026-11-05)
+## 📍 Dónde quedamos (actualizado 2026-11-12)
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
 - **1.2.0 lista, sin publicar:** Fabric 1.19.2 nueva, con libros de Patchouli en `data/` y misiones en formato viejo (solo esa versión). Probada en StaTech Industry: traducción completa y 2.936 textos de misiones aplicados. Commits solo locales; jars en `publicacion/subir-1.2.0/`.
 - **Antes de publicar:** traducción real con Ollama en una versión de 1.20.1 y una de 1.21.1 (después del refactor solo se abrieron pantallas). Alt en StaTech ya probado: funciona.
-- **Commiteado pero sin compilar:** arreglo de la tarjeta "Última traducción" y link de CurseForge en el README. Hay que compilar, correr los tests, mirar la pestaña Herramientas y regenerar los jars de `publicacion/subir-1.2.0/`, que quedaron viejos.
-- **Próximo paso (con el juego cerrado):** compilar y hacer esas pruebas, después push y tag `v1.2.0`, y subir a CurseForge.
+- **Probado en StaTech (2026-11-12):** fichas de información de REI (128 plantillas traducidas, se ven en español) y tarjeta "Última traducción". Jars nuevos en `publicacion/subir-1.2.0/`.
+- Detalle menor: la IA alterna "Mena de" y "Mineral de" en las fichas; se corrige con el editor si molesta.
+- **Próximo paso:** traducción real con Ollama en 1.20.1 y 1.21.1 (en `run/`), después commit, push y tag `v1.2.0`, y subir a CurseForge.
 - **Misiones y libros en 1.20.1:** "Create- Too Many Addons" no da motivo para portarlos: no tiene FTB Quests ni Patchouli, y sus libros son de formatos ya soportados (AE2 con GuideME, Alex's Mobs y Citadel). Queda a la espera de un modpack real que lo necesite.
 - También pendiente: atender los primeros reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
+
+## Idea para 1.3.0: traducciones compartidas (después de publicar 1.2.0)
+Objetivo: que la gente **descargue** lo que otro ya tradujo para ahorrar cupo y tiempo (colaborar corrigiendo es secundario).
+- Plan elegido: repo público en GitHub con las traducciones **por mod** (no por modpack), con el texto en inglés como clave para que sirvan aunque el mod se actualice. Misiones y fichas de REI, por modpack.
+- El mod las baja antes de usar la IA, con una opción visible y apagable (avisarlo en CurseForge). Se aportan por pull request; el repo arranca con lo ya traducido (StaTech, packs de prueba, correcciones).
+- Marcar las revisadas por una persona y darles prioridad.
+- Subir desde el juego (servidor propio, moderación) solo si la comunidad lo pide.
+- Precedente: CFPA "Minecraft Mod Language Package" (comunidad china, repo de GitHub + resource pack).
 
 ## Fase 1: robustez y tests
 - [x] Reintentos con espera ante errores pasajeros (Ollama reiniciado, 429, 5xx, timeouts) en vez de cancelar

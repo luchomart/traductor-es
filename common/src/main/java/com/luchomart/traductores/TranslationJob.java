@@ -117,6 +117,8 @@ public class TranslationJob implements Runnable {
     private volatile FtbQuests.Quests quests;
     /** Misiones en el formato viejo (clave → renglón), o null si no corresponde. */
     private volatile Map<String, String> oldQuests;
+    /** Plantillas de las fichas de REI, clave → texto (ver InfoTexts). */
+    private volatile Map<String, String> infoTexts;
     public volatile int questTexts;
     private Glossary glossary;
     private long lastFlushMs;
@@ -371,6 +373,7 @@ public class TranslationJob implements Runnable {
             }
             prepareBooks(allBooks);
             prepareQuests();
+            prepareInfoTexts();
         }
         glossary.sort();
 
@@ -460,10 +463,24 @@ public class TranslationJob implements Runnable {
     private void queueQuestText(String key, String text) {
         if (Validator.isTrivial(text)) return;
         questTexts++;
-        if (corrections.getOrDefault(FtbQuests.NS, Map.of()).containsKey(key)) return; // ya está en la salida
-        String cached = usableCache(FtbQuests.NS, key, text);
-        if (cached != null) { output.computeIfAbsent(FtbQuests.NS, k -> new TreeMap<>()).put(key, cached); fromCache++; return; }
-        enqueue(FtbQuests.NS, "ftbquests", key, "ftbquests." + key, text, false);
+        queueLoose(FtbQuests.NS, "ftbquests", key, text);
+    }
+
+    /** Fichas de REI con texto fijo: las que se capturaron al entrar a un mundo, en esta sesión o en otra. */
+    private void prepareInfoTexts() {
+        Map<String, String> lines = InfoTexts.known();
+        if (lines.isEmpty()) return;
+        infoTexts = lines;
+        TraductorES.LOG.info("[Traductor ES] Fichas de REI: {} textos distintos", lines.size());
+        lines.forEach((key, text) -> queueLoose(InfoTexts.NS, "rei", key, text));
+    }
+
+    /** Un texto suelto: si no está en las correcciones ni en el caché, va a la IA. */
+    private void queueLoose(String ns, String modNs, String key, String text) {
+        if (corrections.getOrDefault(ns, Map.of()).containsKey(key)) return; // ya está en la salida
+        String cached = usableCache(ns, key, text);
+        if (cached != null) { output.computeIfAbsent(ns, k -> new TreeMap<>()).put(key, cached); fromCache++; return; }
+        enqueue(ns, modNs, key, modNs + "." + key, text, false);
     }
 
     /** Traducción del caché si sigue valiendo: mismo original, marcadores bien y no "olvidada" sin traducir. */
@@ -554,6 +571,7 @@ public class TranslationJob implements Runnable {
         if (oldQuests != null) {
             questsChanged |= FtbQuests.writeOld(target, oldQuests, output.getOrDefault(FtbQuests.NS, Map.of()));
         }
+        if (infoTexts != null) InfoTexts.write(target, infoTexts, output.getOrDefault(InfoTexts.NS, Map.of()));
         return changed;
     }
 

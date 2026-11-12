@@ -46,7 +46,7 @@ Bajá el mod de [CurseForge](https://www.curseforge.com/minecraft/mc-mods/traduc
 - `traductor_es-neoforge-1.21.1-….jar` para modpacks de **NeoForge 1.21.1**
 - `traductor_es-fabric-1.20.1-….jar` para modpacks de **Fabric 1.20.1**
 - `traductor_es-fabric-1.21.1-….jar` para modpacks de **Fabric 1.21.1**
-- `traductor_es-fabric-1.19.2-….jar` para modpacks de **Fabric 1.19.2** (también traduce las misiones en el formato viejo, sin tocar los archivos del modpack)
+- `traductor_es-fabric-1.19.2-….jar` para modpacks de **Fabric 1.19.2** (también traduce las misiones en el formato viejo y las fichas de información de REI con texto fijo, sin tocar los archivos del modpack)
 
 En Fabric también necesitás **Fabric API** (casi todos los modpacks ya lo traen). Con **Mod Menu** aparece el botón para abrir el panel desde la lista de mods; sin él, escribí `/traductor panel` en el chat dentro de un mundo.
 
@@ -93,7 +93,7 @@ En el menú principal: **Mods → Traductor ES → Configurar** (en Fabric hace 
 | Español de destino | *Automático* usa el idioma del juego; también podés fijar uno. |
 | Al abrir el juego | Traducir solo lo nuevo cada vez que llegás al menú. |
 | Mientras juego | *Auto*: con IA en la nube sigue; con IA en tu PC se pausa para no bajar los FPS. También *Sí* o *No*. |
-| Libros y misiones | Los manuales y guías del juego (Patchouli, Tinkers' Construct, GuideME —AE2 y sus agregados, Powah—, el manual de Immersive Engineering y el diccionario de Alex's Mobs) y las misiones de FTB Quests. Las misiones se ven al volver a entrar al mundo, y solo en mundos de un jugador (en un servidor las misiones vienen del servidor). |
+| Libros y misiones | Los manuales y guías del juego (Patchouli, Tinkers' Construct, GuideME —AE2 y sus agregados, Powah—, el manual de Immersive Engineering y el diccionario de Alex's Mobs) y las misiones de FTB Quests. Las misiones se ven al volver a entrar al mundo, y solo en mundos de un jugador (en un servidor las misiones vienen del servidor). En Fabric 1.19.2 incluye las fichas de información de REI con texto fijo: se detectan al entrar a un mundo y se traducen la siguiente vez que trabaja el mod. |
 | Original con Alt | Con **Alt** apretado sobre un objeto traducido por el mod, su nombre y descripción se ven en inglés. Sirve para buscar guías o recetas en internet. |
 | Otras variantes | Si un mod no trae tu español pero sí otro, usarlo en vez de traducir. |
 | Textos por lote / A la vez | Cuántos textos van juntos (si ves "respuesta cortada", bajalo a 10) y cuántas peticiones al mismo tiempo (1 en tu PC, 2 a 4 en la nube). |

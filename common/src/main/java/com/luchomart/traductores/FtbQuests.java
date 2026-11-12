@@ -474,7 +474,7 @@ public final class FtbQuests {
         return '"' + s.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
     }
 
-    private static String hash(String s) {
+    static String hash(String s) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {

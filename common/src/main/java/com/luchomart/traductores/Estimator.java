@@ -48,6 +48,7 @@ public final class Estimator {
                 countBooks(Books.scanDataBooks(Books.readJarBooks(mc.gameDirectory.toPath().resolve("mods")), target, variants), cache, uniqueTexts);
             }
             countQuests(target, variants, cache, uniqueTexts);
+            InfoTexts.known().forEach((key, text) -> addIfMissing(cache, InfoTexts.NS, key, text, uniqueTexts));
         }
         return new Result(uniqueTexts.size(), mods);
     }

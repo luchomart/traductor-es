@@ -85,6 +85,10 @@ public class TranslationJob implements Runnable {
     private SharedTranslations shared;
     /** Lo que esta pasada tomó de la comunidad, con su clave: para el editor de correcciones. */
     private final CommunityUsed communityUsed = new CommunityUsed();
+    /** En modo "solo comunidad": lo que quedó en inglés, con su clave (pestaña "Faltan" del editor). */
+    private final MissingTexts missingTexts = new MissingTexts();
+    /** Claves que quedaron en inglés en modo "solo comunidad" (-1 = no corresponde: hay IA). */
+    public volatile int missing = -1;
     public volatile long translateStartMs, pausedMs;
     public volatile boolean packChanged;
     /** Se escribieron misiones nuevas: se ven al volver a entrar al mundo. */
@@ -152,7 +156,10 @@ public class TranslationJob implements Runnable {
     }
 
     /** La IA de esta traducción corre en esta PC (con la configuración con la que empezó). */
-    public boolean usesLocalAi() { return cfg.isLocalAi(); }
+    public boolean usesLocalAi() { return !cfg.communityOnly && cfg.isLocalAi(); }
+
+    /** Pasada en modo "solo comunidad" que dejó textos en inglés: se invita a completarlos. */
+    public boolean hasMissing() { return state == State.DONE && missing > 0; }
 
     private long pauseStartMs;
     /** Candado propio de la pausa del jugador (no el de la traducción: se consulta desde cualquier hilo). */
@@ -247,6 +254,7 @@ public class TranslationJob implements Runnable {
 
     /** Servicio y modelo con los que traduce esta pasada ("Groq · openai/gpt-oss-120b"). */
     public String aiLabel() {
+        if (cfg.communityOnly) return "Solo comunidad";
         Preset p = Preset.fromUrl(cfg.apiUrl);
         String name = p == Preset.CUSTOM ? cfg.apiUrl.replaceFirst("^https?://", "").replaceFirst("/.*$", "")
                 : p.label.replace(" (nube)", "").replace(" (en tu PC)", "");
@@ -286,10 +294,19 @@ public class TranslationJob implements Runnable {
     @Override
     public void run() {
         try {
-            if (cfg.model.isBlank() && !applyOnly) chooseModel(null, null);
+            if (cfg.model.isBlank() && !applyOnly && !cfg.communityOnly) chooseModel(null, null);
             List<Item> pending = prepare();
             if (cancelRequested) { finish(State.CANCELLED, "Cancelado"); return; }
             if (applyOnly) { finish(State.DONE, "Correcciones aplicadas"); return; }
+            if (cfg.communityOnly) {
+                // Sin IA: lo pendiente queda en inglés y se anota para traducirlo a mano.
+                noteMissing(pending);
+                finish(State.DONE, missing == 0 ? "Todo traducido: no falta nada"
+                        : "Listo con la comunidad: " + Traductor.fmt(missing) + " textos quedaron en inglés");
+                return;
+            }
+            noteMissing(List.of()); // con IA no se anota: borra lo de una pasada anterior sin IA
+            missing = -1;
             if (pending.isEmpty()) {
                 finish(State.DONE, "Todo traducido: no había textos nuevos");
                 return;
@@ -325,7 +342,8 @@ public class TranslationJob implements Runnable {
     private List<Item> prepare() throws IOException {
         state = State.SCANNING;
         message = "Buscando textos en los mods…";
-        aiId = FailureLog.aiId(cfg);
+        // Sin IA no se saltea nada por fallas viejas: todo lo pendiente tiene que figurar en "Faltan".
+        aiId = cfg.communityOnly ? "solo-comunidad" : FailureLog.aiId(cfg);
         Scan scan = scanOnMainThread();
         Map<String, Map<String, Map<String, String>>> all = scan.lang();
         Map<String, byte[]> jarBooks = cfg.translateBooks
@@ -573,6 +591,17 @@ public class TranslationJob implements Runnable {
         String fixed = caps.apply(text, cached);
         if (!fixed.equals(cached)) cache.updateText(ns, key, fixed);
         return fixed;
+    }
+
+    /** Anota cada clave pendiente en compartidas/faltan-<variante>.json (vacío = borra el archivo). */
+    private void noteMissing(List<Item> pending) {
+        for (Item it : pending) for (Target t : it.targets) missingTexts.add(t.ns(), t.key(), it.text);
+        missing = missingTexts.size();
+        try {
+            missingTexts.write(MissingTexts.file(Config.DIR.resolve("compartidas"), target));
+        } catch (IOException e) {
+            TraductorES.LOG.warn("[Traductor ES] No se pudo anotar lo que falta traducir: {}", e.toString());
+        }
     }
 
     private void enqueue(String ns, String modNs, String key, String requestKey, String text, boolean isName) {
@@ -1353,10 +1382,20 @@ public class TranslationJob implements Runnable {
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
                 .append(quests == null && oldQuests == null ? " (el modpack no tiene misiones que se puedan traducir)" : "").append('\n');
-        sb.append("Textos únicos enviados a la IA: ").append(done).append(" de ").append(total).append('\n');
-        sb.append("Fallidos (quedan en el idioma original): ").append(failed).append('\n');
-        sb.append("Omitidos (fallaron ").append(FailureLog.MAX_RUNS).append(" veces con esta IA; se reintentan si cambiás de modelo o de servicio): ")
-                .append(skipped).append("\n\n");
+        if (missing >= 0) {
+            sb.append("Modo: solo comunidad (sin IA)\n");
+            sb.append("Quedaron en inglés: ").append(missing).append('\n');
+            if (missing > 0) {
+                sb.append("¿Ayudás a la comunidad? Traducilos en Correcciones → pestaña «Faltan» y compartilos en Herramientas → Compartir…\n");
+                sb.append("O con una IA: Configuración → «Traducir lo que falta con IA».\n");
+            }
+            sb.append('\n');
+        } else {
+            sb.append("Textos únicos enviados a la IA: ").append(done).append(" de ").append(total).append('\n');
+            sb.append("Fallidos (quedan en el idioma original): ").append(failed).append('\n');
+            sb.append("Omitidos (fallaron ").append(FailureLog.MAX_RUNS).append(" veces con esta IA; se reintentan si cambiás de modelo o de servicio): ")
+                    .append(skipped).append("\n\n");
+        }
         if (!perMod.isEmpty()) {
             sb.append("Por mod (traducidos / fallidos):\n");
             perMod.forEach((ns, c) -> sb.append("  ").append(ns).append(": ").append(c[0]).append(" / ").append(c[1]).append('\n'));

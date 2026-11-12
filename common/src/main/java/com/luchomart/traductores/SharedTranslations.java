@@ -169,7 +169,9 @@ public final class SharedTranslations {
                         Path tmp = Files.createTempFile(local.getParent(), local.getFileName().toString(), ".tmp");
                         try {
                             Files.write(tmp, body);
-                            Files.move(tmp, local, StandardCopyOption.REPLACE_EXISTING);
+                            // Atómico: con REPLACE_EXISTING Java borra el destino antes de renombrar, y si dos
+                            // descargas terminan a la vez la segunda falla con NoSuchFileException.
+                            Files.move(tmp, local, StandardCopyOption.ATOMIC_MOVE);
                         } finally {
                             Files.deleteIfExists(tmp);
                         }

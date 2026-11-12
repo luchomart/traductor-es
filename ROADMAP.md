@@ -1,10 +1,11 @@
 # Hoja de ruta hacia la publicación
 
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
-- **Versión actual: 1.5.0** (sin tag todavía; jars en `*/build/libs/`). En CurseForge sigue la 1.2.0 (de sus 3 jars de Fabric, 1 aprobado y 2 en revisión); la 1.4.1 no se subió (Luciano prefirió no subir varias seguidas el mismo día).
-- **1.5.0 hecha:** editor de correcciones renovado (lista con scroll, pestañas Todo/Sin corregir/Corregidas/Dudosas/Comunidad + selector de mod, «Guardar y siguiente» con Ctrl+Enter que aplica todo junto al volver, lo de la comunidad visible y corregible vía `compartidas/usadas-<variante>.json`, «Reemplazar…» con vista previa) y el asistente baja y descuenta lo de la comunidad. `/revisar` hecho y sus 10 hallazgos arreglados. Probado en 1.19.2, 1.20.1 y 1.21.1.
-- **Lista para subir:** los arreglos de la revisión que tocan la pantalla se vieron en el juego (Fabric 1.20.1) y andan. `publicacion/subir-1.5.0/` armada (5 jars + `changelog.md` con 1.5.0 + 1.4.1 + 1.4.0 + 1.3.0); la descripción de `publicacion/curseforge.md` ya está al día. Falta que Luciano la suba a CurseForge y poner el tag `v1.5.0`.
-- **Próximo paso: 1.6.0 "solo comunidad"** (plan abajo).
+- **Versión actual: 1.6.0** (sin tag; jars en `*/build/libs/`). En CurseForge sigue la 1.2.0; **la 1.5.0 está lista para subir** en `publicacion/subir-1.5.0/` (Luciano la sube más adelante, con tag `v1.5.0`). Al subir, conviene decidir si se sube directo la 1.6.0 (changelog 1.6.0 + 1.5.0 + 1.4.1 + 1.4.0 + 1.3.0).
+- **1.6.0 hecha: modo "solo comunidad"** (sin IA ni claves). Asistente con tercera tarjeta y % de cobertura (elegida sola si ≥ 90 %), paso 2 solo con idioma y textos; la pasada nunca llama a la IA y anota lo que quedó en inglés en `compartidas/faltan-<variante>.json` (`MissingTexts`); pestaña **Faltan** en el editor (solo aparece si hay faltantes); Conexión → «Modo» y los botones «Traducir lo que falta a mano» / «… con IA»; invitación a completar y compartir en el aviso, el informe, el asistente y Conexión. El clic en el aviso abre el panel en Conexión (no el editor: decisión de Luciano). Probado en Fabric 1.20.1 con tres sesiones (`ollama ps` vacío en todas: no se llamó a la IA).
+- Arreglado de paso: carrera al bajar el mismo archivo de la comunidad dos veces a la vez (`Files.move` con REPLACE_EXISTING borra antes de renombrar → ATOMIC_MOVE). El test `dosDescargasALaVezNoSePisan` fallaba de vez en cuando por eso.
+- **Falta:** probar 1.6.0 en 1.19.2 y 1.21.1 (pantallas) y armar `publicacion/subir-1.6.0/`.
+- **Próximo paso:** a definir (ideas abajo y en Opcionales).
 - Traducciones de la comunidad (1.3.0–1.4.1): repo de datos `luchomart/traductor-es-traducciones` (local en `../traductor-es-traducciones/`, CC BY-NC-SA; 350 archivos es_ar de StaTech + Valhelsia). El mod baja solo lo de los mods instalados (de a 6, con barra) y lo usa en este orden: correcciones → comunidad revisada → caché propio → comunidad IA → IA. Herramientas → Compartir… manda lo nuevo como PR (device flow; OAuth App "Traductor ES" en la cuenta luchomart, Client ID en `GitHubShare`) o exporta una carpeta. Probado en las 5 versiones y con envíos reales (PR #1 y #2 de prueba, cerrados).
 - Revisar aportes: en cada PR, "Approve and run" (solo corre el control: formato y marcadores, no ortografía), mirar el diff y recién ahí "Merge". `index.json` se rehace solo.
 - Opcionales: probar el envío con otra cuenta de GitHub (camino con fork; hoy solo con el GitHub falso de los tests); ajustar "texto corto" para otras variantes (≤40 caracteres sin punto final) cuando haya datos; tag `v1.1.0` en `784f1ce`; "Mena de"/"Mineral de" en las fichas.
@@ -13,13 +14,13 @@
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.
 (Modrinth no permite proyectos con código mayormente generado por IA desde agosto de 2026.)
 
-## Idea para 1.6.0: solo comunidad (decidido 2026-11-12)
+## 1.6.0: solo comunidad (hecha 2026-11-12)
 Objetivo: que quien tiene un modpack ya cubierto por la comunidad no tenga que conectar Ollama ni una clave, y que pueda completar lo que falta.
-- [ ] Asistente, paso 1: opción "Usar solo las traducciones de la comunidad (sin IA, sin claves)", recomendada si cubre ≥ 90 % del modpack; con menos, se ofrece igual avisando que lo que falte queda en inglés. Elegirla saltea la comprobación de la IA (paso 2).
-- [ ] Traducción en ese modo: nunca llama a una IA ni elige modelo; usa comunidad, caché y correcciones. El informe y el aviso dicen cuánto quedó en inglés.
-- [ ] Configuración: "Modo: solo comunidad" y un botón "Completar con IA" para configurar una más adelante.
-- [ ] Editor: pestaña "Faltan" con lo que quedó sin traducir (la pasada lo anota, como `usadas`), para traducirlo a mano con «Guardar y siguiente».
-- [ ] Invitar a completar el 100 %: el aviso de fin de pasada lleva al editor; lo corregido sale como revisado en Herramientas → Compartir.
+- [x] Asistente, paso 1: opción "Usar solo las traducciones de la comunidad (sin IA, sin claves)", recomendada si cubre ≥ 90 % del modpack; con menos, se ofrece igual avisando que lo que falte queda en inglés. Elegirla saltea la comprobación de la IA (paso 2).
+- [x] Traducción en ese modo: nunca llama a una IA ni elige modelo; usa comunidad, caché y correcciones. El informe y el aviso dicen cuánto quedó en inglés.
+- [x] Configuración: "Modo: solo comunidad" y un botón "Completar con IA" para configurar una más adelante.
+- [x] Editor: pestaña "Faltan" con lo que quedó sin traducir (la pasada lo anota, como `usadas`), para traducirlo a mano con «Guardar y siguiente».
+- [x] Invitar a completar el 100 %: el aviso de fin de pasada lleva al editor; lo corregido sale como revisado en Herramientas → Compartir.
 - Archivos: `Config`, `WizardScreen`, `TranslationJob`, `ConfigScreen`, el panel y `CorrectionScreen`; después README, Guía y CurseForge.
 
 ## 1.5.0: editor de correcciones (2026-11-12)

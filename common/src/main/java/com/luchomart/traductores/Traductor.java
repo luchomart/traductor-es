@@ -137,6 +137,8 @@ public final class Traductor {
             }
             // Las misiones las carga FTB Quests al abrir el mundo: si ya estaba adentro, las ve la próxima vez.
             if (j.questsChanged && !inMenu) toast("Traductor ES", "Misiones traducidas: se ven al volver a entrar al mundo.");
+            // Sin IA quedó algo en inglés: se invita a completarlo (en el menú lo dice el aviso de la esquina).
+            if (j.hasMissing() && !inMenu) toast("Traductor ES", missingInvite(j));
             // Falló por algo de configuración y el jugador está en el menú: el asistente lo ayuda a arreglarlo.
             Config cfg = Config.get();
             if (j.setupProblem && cfg.showWizard && !wizardDismissed && mc.screen instanceof TitleScreen) {
@@ -153,6 +155,11 @@ public final class Traductor {
             case CANCELLED -> "Traducción cancelada.";
             default -> "¡Traducción terminada!";
         };
+    }
+
+    /** La invitación a completar lo que la comunidad todavía no tiene. */
+    static String missingInvite(TranslationJob j) {
+        return fmt(j.missing) + " textos quedaron en inglés. Traducilos en Correcciones → «Faltan» y compartilos: así le sirven a todos.";
     }
 
     private static void toast(String title, String msg) {
@@ -291,9 +298,16 @@ public final class Traductor {
                 g.drawString(font, font.plainSubstrByWidth(sub, tw), tx, y + 26, color, false);
             }
             case DONE -> {
+                if (j.hasMissing()) {
+                    UiKit.icon(g, x + 6, y + 11, 1);
+                    g.drawString(font, "Listo con la comunidad", tx, y + 8, UiKit.GREEN, false);
+                    g.drawString(font, font.plainSubstrByWidth("Faltan " + fmt(j.missing) + " · ¿nos ayudás?", tw), tx, y + 21, UiKit.YELLOW, false);
+                    return;
+                }
                 UiKit.check(g, x + 6, y + 11, 1);
                 g.drawString(font, "¡Traducción terminada!", tx, y + 8, UiKit.GREEN, false);
-                String sub = j.done > 0 ? Traductor.fmt(j.done - j.failed) + " textos nuevos en español" : "No había textos nuevos";
+                String sub = j.missing == 0 ? "No falta nada"
+                        : j.done > 0 ? Traductor.fmt(j.done - j.failed) + " textos nuevos en español" : "No había textos nuevos";
                 g.drawString(font, font.plainSubstrByWidth(sub, tw), tx, y + 21, UiKit.MUTED, false);
             }
             case CANCELLED -> {
@@ -316,7 +330,9 @@ public final class Traductor {
     /** Clic en cualquier pantalla: si cae en el aviso del menú principal, abre el panel. true = el clic se usó. */
     public static boolean onScreenClick(Screen screen, double mouseX, double mouseY, int button) {
         if (button != 0 || !(screen instanceof TitleScreen) || !insideToast(mouseX, mouseY)) return false;
-        Minecraft.getInstance().setScreen(new ConfigScreen(screen));
+        TranslationJob j = job;
+        // Si quedó algo en inglés, en la pestaña donde se elige qué hacer (traducirlo a mano o completarlo con IA).
+        Minecraft.getInstance().setScreen(j != null && j.hasMissing() ? ConfigScreen.onConnectionTab(screen) : new ConfigScreen(screen));
         return true;
     }
 

@@ -61,6 +61,11 @@ public class Config {
     public boolean useSpanishVariants = true;
     /** Bajar y usar lo que otros ya tradujeron (repo luchomart/traductor-es-traducciones en GitHub) antes de usar la IA. */
     public boolean useSharedTranslations = true;
+    /**
+     * Solo usar las traducciones de la comunidad: nunca llama a una IA ni pide clave. Lo que la comunidad no tiene
+     * queda en inglés y se anota para traducirlo a mano en el editor (pestaña "Faltan").
+     */
+    public boolean communityOnly = false;
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
     /**
@@ -145,6 +150,8 @@ public class Config {
         if (targetLanguage == null || targetLanguage.isBlank()) targetLanguage = "auto";
         if (excludedNamespaces == null) excludedNamespaces = new ArrayList<>();
         if (systemPrompt == null) systemPrompt = "";
+        // Sin IA, la comunidad es lo único que traduce: no se puede apagar.
+        if (communityOnly) useSharedTranslations = true;
     }
 
     /** Trae las claves compartidas por los otros modpacks (mandan las compartidas: son las más recientes). */

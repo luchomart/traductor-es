@@ -15,7 +15,7 @@ import java.util.List;
  * Aparece la primera vez y cada vez que una traducción falla por algo de configuración.
  */
 public class WizardScreen extends BaseScreen {
-    private enum Mode { LOCAL, CLOUD }
+    private enum Mode { LOCAL, CLOUD, COMMUNITY }
 
     private enum Status { PENDING, OK, FAIL, WARN }
 
@@ -64,6 +64,8 @@ public class WizardScreen extends BaseScreen {
     private final Screen parent;
     private int step = 1;
     private Mode mode;
+    /** El jugador ya eligió una tarjeta: la recomendación de la comunidad no le cambia la elección. */
+    private boolean modeTouched;
     /** null mientras se busca; después, si Ollama respondió en esta PC. */
     private volatile Boolean ollamaFound;
     private final Check cAi = new Check(), cModel = new Check(), cLang = new Check(), cTexts = new Check();
@@ -76,9 +78,34 @@ public class WizardScreen extends BaseScreen {
     public WizardScreen(Screen parent) {
         super(Component.literal("Asistente de Traductor ES"));
         this.parent = parent;
-        mode = Preset.fromUrl(Config.get().apiUrl).isCloud() ? Mode.CLOUD : Mode.LOCAL;
+        mode = Config.get().communityOnly ? Mode.COMMUNITY : aiMode();
         detectOllama();
         estimateEarly();
+    }
+
+    /** El asistente para pasar de "solo comunidad" a una IA (botón «Traducir lo que falta con IA» de la configuración). */
+    public static WizardScreen completeWithAi(Screen parent) {
+        WizardScreen w = new WizardScreen(parent);
+        w.mode = aiMode();
+        w.modeTouched = true;
+        return w;
+    }
+
+    private static Mode aiMode() {
+        return Preset.fromUrl(Config.get().apiUrl).isCloud() ? Mode.CLOUD : Mode.LOCAL;
+    }
+
+    /** Desde cuánto de lo que falta traducir se recomienda usar solo la comunidad. */
+    static final int COMMUNITY_RECOMMENDED_PCT = 90;
+
+    /** Qué parte de lo que no tiene español oficial cubre la comunidad (0-100), o -1 si no hay nada por traducir. */
+    static int communityCoverage(Estimator.Result r) {
+        int all = r.texts() + r.community();
+        return all == 0 ? -1 : (int) Math.floor(r.community() * 100.0 / all);
+    }
+
+    private static boolean communityRecommended(Estimator.Result r) {
+        return r != null && (communityCoverage(r) < 0 || communityCoverage(r) >= COMMUNITY_RECOMMENDED_PCT);
     }
 
     /** Cuenta los textos desde el paso 1, para comparar servicios antes de elegir (sin IA, solo leyendo los mods). */
@@ -91,6 +118,8 @@ public class WizardScreen extends BaseScreen {
                 // Baja lo de la comunidad ya en el paso 1, para que la estimación lo descuente.
                 Estimator.Result r = Estimator.estimateModpack(mc, assumed, Config.get(), (done, all) -> {});
                 if (estimate == null) estimate = r;
+                // La comunidad cubre casi todo: se propone de entrada (si el jugador no eligió otra cosa).
+                if (!modeTouched && step == 1 && !Config.get().setupDone && communityRecommended(r)) mode = Mode.COMMUNITY;
             } catch (Throwable e) {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
             }
@@ -103,7 +132,7 @@ public class WizardScreen extends BaseScreen {
     private void openCompare() {
         Estimator.Result r = estimate;
         minecraft.setScreen(new CompareScreen(this, r == null ? -1 : r.texts(), o -> {
-            mode = o.preset().isCloud() ? Mode.CLOUD : Mode.LOCAL;
+            choose(o.preset().isCloud() ? Mode.CLOUD : Mode.LOCAL);
             CompareScreen.apply(o, () -> {
                 minecraft.setScreen(this);
                 goTo(2);
@@ -145,15 +174,17 @@ public class WizardScreen extends BaseScreen {
     }
 
     private void initStep1(int by) {
-        int cw = (W - 8) / 2, cy = 70, ch = Math.min(100, by - cy - 10);
+        int cw = (W - 8) / 2, cy = 70, ch = topCardsHeight(by);
         addRenderableWidget(new OptionCard(left, cy, cw, ch, Component.literal("En mi PC"), () -> List.of(
                 Component.literal("✓ Gratis · sin internet · sin cuentas").withStyle(ChatFormatting.GREEN),
                 Component.literal("Usa Ollama. Ideal con placa de video de 8 GB o más."),
-                ollamaLine()), b -> mode = Mode.LOCAL, () -> mode == Mode.LOCAL));
+                ollamaLine()), b -> choose(Mode.LOCAL), () -> mode == Mode.LOCAL));
         addRenderableWidget(new OptionCard(left + cw + 8, cy, cw, ch, Component.literal("En la nube"), () -> List.of(
                 Component.literal("✓ Sin placa de video · rápido").withStyle(ChatFormatting.GREEN),
                 Component.literal("Gemini, Groq u OpenRouter. Necesitás una clave gratis; los textos se envían por internet.")),
-                b -> mode = Mode.CLOUD, () -> mode == Mode.CLOUD));
+                b -> choose(Mode.CLOUD), () -> mode == Mode.CLOUD));
+        addRenderableWidget(new OptionCard(left, cy + ch + 6, W, COMMUNITY_CARD_H, Component.literal("Solo la comunidad (sin IA, sin claves)"),
+                this::communityLines, b -> choose(Mode.COMMUNITY), () -> mode == Mode.COMMUNITY));
         addRenderableWidget(Widgets.button(Component.literal("Ahora no"), b -> notNow()).bounds(left, by, 80, 20).build());
         addRenderableWidget(Widgets.button(Component.literal("No mostrar más"), b -> neverAgain()).bounds(left + 84, by, 100, 20).build());
         // En pantallas angostas no entra entre los otros botones: va arriba de "Siguiente".
@@ -161,6 +192,32 @@ public class WizardScreen extends BaseScreen {
         addRenderableWidget(Widgets.button(Component.literal("¿Cuál conviene?"), b -> openCompare())
                 .bounds(fits ? left + W - 214 : left + W - 110, fits ? by : by - 24, 110, 20).build());
         addRenderableWidget(Widgets.button(Component.literal("Siguiente"), b -> goTo(2)).bounds(left + W - 100, by, 100, 20).build());
+    }
+
+    private static final int COMMUNITY_CARD_H = 44;
+
+    /** Alto de las tarjetas "En mi PC" y "En la nube" (debajo va la de la comunidad). */
+    private int topCardsHeight(int by) {
+        return Math.max(50, Math.min(84, by - 70 - 10 - COMMUNITY_CARD_H - 6));
+    }
+
+    private void choose(Mode m) {
+        mode = m;
+        modeTouched = true;
+    }
+
+    /** Lo que cubre la comunidad en este modpack, para la tarjeta del paso 1. */
+    private List<Component> communityLines() {
+        Estimator.Result r = estimate;
+        if (r == null) return List.of(Component.literal("Viendo qué ya tradujo la comunidad…").withStyle(ChatFormatting.GRAY));
+        int pct = communityCoverage(r);
+        if (pct < 0) return List.of(Component.literal("★ Recomendado: no falta traducir nada, no necesitás una IA").withStyle(ChatFormatting.GOLD));
+        if (r.community() == 0) return List.of(Component.literal("La comunidad todavía no tiene textos de tus mods: quedarían en inglés.").withStyle(ChatFormatting.GRAY));
+        String cover = "Cubre el " + pct + " % de lo que falta traducir";
+        if (pct >= COMMUNITY_RECOMMENDED_PCT) {
+            return List.of(Component.literal("★ Recomendado · " + cover + ". Lo que falte lo podés traducir vos.").withStyle(ChatFormatting.GOLD));
+        }
+        return List.of(Component.literal(cover + ": " + Traductor.fmt(r.texts()) + " textos quedarían en inglés.").withStyle(ChatFormatting.YELLOW));
     }
 
     private Component ollamaLine() {
@@ -194,7 +251,7 @@ public class WizardScreen extends BaseScreen {
             y += 30;
         }
         checksTop = y;
-        Check[] checks = {cAi, cModel, cLang, cTexts};
+        Check[] checks = checks();
         for (int i = 0; i < checks.length; i++) {
             Check c = checks[i];
             if (c.actionLabel != null && c.action != null && !checking) {
@@ -208,23 +265,31 @@ public class WizardScreen extends BaseScreen {
                 b -> runChecks()).bounds(left + W / 2 - 60, by, 120, 20).build());
         again.active = !checking;
         Button next = addRenderableWidget(Widgets.button(Component.literal("Siguiente"), b -> goTo(3)).bounds(left + W - 100, by, 100, 20).build());
-        next.active = !checking && cAi.status == Status.OK && cModel.status == Status.OK && cLang.status == Status.OK;
+        next.active = !checking && cLang.status == Status.OK
+                && (mode == Mode.COMMUNITY || (cAi.status == Status.OK && cModel.status == Status.OK));
+    }
+
+    /** Las filas del paso 2: sin IA no hay que comprobar servicio ni modelo. */
+    private Check[] checks() {
+        return mode == Mode.COMMUNITY ? new Check[]{cLang, cTexts} : new Check[]{cAi, cModel, cLang, cTexts};
     }
 
     private void initStep3(int by) {
         Config cfg = Config.get();
         int y = height - 62;
         int half = (W - 4) / 2;
-        addRenderableWidget(Widgets.button(ConfigScreen.whilePlayingLabel(cfg), b -> {
-            cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
-            b.setMessage(ConfigScreen.whilePlayingLabel(cfg));
-        }).bounds(left + half + 4, y, half, 20).build());
+        if (mode != Mode.COMMUNITY) {
+            addRenderableWidget(Widgets.button(ConfigScreen.whilePlayingLabel(cfg), b -> {
+                cfg.whilePlaying = switch (cfg.whilePlaying) { case "auto" -> "si"; case "si" -> "no"; default -> "auto"; };
+                b.setMessage(ConfigScreen.whilePlayingLabel(cfg));
+            }).bounds(left + half + 4, y, half, 20).build());
+        }
         addRenderableWidget(Widgets.button(autoStartLabel(cfg), b -> {
             cfg.autoStart = !cfg.autoStart;
             b.setMessage(autoStartLabel(cfg));
         }).bounds(left, y, half, 20).build());
         addRenderableWidget(Widgets.button(Component.literal("Atrás"), b -> goTo(2)).bounds(left, by, 70, 20).build());
-        addRenderableWidget(Widgets.button(Component.literal("Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
+        addRenderableWidget(Widgets.button(Component.literal(mode == Mode.COMMUNITY ? "Empezar" : "Empezar a traducir").withStyle(ChatFormatting.GREEN), b -> finish())
                 .bounds(left + W - 140, by, 140, 20).build());
     }
 
@@ -247,6 +312,8 @@ public class WizardScreen extends BaseScreen {
     /** Ajusta el servicio al modo elegido: Ollama en la PC; en la nube, Gemini si no había uno elegido. */
     private void prepareService() {
         Config cfg = Config.get();
+        cfg.communityOnly = mode == Mode.COMMUNITY;
+        if (cfg.communityOnly) cfg.useSharedTranslations = true; // sin IA, la comunidad es lo único que traduce
         Preset current = Preset.fromUrl(cfg.apiUrl);
         if (mode == Mode.LOCAL && current.isCloud()) applyPreset(Preset.OLLAMA);
         if (mode == Mode.CLOUD && !current.isCloud()) applyPreset(Preset.GEMINI);
@@ -273,6 +340,7 @@ public class WizardScreen extends BaseScreen {
         checking = true;
         checkedLang = mc.options.languageCode;
         for (Check c : new Check[]{cAi, cModel, cLang, cTexts}) c.set(Status.PENDING, "Comprobando…", "");
+        boolean communityOnly = cfg.communityOnly;
 
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
         if (target != null) {
@@ -286,7 +354,7 @@ public class WizardScreen extends BaseScreen {
         Thread t = new Thread(() -> {
             RUN.set(run);
             try {
-                checkAi(cfg, preset);
+                if (!communityOnly) checkAi(cfg, preset);
                 if (target != null) {
                     Estimator.Result r = Estimator.estimateModpack(mc, target, cfg, (done, all) ->
                             cTexts.set(Status.PENDING, "Bajando traducciones de la comunidad…", done + " de " + all + " archivos"));
@@ -294,7 +362,12 @@ public class WizardScreen extends BaseScreen {
                     String fromCommunity = r.community() > 0 ? "la comunidad ya tenía " + Traductor.fmt(r.community()) : null;
                     if (r.texts() == 0) cTexts.set(Status.OK, "No falta traducir nada",
                             fromCommunity != null ? fromCommunity + " textos; el resto ya estaba en tu español" : "todo está en tu español");
-                    else {
+                    else if (communityOnly) {
+                        int pct = communityCoverage(r);
+                        cTexts.set(pct >= COMMUNITY_RECOMMENDED_PCT ? Status.OK : Status.WARN,
+                                "La comunidad cubre el " + pct + " %: " + Traductor.fmt(r.texts()) + " textos quedan en inglés",
+                                "los podés traducir vos en Correcciones → «Faltan», o completar con una IA");
+                    } else {
                         cTexts.set(Status.WARN, Traductor.fmt(r.texts()) + " textos sin traducir en " + r.mods() + " mods",
                                 (fromCommunity != null ? fromCommunity + " · " : "") + "la primera vez tarda: " + r.duration(cfg) + " aprox.");
                         cTexts.action("Comparar", this::openCompare);
@@ -419,7 +492,8 @@ public class WizardScreen extends BaseScreen {
         Config cfg = Config.get();
         cfg.setupDone = true;
         cfg.save();
-        TraductorES.LOG.info("[Traductor ES] Asistente completado: {} · {}", Preset.fromUrl(cfg.apiUrl).label, cfg.model);
+        if (cfg.communityOnly) TraductorES.LOG.info("[Traductor ES] Asistente completado: solo comunidad");
+        else TraductorES.LOG.info("[Traductor ES] Asistente completado: {} · {}", Preset.fromUrl(cfg.apiUrl).label, cfg.model);
         minecraft.setScreen(parent);
         Traductor.start();
     }
@@ -433,7 +507,7 @@ public class WizardScreen extends BaseScreen {
 
     @Override
     protected void renderPanels(Gfx g, int mouseX, int mouseY, float partialTick) {
-        if (step == 2) UiKit.panel(g, left - 6, checksTop - 4, W + 12, ROW * 4 + 6);
+        if (step == 2) UiKit.panel(g, left - 6, checksTop - 4, W + 12, ROW * checks().length + 6);
         if (step == 3) {
             int cw = (W - 12) / 3;
             for (int i = 0; i < 3; i++) UiKit.card(g, left + i * (cw + 6), 46, cw, 34);
@@ -451,10 +525,10 @@ public class WizardScreen extends BaseScreen {
         switch (step) {
             case 1 -> {
                 g.drawString(font, "¡Hola! Vamos a poner tus mods en español", left, 24, UiKit.GOLD, true);
-                UiKit.wrapped(g, font, Component.literal("Una IA traduce los textos de los mods que no tienen español. Primero, ¿dónde querés que trabaje?"),
+                UiKit.wrapped(g, font, Component.literal("Los textos de los mods que no tienen español los traduce una IA, o se usa lo que ya tradujo la comunidad. ¿Cómo querés hacerlo?"),
                         left, 40, W, UiKit.MUTED);
                 Estimator.Result r = estimate;
-                int sy = 70 + Math.min(100, height - 28 - 70 - 10) + 6;
+                int sy = 70 + topCardsHeight(height - 28) + 6 + COMMUNITY_CARD_H + 6;
                 if (r != null && r.texts() > 0 && sy + 10 < height - 32) {
                     List<ServiceGuide.Option> o = ServiceGuide.OPTIONS;
                     String line = "Este modpack: " + Traductor.fmt(r.texts()) + " textos"
@@ -471,7 +545,7 @@ public class WizardScreen extends BaseScreen {
                     g.drawCenteredString(font, p.label, left + 90 + (W - 90) / 2, 52, UiKit.WHITE);
                     g.drawString(font, "Clave (API key)", left, 76, UiKit.MUTED, false);
                 }
-                Check[] checks = {cAi, cModel, cLang, cTexts};
+                Check[] checks = checks();
                 for (int i = 0; i < checks.length; i++) drawCheck(g, checks[i], checksTop + i * ROW);
             }
             default -> {
@@ -480,7 +554,11 @@ public class WizardScreen extends BaseScreen {
                 String target = SpanishTarget.resolve(cfg.targetLanguage, minecraft.options.languageCode);
                 Estimator.Result r = estimate;
                 Preset p = Preset.fromUrl(cfg.apiUrl);
-                String[][] cards = {
+                boolean onlyCommunity = mode == Mode.COMMUNITY;
+                String[][] cards = onlyCommunity ? new String[][]{
+                        {"Modo", "Solo la comunidad"},
+                        {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
+                        {"En inglés", r == null ? "—" : r.texts() == 0 ? "Nada" : Traductor.fmt(r.texts()) + " textos"}} : new String[][]{
                         {"IA", p.label.replaceFirst(" \\(.*\\)", "") + " · " + cfg.model},
                         {"Idioma", target == null ? "—" : SpanishTarget.displayName(target)},
                         {"Por traducir", r == null ? "—" : r.texts() == 0 ? "Nada pendiente" : Traductor.fmt(r.texts()) + " textos · " + r.duration(cfg)}};
@@ -499,11 +577,17 @@ public class WizardScreen extends BaseScreen {
                         ? (cfg.isLocalAi() ? "• Sigue traduciendo mientras jugás. Ojo: con la IA en tu PC bajan los FPS y va más lento."
                                            : "• Sigue traduciendo mientras jugás: la IA está en la nube y no usa tu placa de video.")
                         : "• Traduce mientras estás en el menú. Al entrar a un mundo se pausa, y sigue al volver.";
-                for (String line : new String[]{
+                String[] lines = onlyCommunity ? new String[]{
+                        "• Usa solo lo que tradujo la comunidad: no llama a ninguna IA ni necesita claves.",
+                        r != null && r.texts() > 0 ? "• Lo que falte queda en inglés. ¿Nos ayudás? Traducilo en Correcciones → «Faltan» "
+                                + "y compartilo en Herramientas → Compartir…: así le sirve a todos." : null,
+                        "• Si después querés usar una IA: Configuración → «Traducir lo que falta con IA».",
+                        "• Las próximas veces baja solo lo nuevo de la comunidad."} : new String[]{
                         community,
                         playing,
                         "• Si cerrás el juego, lo traducido queda guardado.",
-                        "• Las próximas veces solo traduce lo nuevo, en segundos."}) {
+                        "• Las próximas veces solo traduce lo nuevo, en segundos."};
+                for (String line : lines) {
                     if (line == null) continue;
                     y = UiKit.wrapped(g, font, Component.literal(line), left, y, W, UiKit.MUTED) + 4;
                 }

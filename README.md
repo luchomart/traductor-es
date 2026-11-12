@@ -8,6 +8,7 @@ Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuent
 - Si trae otro español, lo usa en vez de traducir.
 - Si otros jugadores ya tradujeron ese mod, **baja su traducción** en vez de traducirlo ([traducciones de la comunidad](#traducciones-de-la-comunidad)).
 - Lo que falta lo traduce la IA, y lo guarda para no volver a traducirlo.
+- ¿Tus mods ya están traducidos por la comunidad? Con el modo **[solo comunidad](#solo-comunidad-sin-ia)** no necesitás ninguna IA ni clave.
 
 ## Qué necesitás
 
@@ -16,7 +17,7 @@ Usa una inteligencia artificial que corre **en tu propia PC** (gratis, sin cuent
 | **Minecraft** | **1.19.2** (Fabric), **1.20.1** (Forge o Fabric) o **1.21.1** (NeoForge o Fabric) |
 | **Placa de video** | Recomendado: 12 GB de VRAM o más. Con menos también funciona, usando un modelo más chico (ver abajo). |
 | **Espacio** | Unos 8 GB libres para el modelo de IA |
-| **Ollama** | El programa que hace correr la IA. Se instala una sola vez. (Si no tenés placa de video, mirá [IA en la nube](#ia-en-la-nube).) |
+| **Ollama** | El programa que hace correr la IA. Se instala una sola vez. (Si no tenés placa de video, mirá [IA en la nube](#ia-en-la-nube); si la comunidad ya tradujo tus mods, [no hace falta ninguna IA](#solo-comunidad-sin-ia).) |
 
 ## Instalación paso a paso
 
@@ -59,8 +60,8 @@ Abrí el juego → **Opciones → Idioma** y elegí tu español (España, Méxic
 
 La primera vez que abras el juego aparece un **asistente de 3 pasos**:
 
-1. Elegís dónde trabaja la IA: **en tu PC** (Ollama) o **en la nube**.
-2. Comprueba solo que todo esté listo: que la IA responda, el modelo, el idioma y cuántos textos faltan. Si algo falla, te da el botón para arreglarlo (Descargar, Conseguir clave, Copiar comando, Cambiar idioma).
+1. Elegís cómo traducir: con una IA **en tu PC** (Ollama), **en la nube**, o **solo con la comunidad** (sin IA). La tarjeta de la comunidad muestra cuánto de tu modpack ya está traducido, y si cubre el 90 % o más viene elegida.
+2. Comprueba solo que todo esté listo: que la IA responda, el modelo, el idioma y cuántos textos faltan (sin IA, solo el idioma y los textos). Si algo falla, te da el botón para arreglarlo (Descargar, Conseguir clave, Copiar comando, Cambiar idioma).
 3. Te muestra un resumen y tocás **Empezar a traducir**.
 
 Desde ahí, cada vez que abras el juego el mod traduce solo lo que falta. Mientras trabaja vas a ver un **aviso arriba a la derecha** del menú principal con el progreso y el tiempo restante. Al terminar, los textos se actualizan solos.
@@ -158,7 +159,7 @@ Una clave es como una contraseña que le dice al servicio que sos vos. Los tres 
 La IA a veces se equivoca. Para arreglar un texto, abrí el editor: **Herramientas → Abrir editor**, o escribí `/traductor corregir` en el chat. También podés buscar directo: `/traductor corregir lingote`.
 
 1. Buscá el texto en inglés o en español. Aparecen los objetos, los libros y las misiones que tradujo la IA o que se bajaron de la comunidad.
-2. Filtrá si querés: **Sin corregir**, **Corregidas**, **Dudosas** (las que parecen haber quedado en inglés), **Comunidad**, y **Mod: …** para ver uno solo.
+2. Filtrá si querés: **Sin corregir**, **Corregidas**, **Dudosas** (las que parecen haber quedado en inglés), **Comunidad**, **Faltan** (lo que quedó en inglés en modo [solo comunidad](#solo-comunidad-sin-ia)), y **Mod: …** para ver uno solo.
 3. Tocá el texto, corregilo y tocá **Guardar**: se aplica enseguida (las misiones, al volver a entrar al mundo).
    Para corregir de corrido, **Guardar y siguiente** (Ctrl+Enter) abre el próximo de la lista; todo se aplica junto al volver a la lista.
 
@@ -186,6 +187,15 @@ Lo que traduce un jugador le puede servir a otro: hay un repo público con tradu
 - Libros sí; misiones de FTB Quests y fichas de REI no, porque son de cada modpack.
 - **Se apaga** en Traducción → Bajar de la comunidad. Tus traducciones **nunca se suben solas**.
 - Al bajarlas, GitHub ve tu IP y los nombres de tus mods (como cualquier descarga). No se manda ningún texto.
+
+### Solo comunidad (sin IA)
+
+Si la comunidad ya tradujo casi todo tu modpack, no hace falta instalar Ollama ni pedir una clave: elegí **Solo la comunidad** en el asistente, o **Conexión → Modo: Solo comunidad**.
+
+- El mod baja y usa lo de la comunidad (y tus correcciones), y **nunca llama a una IA**.
+- Lo que la comunidad todavía no tiene **queda en inglés**. El aviso del menú y el informe te dicen cuánto.
+- **¿Nos ayudás a completarlo?** En **Conexión → Traducir lo que falta a mano** se abre el editor en la pestaña **Faltan**: traducilo con *Guardar y siguiente* y después compartilo (abajo). Así el próximo jugador ya lo tiene en español.
+- ¿Preferís que lo haga una IA? **Conexión → Traducir lo que falta con IA** abre el asistente para elegir una.
 
 ### Compartir lo tuyo
 

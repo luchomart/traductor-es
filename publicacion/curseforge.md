@@ -26,14 +26,14 @@ It translates into the Spanish variant your game uses: Spain, Mexico, Argentina,
 - **Correction editor.** Search any translated text in game and fix it; applied instantly. Filters (uncorrected, doubtful, community, by mod), "save and next" to fix them in a row, and find & replace across many texts with a preview.
 - **Hold Alt** on an item to see its original English text.
 - **Translates in the background** and only translates new texts after the first time. With a cloud AI it keeps going while you play; with a local AI it pauses in game to keep your FPS.
-- **Community translations.** Before using the AI, it downloads what other players already translated for *your* mods, from a public [GitHub repo](https://github.com/luchomart/traductor-es-traducciones). Saves quota and hours. Can be turned off («Bajar de la comunidad»). **Give back in one click:** *Herramientas → Compartir…* sends your new translations as a pull request with your GitHub account, or exports a folder to upload by hand.
+- **Community translations.** Before using the AI, it downloads what other players already translated for *your* mods, from a public [GitHub repo](https://github.com/luchomart/traductor-es-traducciones). Saves quota and hours. Can be turned off («Bajar de la comunidad»). **No AI at all:** if the community already covers your modpack, the «Solo comunidad» mode needs no AI and no key; whatever is missing stays in English, and you can translate it by hand in the editor («Faltan» tab) and share it. **Give back in one click:** *Herramientas → Compartir…* sends your new translations as a pull request with your GitHub account, or exports a folder to upload by hand.
 - **Share it:** export the translations as a resource pack so friends with the same modpack don't need an AI.
 
 ## Requirements
 
 - Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** or **Fabric 1.21.1** (Fabric needs Fabric API; Mod Menu is optional). On 1.19.2, old-format FTB Quests and REI information pages with fixed text (like StaTech Industry's ore veins, made with KubeJS) are translated in memory, without changing the modpack's files.
 - **Client only.** Servers don't need it.
-- An AI, one of:
+- An AI (or none, in «Solo comunidad» mode), one of:
   - **On your PC:** Ollama with `translategemma:12b` (about 8 GB, ideal with a 12 GB GPU; a Gemma 3 trained for translation) or `translategemma:4b` for smaller GPUs.
   - **In the cloud:** a free API key from Google Gemini, Groq or OpenRouter.
 
@@ -76,14 +76,14 @@ Traduce a la variante del español que tengas en el juego: España, México, Arg
 - **Editor de correcciones.** Buscá cualquier texto traducido dentro del juego y corregilo; se aplica al instante. Filtros (sin corregir, dudosas, comunidad, por mod), «guardar y siguiente» para corregir de corrido y reemplazo en muchos textos con vista previa.
 - **Mantené Alt** sobre un objeto para ver su texto original en inglés.
 - **Traduce en segundo plano** y después de la primera vez solo lo nuevo. Con IA en la nube sigue mientras jugás; con IA en tu PC se pausa en el mundo para no bajar los FPS.
-- **Traducciones de la comunidad.** Antes de usar la IA, baja lo que otros jugadores ya tradujeron de *tus* mods, desde un [repo público de GitHub](https://github.com/luchomart/traductor-es-traducciones). Ahorra cupo y horas. Se puede apagar («Bajar de la comunidad»). **Devolvé el favor con un clic:** *Herramientas → Compartir…* manda tus traducciones nuevas como pull request con tu cuenta de GitHub, o exporta una carpeta para subirla a mano.
+- **Traducciones de la comunidad.** Antes de usar la IA, baja lo que otros jugadores ya tradujeron de *tus* mods, desde un [repo público de GitHub](https://github.com/luchomart/traductor-es-traducciones). Ahorra cupo y horas. Se puede apagar («Bajar de la comunidad»). **Sin ninguna IA:** si la comunidad ya cubre tu modpack, el modo «Solo comunidad» no necesita IA ni clave; lo que falte queda en inglés, y lo podés traducir a mano en el editor (pestaña «Faltan») y compartirlo. **Devolvé el favor con un clic:** *Herramientas → Compartir…* manda tus traducciones nuevas como pull request con tu cuenta de GitHub, o exporta una carpeta para subirla a mano.
 - **Compartilo:** exportá las traducciones como resource pack para amigos con el mismo modpack, sin IA.
 
 ## Qué necesitás
 
 - Minecraft **Forge 1.20.1**, **NeoForge 1.21.1**, **Fabric 1.19.2**, **Fabric 1.20.1** o **Fabric 1.21.1** (Fabric necesita Fabric API; Mod Menu es opcional). En 1.19.2, las misiones de FTB Quests en formato viejo y las fichas de información de REI con texto fijo (como las vetas de minerales de StaTech Industry, armadas con KubeJS) se traducen en memoria, sin cambiar los archivos del modpack.
 - **Solo cliente.** Los servidores no lo necesitan.
-- Una IA: **en tu PC** (Ollama con `translategemma:12b`, o `translategemma:4b` con menos VRAM) o **en la nube** (clave gratis de Gemini, Groq u OpenRouter). Los tiempos están en la tabla de arriba.
+- Una IA: **en tu PC** (Ollama con `translategemma:12b`, o `translategemma:4b` con menos VRAM) o **en la nube** (clave gratis de Gemini, Groq u OpenRouter). Los tiempos están en la tabla de arriba. En modo «Solo comunidad» no hace falta ninguna.
 
 ## Privacidad
 

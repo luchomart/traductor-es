@@ -9,6 +9,8 @@ import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -20,7 +22,7 @@ import java.util.Map;
  */
 public class CorrectionScreen extends BaseScreen {
     /** De dónde sale la traducción que se ve (sin contar la corrección del jugador). */
-    private enum Origin { AI, COMMUNITY, COMMUNITY_REVISED, NONE }
+    private enum Origin { AI, COMMUNITY, COMMUNITY_REVISED, MISSING, NONE }
 
     /**
      * Un texto traducido. ai es la traducción de base (de la IA o de la comunidad, según origin); corrected es null si
@@ -63,7 +65,9 @@ public class CorrectionScreen extends BaseScreen {
         PENDING("Sin corregir", "Lo que todavía no corregiste."),
         CORRECTED("Corregidas", "Lo que ya corregiste (★)."),
         DOUBTFUL("Dudosas", "Lo que parece haber quedado en inglés: buen lugar para empezar a revisar."),
-        COMMUNITY("Comunidad", "Lo que se bajó de las traducciones de la comunidad (✓ = revisado por una persona).");
+        COMMUNITY("Comunidad", "Lo que se bajó de las traducciones de la comunidad (✓ = revisado por una persona)."),
+        MISSING("Faltan", "Lo que quedó en inglés porque la comunidad todavía no lo tiene. Traducilo con «Guardar y siguiente» "
+                + "y compartilo en Herramientas → Compartir…: así le sirve a todos.");
 
         final String label, help;
 
@@ -76,6 +80,7 @@ public class CorrectionScreen extends BaseScreen {
                 case CORRECTED -> e.corrected != null;
                 case DOUBTFUL -> e.corrected == null && e.doubtful;
                 case COMMUNITY -> e.fromCommunity();
+                case MISSING -> e.origin == Origin.MISSING && e.corrected == null;
             };
         }
     }
@@ -97,6 +102,8 @@ public class CorrectionScreen extends BaseScreen {
     private final List<Entry> matches = new ArrayList<>();
     private String query;
     private Filter filter = Filter.ALL;
+    /** Hay textos anotados como faltantes (modo "solo comunidad"): recién ahí se muestra la pestaña "Faltan". */
+    private boolean showMissingTab;
     /** Mod elegido (null = todos). */
     private String mod;
     /** Se está eligiendo un mod: la lista muestra mods y el buscador los filtra. */
@@ -135,6 +142,13 @@ public class CorrectionScreen extends BaseScreen {
         load();
     }
 
+    /** El editor abierto en la pestaña "Faltan" (desde el aviso de fin de pasada). */
+    public static CorrectionScreen missing(Screen parent) {
+        CorrectionScreen s = new CorrectionScreen(parent, "");
+        if (s.showMissingTab) s.filter = Filter.MISSING;
+        return s;
+    }
+
     private void load() {
         Minecraft mc = Minecraft.getInstance();
         String target = SpanishTarget.resolve(Config.get().targetLanguage, mc.options.languageCode);
@@ -143,6 +157,8 @@ public class CorrectionScreen extends BaseScreen {
             entries = List.of();
             return;
         }
+        Path missingFile = MissingTexts.file(Config.DIR.resolve("compartidas"), target);
+        showMissingTab = Files.exists(missingFile);
         Thread t = new Thread(() -> {
             try {
                 Map<String, Map<String, String>> corr = Corrections.load();
@@ -160,6 +176,10 @@ public class CorrectionScreen extends BaseScreen {
                     boolean doubtful = !e.revised() && Validator.looksUntranslated(e.o, e.t);
                     byKey.put(ns + "\0" + key, new Entry(ns, key, e.o, e.t, origin, corr.getOrDefault(ns, Map.of()).get(key), doubtful));
                 }));
+                // Lo que quedó en inglés sin IA: el "de base" es el mismo original (corregirlo es traducirlo).
+                MissingTexts.read(missingFile).forEach((ns, m) -> m.forEach((key, english) ->
+                        byKey.putIfAbsent(ns + "\0" + key, new Entry(ns, key, english, english, Origin.MISSING,
+                                corr.getOrDefault(ns, Map.of()).get(key), false))));
                 // Correcciones escritas a mano para textos que no tradujo ni la IA ni la comunidad (oficiales, por ejemplo).
                 corr.forEach((ns, m) -> m.forEach((key, text) ->
                         byKey.putIfAbsent(ns + "\0" + key, new Entry(ns, key, "", "", Origin.NONE, text, false))));
@@ -192,7 +212,7 @@ public class CorrectionScreen extends BaseScreen {
         // Pestañas a la izquierda y el selector de mod a la derecha.
         int modW = Math.min(140, Math.max(90, W - 300));
         int tabsW = W - modW - 6;
-        Filter[] fs = Filter.values();
+        Filter[] fs = java.util.Arrays.stream(Filter.values()).filter(f -> f != Filter.MISSING || showMissingTab).toArray(Filter[]::new);
         // Cada pestaña, del ancho de su texto; lo que sobra se reparte.
         int textSum = 0;
         for (Filter f : fs) textSum += font.width(f.label);
@@ -258,8 +278,8 @@ public class CorrectionScreen extends BaseScreen {
         addRenderableWidget(Widgets.button(Component.literal("Cancelar"), b -> closeEditor(null)).bounds(left + W - nextW - 8 - 2 * btnW, by, btnW, 20).build());
         if (e.corrected != null && !e.ai.isEmpty()) {
             int rw = Math.min(150, W - nextW - 12 - 2 * btnW);
-            String full = e.fromCommunity() ? "Volver a la de la comunidad" : "Volver a la de la IA";
-            String brief = e.fromCommunity() ? "Volver a la comunidad" : "Volver a la IA";
+            String full = e.origin == Origin.MISSING ? "Volver al inglés" : e.fromCommunity() ? "Volver a la de la comunidad" : "Volver a la de la IA";
+            String brief = e.origin == Origin.MISSING ? "Volver al inglés" : e.fromCommunity() ? "Volver a la comunidad" : "Volver a la IA";
             addRenderableWidget(Widgets.button(Component.literal(font.plainSubstrByWidth(font.width(full) + 10 <= rw ? full : brief, rw - 6)), b -> restore())
                     .bounds(left, by, rw, 20).build());
         }
@@ -334,7 +354,8 @@ public class CorrectionScreen extends BaseScreen {
         List<BulkReplace.Target> targets = new ArrayList<>();
         Map<String, Entry> byKey = new java.util.HashMap<>();
         for (Entry e : matches) {
-            if (e.current().isEmpty()) continue;
+            // Lo que sigue en inglés no se reemplaza: quedaría a medio traducir y guardado como corrección.
+            if (e.current().isEmpty() || (e.origin == Origin.MISSING && e.corrected == null)) continue;
             targets.add(new BulkReplace.Target(e.ns, e.key, e.original, e.current(), e.ai));
             byKey.put(e.ns + ":" + e.key, e);
         }
@@ -559,7 +580,8 @@ public class CorrectionScreen extends BaseScreen {
         Entry next = andNext ? nextEntry() : null;
         String text = realCodes(editor.getValue());
         if (text.isBlank()) {
-            showWarning(e.fromCommunity() ? "La traducción está vacía. Si querés volver a la de la comunidad, usá «Volver a la de la comunidad»."
+            showWarning(e.origin == Origin.MISSING ? "La traducción está vacía: escribí el texto en español."
+                    : e.fromCommunity() ? "La traducción está vacía. Si querés volver a la de la comunidad, usá «Volver a la de la comunidad»."
                     : "La traducción está vacía. Si querés volver a la de la IA, usá «Volver a la de la IA».");
             return;
         }
@@ -635,7 +657,9 @@ public class CorrectionScreen extends BaseScreen {
         else if (pickingMod) {
             info = modMatches.isEmpty() ? "Ningún mod coincide." : "Elegí qué textos ver (Esc vuelve sin cambiar).";
             renderScrollbar(g);
-        } else if (matches.isEmpty()) info = filter == Filter.DOUBTFUL && query.isBlank() ? "No hay dudosas acá: todo parece traducido." : "Nada coincide con la búsqueda.";
+        } else if (matches.isEmpty()) info = !query.isBlank() ? "Nada coincide con la búsqueda."
+                : filter == Filter.DOUBTFUL ? "No hay dudosas acá: todo parece traducido."
+                : filter == Filter.MISSING ? "¡No falta nada! Compartí lo tuyo en Herramientas → Compartir…" : "Nada coincide con la búsqueda.";
         else {
             int last = Math.min(matches.size(), scroll + perPage);
             info = Traductor.fmt(matches.size()) + " textos" + (maxScroll() > 0 ? " · viendo " + Traductor.fmt(scroll + 1) + "–" + Traductor.fmt(last) : "");
@@ -681,6 +705,7 @@ public class CorrectionScreen extends BaseScreen {
             y += font.lineHeight + 1;
         }
         String label = e.corrected != null ? "Tu corrección"
+                : e.origin == Origin.MISSING ? "Sin traducir todavía: escribilo en español (después compartilo en Herramientas → Compartir…)"
                 : e.origin == Origin.COMMUNITY_REVISED ? "Traducción de la comunidad (revisada)"
                 : e.origin == Origin.COMMUNITY ? "Traducción de la comunidad (de una IA)" : "Traducción de la IA";
         if (SECTION.matcher(e.original + e.current()).find()) label += "  ·  " + codeMark + "9, " + codeMark + "r… son colores: dejalos en su lugar";
@@ -722,9 +747,10 @@ public class CorrectionScreen extends BaseScreen {
             String origin = e.corrected != null ? "★ Tuya" : switch (e.origin) {
                 case COMMUNITY_REVISED -> "Comunidad ✓";
                 case COMMUNITY -> "Comunidad";
+                case MISSING -> "En inglés";
                 default -> "IA";
             };
-            int originColor = e.corrected != null ? UiKit.GOLD : e.fromCommunity() ? UiKit.GREEN : UiKit.AQUA;
+            int originColor = e.corrected != null ? UiKit.GOLD : e.origin == Origin.MISSING ? UiKit.YELLOW : e.fromCommunity() ? UiKit.GREEN : UiKit.AQUA;
             String source = sourceLabel(e.ns);
             int tagW = Math.min(110, Math.max(font.width(origin), font.width(source)));
             int textW = w - tagW - 18;

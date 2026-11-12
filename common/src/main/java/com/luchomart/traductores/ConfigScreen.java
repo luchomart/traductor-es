@@ -101,6 +101,31 @@ public class ConfigScreen extends BaseScreen {
     }
 
     private void initConexion(Config cfg, int y) {
+        addRenderableWidget(Widgets.button(modeLabel(cfg), b -> {
+            cfg.communityOnly = !cfg.communityOnly;
+            if (cfg.communityOnly) cfg.useSharedTranslations = true;
+            cfg.save();
+            testResult = null;
+            rebuildWidgets();
+        }).bounds(fieldX, y, fieldW, 20).tooltip(Component.literal(
+                "Con IA: lo que la comunidad no tiene lo traduce una IA. Solo comunidad: sin IA ni claves; lo que falte queda en inglés.")).build());
+        y += ROW + 4;
+        if (cfg.communityOnly) {
+            // Sin IA: no hay servicio ni clave que configurar.
+            // Las dos formas de completar lo que la comunidad no tiene, una al lado de la otra: primero a mano (ayuda a todos).
+            int bw = (innerW - 4) / 2;
+            addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta a mano"), b -> {
+                cfg.save();
+                minecraft.setScreen(CorrectionScreen.missing(this));
+            }).bounds(innerX, y + COMMUNITY_TEXT_H, bw, 20).tooltip(Component.literal(
+                    "Abre el editor en la pestaña «Faltan». Lo que traduzcas compartilo en Herramientas → Compartir…: así le sirve a todos.")).build());
+            addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta con IA"), b -> {
+                cfg.save();
+                minecraft.setScreen(WizardScreen.completeWithAi(this));
+            }).bounds(innerX + bw + 4, y + COMMUNITY_TEXT_H, bw, 20).tooltip(Component.literal(
+                    "El asistente te ayuda a elegir una IA (en tu PC o en la nube) para traducir lo que la comunidad todavía no tiene.")).build());
+            return;
+        }
         addRenderableWidget(Widgets.button(Component.literal("◀"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).previous()))
                 .bounds(fieldX, y, 20, 20).tooltip(Component.literal("Servicio anterior")).build());
         addRenderableWidget(Widgets.button(Component.literal("▶"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).next()))
@@ -145,6 +170,21 @@ public class ConfigScreen extends BaseScreen {
         addRenderableWidget(Widgets.button(Component.literal("¿Cuál conviene?"), b -> openCompare())
                 .bounds(innerX + 124, y, 110, 20)
                 .tooltip(Component.literal("Cuánto tarda cada servicio y cuáles son gratis.")).build());
+    }
+
+    /** Alto del texto que explica el modo "solo comunidad" (los botones van debajo). */
+    private static final int COMMUNITY_TEXT_H = 64;
+
+    /** El panel abierto en la pestaña Conexión (desde el aviso, cuando quedaron textos en inglés). */
+    public static ConfigScreen onConnectionTab(Screen parent) {
+        tab = Tab.CONEXION;
+        return new ConfigScreen(parent);
+    }
+
+    private static Component modeLabel(Config cfg) {
+        return Component.literal("Modo: ").append(cfg.communityOnly
+                ? Component.literal("Solo comunidad (sin IA)").withStyle(ChatFormatting.AQUA)
+                : Component.literal("Con IA").withStyle(ChatFormatting.GREEN));
     }
 
     /** "¿Cuál conviene?": la pantalla cuenta los textos del modpack por su cuenta. */
@@ -198,8 +238,8 @@ public class ConfigScreen extends BaseScreen {
         toggle(innerX, y, half, "Cambio automático", () -> cfg.autoSwitch, v -> cfg.autoSwitch = v,
                 "Si se acaba el cupo, va muy lenta 3 minutos o va lenta y faltan más de 2 horas: pasa sola a otro modelo del mismo "
                         + "servicio o a otro servicio gratis del que tengas clave. Nunca a uno de pago ni de tu PC a la nube.");
-        toggle(innerX + half + 4, y, half, "Bajar de la comunidad", () -> cfg.useSharedTranslations, v -> cfg.useSharedTranslations = v,
-                "Antes de usar la IA, descargar las traducciones que la comunidad ya hizo (de GitHub: luchomart/traductor-es-traducciones). "
+        toggle(innerX + half + 4, y, half, "Bajar de la comunidad", () -> cfg.useSharedTranslations, v -> cfg.useSharedTranslations = v || cfg.communityOnly,
+                cfg.communityOnly ? "En modo «solo comunidad» no se puede apagar: es lo único que traduce." : "Antes de usar la IA, descargar las traducciones que la comunidad ya hizo (de GitHub: luchomart/traductor-es-traducciones). "
                         + "Solo se bajan los mods que tenés instalados; ahorra cupo y tiempo.");
         y += ROW + 4;
         EditBox batch = field(fieldX, y, 40, String.valueOf(cfg.batchSize), 3, s -> cfg.batchSize = parsePositive(s, cfg.batchSize));
@@ -623,6 +663,16 @@ public class ConfigScreen extends BaseScreen {
         int y = contentTop + 8;
         switch (tab) {
             case CONEXION -> {
+                g.drawString(font, "Modo", innerX, y + 6, UiKit.MUTED, false);
+                y += ROW + 4;
+                if (cfg.communityOnly) {
+                    int ty = UiKit.wrapped(g, font, Component.literal("Se usa solo lo que ya tradujo la comunidad: no se llama a ninguna IA "
+                            + "ni hace falta una clave. Lo que la comunidad todavía no tiene queda en inglés."), innerX, y, innerW, UiKit.MUTED) + 4;
+                    UiKit.wrapped(g, font, Component.literal("¿Nos ayudás? Traducí lo que falta y compartilo en Herramientas → Compartir…: "
+                            + "así el próximo jugador ya lo tiene en español.").withStyle(ChatFormatting.YELLOW), innerX, ty, innerW, UiKit.WHITE);
+                    drawMessage(g, y + COMMUNITY_TEXT_H + 26);
+                    break;
+                }
                 g.drawString(font, "Servicio", innerX, y + 6, UiKit.MUTED, false);
                 Preset p = Preset.fromUrl(cfg.apiUrl);
                 g.drawCenteredString(font, p.label, fieldX + fieldW / 2, y + 6, UiKit.WHITE);
@@ -689,6 +739,8 @@ public class ConfigScreen extends BaseScreen {
             text = (j.isPaused() ? "En pausa · " : "Traduciendo con ") + j.aiLabel();
             color = j.isPaused() ? UiKit.YELLOW : UiKit.GREEN;
             box = j.isPaused() ? 0xFF2A2410 : 0xFF0F2A12;
+        } else if (Config.get().communityOnly) {
+            text = "Solo comunidad · sin IA"; color = UiKit.AQUA; box = 0xFF0F2229;
         } else switch (Traductor.connection) {
             case OK -> { text = "Conectado · " + Traductor.connectionDetail; color = UiKit.GREEN; box = 0xFF0F2A12; }
             case FAIL -> { text = "Sin conexión"; color = UiKit.RED; box = 0xFF2A0F0F; }

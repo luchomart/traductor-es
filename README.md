@@ -60,7 +60,7 @@ Abrí el juego → **Opciones → Idioma** y elegí tu español (España, Méxic
 
 La primera vez que abras el juego aparece un **asistente de 3 pasos**:
 
-1. Elegís cómo traducir: con una IA **en tu PC** (Ollama), **en la nube**, o **solo con la comunidad** (sin IA). La tarjeta de la comunidad muestra cuánto de tu modpack ya está traducido, y si cubre el 90 % o más viene elegida.
+1. Elegís cómo traducir: con una IA **en tu PC** (Ollama), **en la nube**, o **solo con la comunidad** (sin IA). La tarjeta de la comunidad muestra cuánto de tu modpack ya está traducido, y si cubre el 90 % o más aparece como recomendada.
 2. Comprueba solo que todo esté listo: que la IA responda, el modelo, el idioma y cuántos textos faltan (sin IA, solo el idioma y los textos). Si algo falla, te da el botón para arreglarlo (Descargar, Conseguir clave, Copiar comando, Cambiar idioma).
 3. Te muestra un resumen y tocás **Empezar a traducir**.
 

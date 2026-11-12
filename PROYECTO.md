@@ -32,6 +32,7 @@ que ya traían chino (142 en FTB OceanBlock 2).
 | Traducciones de la comunidad | Repo público aparte (`traductor-es-traducciones`, CC BY-NC-SA), por mod y variante, con el inglés como clave. Se bajan solas (apagable). Prioridad: correcciones → revisadas → caché propio → IA de otros → IA. Otra variante solo para nombres cortos. |
 | Compartir | Pull request con la cuenta de GitHub del jugador (device flow, sin servidor) o carpeta para subir a mano. Servidor propio descartado por ahora (mantenimiento y spam). |
 | Editor de correcciones | Cada aplicación recarga todos los recursos (segundos en modpacks grandes): «Guardar» aplica enseguida, pero «Guardar y siguiente» y «Reemplazar…» aplican una sola vez al volver a la lista (o al cerrarse la pantalla). Lo bajado de la comunidad no queda en el caché: cada pasada anota qué usó, con su clave, en `compartidas/usadas-<variante>.json`. |
+| Solo comunidad (1.6.0) | Modo sin IA: lo que falta queda en inglés y se anota (`faltan-<variante>.json`) para traducirlo a mano en «Faltan». Sin internet termina con error en vez de dar todo por faltante. La tarjeta del asistente solo se marca como recomendada (≥ 90 %) y nunca cambia la elección sola. El clic en el aviso abre el panel en Conexión, no el editor. |
 | Descartado | Arreglar los cortes de renglón del manual de Actually Additions (es un error de su propio dibujado). |
 
 ## Pruebas de modelos locales (2026-10-13)

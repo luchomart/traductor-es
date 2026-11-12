@@ -114,15 +114,16 @@ public class ConfigScreen extends BaseScreen {
             // Sin IA: no hay servicio ni clave que configurar.
             // Las dos formas de completar lo que la comunidad no tiene, una al lado de la otra: primero a mano (ayuda a todos).
             int bw = (innerW - 4) / 2;
+            int textH = communityTextHeight();
             addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta a mano"), b -> {
                 cfg.save();
                 minecraft.setScreen(CorrectionScreen.missing(this));
-            }).bounds(innerX, y + COMMUNITY_TEXT_H, bw, 20).tooltip(Component.literal(
+            }).bounds(innerX, y + textH, bw, 20).tooltip(Component.literal(
                     "Abre el editor en la pestaña «Faltan». Lo que traduzcas compartilo en Herramientas → Compartir…: así le sirve a todos.")).build());
             addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta con IA"), b -> {
                 cfg.save();
                 minecraft.setScreen(WizardScreen.completeWithAi(this));
-            }).bounds(innerX + bw + 4, y + COMMUNITY_TEXT_H, bw, 20).tooltip(Component.literal(
+            }).bounds(innerX + bw + 4, y + textH, bw, 20).tooltip(Component.literal(
                     "El asistente te ayuda a elegir una IA (en tu PC o en la nube) para traducir lo que la comunidad todavía no tiene.")).build());
             return;
         }
@@ -172,8 +173,17 @@ public class ConfigScreen extends BaseScreen {
                 .tooltip(Component.literal("Cuánto tarda cada servicio y cuáles son gratis.")).build());
     }
 
-    /** Alto del texto que explica el modo "solo comunidad" (los botones van debajo). */
-    private static final int COMMUNITY_TEXT_H = 64;
+    /** Lo que explica el modo "solo comunidad" y la invitación a ayudar (en Conexión, arriba de los botones). */
+    private static final Component COMMUNITY_INFO = Component.literal("Se usa solo lo que ya tradujo la comunidad: no se llama a "
+            + "ninguna IA ni hace falta una clave. Lo que la comunidad todavía no tiene queda en inglés.");
+    private static final Component COMMUNITY_INVITE = Component.literal("¿Nos ayudás? Traducí lo que falta y compartilo en "
+            + "Herramientas → Compartir…: así el próximo jugador ya lo tiene en español.").withStyle(ChatFormatting.YELLOW);
+
+    /** Alto real de esos dos párrafos con el ancho de ahora (con la interfaz grande ocupan más renglones). */
+    private int communityTextHeight() {
+        int lines = font.split(COMMUNITY_INFO, innerW).size() + font.split(COMMUNITY_INVITE, innerW).size();
+        return lines * (font.lineHeight + 1) + 4 + 6;
+    }
 
     /** El panel abierto en la pestaña Conexión (desde el aviso, cuando quedaron textos en inglés). */
     public static ConfigScreen onConnectionTab(Screen parent) {
@@ -666,11 +676,9 @@ public class ConfigScreen extends BaseScreen {
                 g.drawString(font, "Modo", innerX, y + 6, UiKit.MUTED, false);
                 y += ROW + 4;
                 if (cfg.communityOnly) {
-                    int ty = UiKit.wrapped(g, font, Component.literal("Se usa solo lo que ya tradujo la comunidad: no se llama a ninguna IA "
-                            + "ni hace falta una clave. Lo que la comunidad todavía no tiene queda en inglés."), innerX, y, innerW, UiKit.MUTED) + 4;
-                    UiKit.wrapped(g, font, Component.literal("¿Nos ayudás? Traducí lo que falta y compartilo en Herramientas → Compartir…: "
-                            + "así el próximo jugador ya lo tiene en español.").withStyle(ChatFormatting.YELLOW), innerX, ty, innerW, UiKit.WHITE);
-                    drawMessage(g, y + COMMUNITY_TEXT_H + 26);
+                    int ty = UiKit.wrapped(g, font, COMMUNITY_INFO, innerX, y, innerW, UiKit.MUTED) + 4;
+                    UiKit.wrapped(g, font, COMMUNITY_INVITE, innerX, ty, innerW, UiKit.WHITE);
+                    drawMessage(g, y + communityTextHeight() + 26);
                     break;
                 }
                 g.drawString(font, "Servicio", innerX, y + 6, UiKit.MUTED, false);

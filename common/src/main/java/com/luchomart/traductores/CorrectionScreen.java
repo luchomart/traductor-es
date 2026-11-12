@@ -22,7 +22,24 @@ import java.util.Map;
  */
 public class CorrectionScreen extends BaseScreen {
     /** De dónde sale la traducción que se ve (sin contar la corrección del jugador). */
-    private enum Origin { AI, COMMUNITY, COMMUNITY_REVISED, MISSING, NONE }
+    /** De dónde viene la traducción de base: cómo se muestra y cómo se vuelve a ella, en un solo lugar. */
+    private enum Origin {
+        AI("IA", "Traducción de la IA", "Volver a la de la IA", "Volver a la IA", UiKit.AQUA),
+        COMMUNITY("Comunidad", "Traducción de la comunidad (de una IA)", "Volver a la de la comunidad", "Volver a la comunidad", UiKit.GREEN),
+        COMMUNITY_REVISED("Comunidad ✓", "Traducción de la comunidad (revisada)", "Volver a la de la comunidad", "Volver a la comunidad", UiKit.GREEN),
+        MISSING("En inglés", "Sin traducir todavía: escribilo en español (después compartilo en Herramientas → Compartir…)",
+                "Volver al inglés", "Volver al inglés", UiKit.YELLOW),
+        /** Corrección de un texto que no tradujo nadie (oficial, por ejemplo): siempre tiene corrección. */
+        NONE("IA", "Traducción de la IA", "Volver a la de la IA", "Volver a la IA", UiKit.AQUA);
+
+        /** Etiqueta en la fila, rótulo arriba del editor, texto del botón de volver (largo y corto) y color. */
+        final String tag, label, restore, restoreShort;
+        final int color;
+
+        Origin(String tag, String label, String restore, String restoreShort, int color) {
+            this.tag = tag; this.label = label; this.restore = restore; this.restoreShort = restoreShort; this.color = color;
+        }
+    }
 
     /**
      * Un texto traducido. ai es la traducción de base (de la IA o de la comunidad, según origin); corrected es null si
@@ -178,7 +195,8 @@ public class CorrectionScreen extends BaseScreen {
                 }));
                 // Lo que quedó en inglés sin IA: el "de base" es el mismo original (corregirlo es traducirlo).
                 MissingTexts.read(missingFile).forEach((ns, m) -> m.forEach((key, english) ->
-                        byKey.putIfAbsent(ns + "\0" + key, new Entry(ns, key, english, english, Origin.MISSING,
+                        // put: si el caché tiene una traducción de un original viejo, lo que vale es que hoy falta.
+                        byKey.put(ns + "\0" + key, new Entry(ns, key, english, english, Origin.MISSING,
                                 corr.getOrDefault(ns, Map.of()).get(key), false))));
                 // Correcciones escritas a mano para textos que no tradujo ni la IA ni la comunidad (oficiales, por ejemplo).
                 corr.forEach((ns, m) -> m.forEach((key, text) ->
@@ -278,8 +296,7 @@ public class CorrectionScreen extends BaseScreen {
         addRenderableWidget(Widgets.button(Component.literal("Cancelar"), b -> closeEditor(null)).bounds(left + W - nextW - 8 - 2 * btnW, by, btnW, 20).build());
         if (e.corrected != null && !e.ai.isEmpty()) {
             int rw = Math.min(150, W - nextW - 12 - 2 * btnW);
-            String full = e.origin == Origin.MISSING ? "Volver al inglés" : e.fromCommunity() ? "Volver a la de la comunidad" : "Volver a la de la IA";
-            String brief = e.origin == Origin.MISSING ? "Volver al inglés" : e.fromCommunity() ? "Volver a la comunidad" : "Volver a la IA";
+            String full = e.origin.restore, brief = e.origin.restoreShort;
             addRenderableWidget(Widgets.button(Component.literal(font.plainSubstrByWidth(font.width(full) + 10 <= rw ? full : brief, rw - 6)), b -> restore())
                     .bounds(left, by, rw, 20).build());
         }
@@ -581,8 +598,7 @@ public class CorrectionScreen extends BaseScreen {
         String text = realCodes(editor.getValue());
         if (text.isBlank()) {
             showWarning(e.origin == Origin.MISSING ? "La traducción está vacía: escribí el texto en español."
-                    : e.fromCommunity() ? "La traducción está vacía. Si querés volver a la de la comunidad, usá «Volver a la de la comunidad»."
-                    : "La traducción está vacía. Si querés volver a la de la IA, usá «Volver a la de la IA».");
+                    : "La traducción está vacía. Si querés volver atrás, usá «" + e.origin.restore + "».");
             return;
         }
         String problem = e.original.isEmpty() ? null : Validator.check(e.original, text);
@@ -592,9 +608,12 @@ public class CorrectionScreen extends BaseScreen {
             return;
         }
         try {
-            if (text.equals(e.ai)) Corrections.remove(e.ns, e.key);
+            // Igual a la de base = volver a ella. Salvo en lo que falta: "Create" o "RF" quedan igual en español,
+            // y guardarlo es la forma de marcarlo como traducido (y de poder compartirlo).
+            boolean backToBase = text.equals(e.ai) && e.origin != Origin.MISSING;
+            if (backToBase) Corrections.remove(e.ns, e.key);
             else Corrections.put(e.ns, e.key, text);
-            e.setCorrected(text.equals(e.ai) ? null : text);
+            e.setCorrected(backToBase ? null : text);
             TraductorES.LOG.info("[Traductor ES] Corrección guardada: {}:{}", e.ns, e.key);
             if (next != null) {
                 pendingApply = true;
@@ -704,10 +723,7 @@ public class CorrectionScreen extends BaseScreen {
             g.drawString(font, line, left, y, UiKit.WHITE, false);
             y += font.lineHeight + 1;
         }
-        String label = e.corrected != null ? "Tu corrección"
-                : e.origin == Origin.MISSING ? "Sin traducir todavía: escribilo en español (después compartilo en Herramientas → Compartir…)"
-                : e.origin == Origin.COMMUNITY_REVISED ? "Traducción de la comunidad (revisada)"
-                : e.origin == Origin.COMMUNITY ? "Traducción de la comunidad (de una IA)" : "Traducción de la IA";
+        String label = e.corrected != null ? "Tu corrección" : e.origin.label;
         if (SECTION.matcher(e.original + e.current()).find()) label += "  ·  " + codeMark + "9, " + codeMark + "r… son colores: dejalos en su lugar";
         g.drawString(font, font.plainSubstrByWidth(label, W), left, originalBottom() + 4, UiKit.MUTED, false);
         if (warning != null && editor != null) {
@@ -744,13 +760,8 @@ public class CorrectionScreen extends BaseScreen {
             g.fill(x, y, x + w, y + h, hover ? 0xFF8A8A8A : 0xFF000000);
             g.fill(x + 1, y + 1, x + w - 1, y + h - 1, hover ? 0xFF33363C : 0xFF24262B);
             Font font = Minecraft.getInstance().font;
-            String origin = e.corrected != null ? "★ Tuya" : switch (e.origin) {
-                case COMMUNITY_REVISED -> "Comunidad ✓";
-                case COMMUNITY -> "Comunidad";
-                case MISSING -> "En inglés";
-                default -> "IA";
-            };
-            int originColor = e.corrected != null ? UiKit.GOLD : e.origin == Origin.MISSING ? UiKit.YELLOW : e.fromCommunity() ? UiKit.GREEN : UiKit.AQUA;
+            String origin = e.corrected != null ? "★ Tuya" : e.origin.tag;
+            int originColor = e.corrected != null ? UiKit.GOLD : e.origin.color;
             String source = sourceLabel(e.ns);
             int tagW = Math.min(110, Math.max(font.width(origin), font.width(source)));
             int textW = w - tagW - 18;

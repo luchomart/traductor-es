@@ -45,3 +45,6 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - Cerrar un cliente de `run/` desde un script: matar solo el `java` cuyo `/proc/<pid>/cwd` es ese `run/`.
 - Ruedita del mouse en pantallas de `common/`: sobreescribir `onScroll` de `BaseScreen`, no `mouseScrolled` (su firma cambia en 1.21).
 - Lo que se testea no puede usar `TraductorES.LOG`: en los tests no está NeoForge y falla con NoClassDefFoundError.
+- Archivos que pueden escribir dos hilos a la vez: `JsonFiles.writeAtomic` (`Files.move` con REPLACE_EXISTING borra el destino antes de renombrar y falla con NoSuchFileException).
+- No compilar con el cliente de `run/` abierto: lee las clases de `build/` y puede crashear (como al reemplazar un jar).
+- Probar el modo solo comunidad en `run/`: apartar `cache/` (Mod Menu tiene traducciones en la comunidad, así hay % y faltantes) y comprobar con `ollama ps` que no se cargó ningún modelo.

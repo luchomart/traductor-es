@@ -64,8 +64,8 @@ public class WizardScreen extends BaseScreen {
     private final Screen parent;
     private int step = 1;
     private Mode mode;
-    /** El jugador ya eligió una tarjeta: la recomendación de la comunidad no le cambia la elección. */
-    private boolean modeTouched;
+    /** El modo con el que se abrió: si se sale sin «Empezar», se devuelve (el paso 2 ya guardó el nuevo). */
+    private final boolean startCommunityOnly, startUseShared;
     /** null mientras se busca; después, si Ollama respondió en esta PC. */
     private volatile Boolean ollamaFound;
     private final Check cAi = new Check(), cModel = new Check(), cLang = new Check(), cTexts = new Check();
@@ -78,7 +78,9 @@ public class WizardScreen extends BaseScreen {
     public WizardScreen(Screen parent) {
         super(Component.literal("Asistente de Traductor ES"));
         this.parent = parent;
-        mode = Config.get().communityOnly ? Mode.COMMUNITY : aiMode();
+        startCommunityOnly = Config.get().communityOnly;
+        startUseShared = Config.get().useSharedTranslations;
+        mode = startCommunityOnly ? Mode.COMMUNITY : aiMode();
         detectOllama();
         estimateEarly();
     }
@@ -87,7 +89,6 @@ public class WizardScreen extends BaseScreen {
     public static WizardScreen completeWithAi(Screen parent) {
         WizardScreen w = new WizardScreen(parent);
         w.mode = aiMode();
-        w.modeTouched = true;
         return w;
     }
 
@@ -104,10 +105,6 @@ public class WizardScreen extends BaseScreen {
         return all == 0 ? -1 : (int) Math.floor(r.community() * 100.0 / all);
     }
 
-    private static boolean communityRecommended(Estimator.Result r) {
-        return r != null && (communityCoverage(r) < 0 || communityCoverage(r) >= COMMUNITY_RECOMMENDED_PCT);
-    }
-
     /** Cuenta los textos desde el paso 1, para comparar servicios antes de elegir (sin IA, solo leyendo los mods). */
     private void estimateEarly() {
         Minecraft mc = Minecraft.getInstance();
@@ -117,9 +114,8 @@ public class WizardScreen extends BaseScreen {
             try {
                 // Baja lo de la comunidad ya en el paso 1, para que la estimación lo descuente.
                 Estimator.Result r = Estimator.estimateModpack(mc, assumed, Config.get(), (done, all) -> {});
+                // Solo se marca como recomendada: cambiar la tarjeta elegida por su cuenta podía pasar justo al tocar «Siguiente».
                 if (estimate == null) estimate = r;
-                // La comunidad cubre casi todo: se propone de entrada (si el jugador no eligió otra cosa).
-                if (!modeTouched && step == 1 && !Config.get().setupDone && communityRecommended(r)) mode = Mode.COMMUNITY;
             } catch (Throwable e) {
                 TraductorES.LOG.warn("[Traductor ES] No se pudo contar los textos: {}", e.toString());
             }
@@ -203,11 +199,14 @@ public class WizardScreen extends BaseScreen {
 
     private void choose(Mode m) {
         mode = m;
-        modeTouched = true;
     }
 
     /** Lo que cubre la comunidad en este modpack, para la tarjeta del paso 1. */
     private List<Component> communityLines() {
+        // Con la descarga apagada no se sabe qué tiene la comunidad (elegir esta opción la prende).
+        if (!Config.get().useSharedTranslations) {
+            return List.of(Component.literal("«Bajar de la comunidad» está apagado: elegí esta opción para prenderlo y ver cuánto cubre.").withStyle(ChatFormatting.GRAY));
+        }
         Estimator.Result r = estimate;
         if (r == null) return List.of(Component.literal("Viendo qué ya tradujo la comunidad…").withStyle(ChatFormatting.GRAY));
         int pct = communityCoverage(r);
@@ -478,14 +477,24 @@ public class WizardScreen extends BaseScreen {
 
     private void notNow() {
         Traductor.wizardDismissed = true;
+        restoreMode();
+        Config.get().save();
         minecraft.setScreen(parent);
     }
 
     private void neverAgain() {
         Config cfg = Config.get();
+        restoreMode();
         cfg.showWizard = false;
         cfg.save();
         minecraft.setScreen(parent);
+    }
+
+    /** Sale sin «Empezar»: el modo vuelve a ser el de antes (si no, quedaba "con IA" sin ninguna IA comprobada). */
+    private void restoreMode() {
+        Config cfg = Config.get();
+        cfg.communityOnly = startCommunityOnly;
+        cfg.useSharedTranslations = startUseShared || startCommunityOnly;
     }
 
     private void finish() {

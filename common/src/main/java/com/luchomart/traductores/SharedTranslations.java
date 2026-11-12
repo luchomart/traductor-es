@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -162,19 +161,8 @@ public final class SharedTranslations {
                         byte[] body = http.get(baseUrl + rel);
                         if (body.length > MAX_BYTES) throw new IOException("archivo demasiado grande");
                         parse(body); // que sea válido antes de reemplazar lo que había
-                        Path local = dir.resolve(rel);
-                        Files.createDirectories(local.getParent());
-                        // Temporal propio: el asistente y la traducción pueden bajar el mismo archivo a la vez, y con un
-                        // .tmp compartido uno podría mover el del otro a medio escribir.
-                        Path tmp = Files.createTempFile(local.getParent(), local.getFileName().toString(), ".tmp");
-                        try {
-                            Files.write(tmp, body);
-                            // Atómico: con REPLACE_EXISTING Java borra el destino antes de renombrar, y si dos
-                            // descargas terminan a la vez la segunda falla con NoSuchFileException.
-                            Files.move(tmp, local, StandardCopyOption.ATOMIC_MOVE);
-                        } finally {
-                            Files.deleteIfExists(tmp);
-                        }
+                        // El asistente y la traducción pueden bajar el mismo archivo a la vez: escritura atómica.
+                        JsonFiles.writeAtomic(dir.resolve(rel), body);
                         loaded.remove(rel);
                         downloaded.incrementAndGet();
                     } catch (Exception e) {

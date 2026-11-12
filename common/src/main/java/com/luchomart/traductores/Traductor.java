@@ -131,14 +131,15 @@ public final class Traductor {
                 mc.reloadResourcePacks();
             } else if (j.packChanged) {
                 reloadOnMenu = Config.get().autoReload;
-                toast("Traductor ES", shortResult(j) + " Lo traducido se aplica al volver al menú (o con F3+T).");
+                // Si quedó algo en inglés, un solo aviso con las dos cosas (antes salían dos seguidos).
+                toast("Traductor ES", (j.hasMissing() ? missingInvite(j) : shortResult(j)) + " Lo traducido se aplica al volver al menú (o con F3+T).");
             } else if (j.state != TranslationJob.State.DONE && !j.restarting) {
                 toast("Traductor ES", shortResult(j));
             }
             // Las misiones las carga FTB Quests al abrir el mundo: si ya estaba adentro, las ve la próxima vez.
             if (j.questsChanged && !inMenu) toast("Traductor ES", "Misiones traducidas: se ven al volver a entrar al mundo.");
             // Sin IA quedó algo en inglés: se invita a completarlo (en el menú lo dice el aviso de la esquina).
-            if (j.hasMissing() && !inMenu) toast("Traductor ES", missingInvite(j));
+            if (j.hasMissing() && !inMenu && !j.packChanged) toast("Traductor ES", missingInvite(j));
             // Falló por algo de configuración y el jugador está en el menú: el asistente lo ayuda a arreglarlo.
             Config cfg = Config.get();
             if (j.setupProblem && cfg.showWizard && !wizardDismissed && mc.screen instanceof TitleScreen) {

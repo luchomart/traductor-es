@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -59,10 +58,7 @@ public final class CommunityUsed {
             Files.deleteIfExists(file);
             return;
         }
-        Files.createDirectories(file.getParent());
-        Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-        Files.writeString(tmp, GSON.toJson(data), StandardCharsets.UTF_8);
-        Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+        JsonFiles.writeAtomic(file, GSON.toJson(data));
     }
 
     /** Lo anotado en la última pasada; vacío si no hay archivo o está dañado. */

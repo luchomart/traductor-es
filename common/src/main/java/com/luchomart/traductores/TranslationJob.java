@@ -87,6 +87,8 @@ public class TranslationJob implements Runnable {
     private final CommunityUsed communityUsed = new CommunityUsed();
     /** En modo "solo comunidad": lo que quedó en inglés, con su clave (pestaña "Faltan" del editor). */
     private final MissingTexts missingTexts = new MissingTexts();
+    /** Motivo por el que no se pudo llegar a las traducciones de la comunidad en esta pasada, o null. */
+    private volatile String sharedUnreachable;
     /** Claves que quedaron en inglés en modo "solo comunidad" (-1 = no corresponde: hay IA). */
     public volatile int missing = -1;
     public volatile long translateStartMs, pausedMs;
@@ -299,6 +301,14 @@ public class TranslationJob implements Runnable {
             if (cancelRequested) { finish(State.CANCELLED, "Cancelado"); return; }
             if (applyOnly) { finish(State.DONE, "Correcciones aplicadas"); return; }
             if (cfg.communityOnly) {
+                if (sharedUnreachable != null) {
+                    // Sin IA, la comunidad es lo único que traduce: sin ella, "falta todo" sería mentira. Se usó lo
+                    // que ya estaba bajado y la lista de faltantes queda como estaba.
+                    TraductorES.LOG.warn("[Traductor ES] Solo comunidad: no se pudo bajar nada ({})", sharedUnreachable);
+                    finish(State.ERROR, "No se pudo conectar con las traducciones de la comunidad (¿sin internet?). "
+                            + "Se usó lo que ya estaba bajado; probá de nuevo más tarde.");
+                    return;
+                }
                 // Sin IA: lo pendiente queda en inglés y se anota para traducirlo a mano.
                 noteMissing(pending);
                 finish(State.DONE, missing == 0 ? "Todo traducido: no falta nada"
@@ -535,6 +545,8 @@ public class TranslationJob implements Runnable {
         });
         downloadTotal = 0;
         if (u.error() != null) TraductorES.LOG.warn("[Traductor ES] Traducciones compartidas: {}", u.error());
+        // Ni se bajó ni se pudo confirmar nada: no se llegó a la comunidad (sin internet, GitHub caído…).
+        if (u.error() != null && u.downloaded() == 0 && u.upToDate() == 0) sharedUnreachable = u.error();
         TraductorES.LOG.info("[Traductor ES] Traducciones compartidas: {} archivos bajados, {} ya al día", u.downloaded(), u.upToDate());
         message = "Buscando textos en los mods…";
     }
@@ -1382,9 +1394,9 @@ public class TranslationJob implements Runnable {
         sb.append("Archivos de libros con textos por traducir: ").append(bookFiles).append('\n');
         sb.append("Textos de misiones (FTB Quests) sin español: ").append(questTexts)
                 .append(quests == null && oldQuests == null ? " (el modpack no tiene misiones que se puedan traducir)" : "").append('\n');
-        if (missing >= 0) {
+        if (cfg.communityOnly) {
             sb.append("Modo: solo comunidad (sin IA)\n");
-            sb.append("Quedaron en inglés: ").append(missing).append('\n');
+            if (missing >= 0) sb.append("Quedaron en inglés: ").append(missing).append('\n');
             if (missing > 0) {
                 sb.append("¿Ayudás a la comunidad? Traducilos en Correcciones → pestaña «Faltan» y compartilos en Herramientas → Compartir…\n");
                 sb.append("O con una IA: Configuración → «Traducir lo que falta con IA».\n");

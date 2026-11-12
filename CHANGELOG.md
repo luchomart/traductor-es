@@ -3,12 +3,12 @@
 ## 1.6.0
 
 **English**
-- **Community only mode (no AI, no keys).** If the community already translated your modpack, you don't need Ollama or a cloud key: choose «Solo la comunidad» in the setup assistant (it shows how much of your modpack the community covers, and is preselected at 90 % or more) or *Conexión → Modo*. The mod never calls an AI; whatever is missing stays in English.
+- **Community only mode (no AI, no keys).** If the community already translated your modpack, you don't need Ollama or a cloud key: choose «Solo la comunidad» in the setup assistant (it shows how much of your modpack the community covers, and is marked as recommended at 90 % or more) or *Conexión → Modo*. The mod never calls an AI; whatever is missing stays in English. If the community can't be reached (no internet), it says so instead of reporting everything as missing.
 - **Help complete it:** the menu notice and the report say how many texts are missing. *Conexión → Traducir lo que falta a mano* opens the editor on the new **Faltan** tab to translate them yourself (then share them in *Herramientas → Compartir…*), and *Traducir lo que falta con IA* opens the assistant to pick an AI.
 - Fixed: two downloads of the same community file at the same time (assistant and translation) could fail with "NoSuchFileException".
 
 **Español**
-- **Modo solo comunidad (sin IA, sin claves).** Si la comunidad ya tradujo tu modpack, no necesitás Ollama ni una clave: elegí «Solo la comunidad» en el asistente (muestra cuánto de tu modpack cubre la comunidad y viene elegida si es el 90 % o más) o en *Conexión → Modo*. El mod nunca llama a una IA; lo que falte queda en inglés.
+- **Modo solo comunidad (sin IA, sin claves).** Si la comunidad ya tradujo tu modpack, no necesitás Ollama ni una clave: elegí «Solo la comunidad» en el asistente (muestra cuánto de tu modpack cubre la comunidad y aparece como recomendada si es el 90 % o más) o en *Conexión → Modo*. El mod nunca llama a una IA; lo que falte queda en inglés. Si no se puede llegar a la comunidad (sin internet), lo avisa en vez de dar todo por faltante.
 - **Ayudá a completarlo:** el aviso del menú y el informe dicen cuántos textos faltan. *Conexión → Traducir lo que falta a mano* abre el editor en la pestaña nueva **Faltan** para traducirlos vos (después compartilos en *Herramientas → Compartir…*), y *Traducir lo que falta con IA* abre el asistente para elegir una IA.
 - Arreglado: dos descargas del mismo archivo de la comunidad a la vez (el asistente y la traducción) podían fallar con "NoSuchFileException".
 

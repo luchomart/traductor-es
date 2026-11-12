@@ -6,7 +6,8 @@
 - **1.3.0 lista para publicar (2026-11-12), etapas 1 a 3 hechas:** repo de datos en `../traductor-es-traducciones/` (público en GitHub: luchomart/traductor-es-traducciones), con StaTech + Valhelsia en es_ar (350 archivos, 30.199 textos), `herramientas/validar.py` y CI. Se carga con `tools/compartir.py`.
 - Etapa 2: el mod baja y usa las traducciones (opción "Bajar de la comunidad" en el panel). Probada en `run/` de 1.19.2 sin caché: 469 textos de la comunidad, solo las misiones a la IA; segunda pasada: 0 bajados, 12 al día, nada por traducir.
 - Etapa 3: README (sección "Traducciones de la comunidad"), CurseForge (función + privacidad: GitHub ve IP y nombres de mods), Guía (sección "La comunidad"), prompt de ayuda, CHANGELOG y `mod_version=1.3.0`.
-- **Próximo paso:** publicar 1.3.0 (`./gradlew build`, jars a `publicacion/subir-1.3.0/`, tag `v1.3.0`, CurseForge con la descripción nueva). Antes, probarla en otra versión (NeoForge o Fabric 1.21.1) con Ollama.
+- Probada en las 5 versiones con Ollama, dos pasadas cada una, sin caché: todas bajan del repo, la 2.ª pasada no baja nada ni deja textos, 0 fallidos. Fabric 1.21.1 (es_es) usó nombres cortos de es_ar.
+- **Próximo paso:** publicar 1.3.0. Jars listos en `publicacion/subir-1.3.0/`. Falta: tag `v1.3.0` en GitHub, subir los 5 jars a CurseForge con el changelog y pegar la descripción nueva (`publicacion/curseforge.md`).
 - Pendientes chicos de 1.3.0: ajustar "texto corto" para otras variantes (hoy ≤40 caracteres sin punto final) cuando haya datos de otra variante; el estimador del asistente todavía no descuenta lo de la comunidad.
 - Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.

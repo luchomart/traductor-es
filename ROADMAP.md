@@ -1,20 +1,12 @@
 # Hoja de ruta hacia la publicación
 
 ## 📍 Dónde quedamos (actualizado 2026-11-12)
-- **1.2.0 publicada (2026-11-12):** tag `v1.2.0` en GitHub y 5 jars en CurseForge (https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator). Forge y NeoForge aprobados; los 3 de Fabric estaban en revisión. Probada con Ollama en 1.20.1 y 1.21.1, y en StaTech (fichas de REI y tarjeta "Última traducción").
-- **A medias:** CurseForge aprobó 1 de los 3 jars de Fabric (2026-11-12); falta que aprueben los otros 2. La descripción nueva (fichas de REI en 1.19.2) ya está en la página.
-- **1.3.0 lista para publicar (2026-11-12), etapas 1 a 3 hechas:** repo de datos en `../traductor-es-traducciones/` (público en GitHub: luchomart/traductor-es-traducciones), con StaTech + Valhelsia en es_ar (350 archivos, 30.199 textos), `herramientas/validar.py` y CI. Se carga con `tools/compartir.py`.
-- Etapa 2: el mod baja y usa las traducciones (opción "Bajar de la comunidad" en el panel). Probada en `run/` de 1.19.2 sin caché: 469 textos de la comunidad, solo las misiones a la IA; segunda pasada: 0 bajados, 12 al día, nada por traducir.
-- Etapa 3: README (sección "Traducciones de la comunidad"), CurseForge (función + privacidad: GitHub ve IP y nombres de mods), Guía (sección "La comunidad"), prompt de ayuda, CHANGELOG y `mod_version=1.3.0`.
-- Probada en las 5 versiones con Ollama, dos pasadas cada una, sin caché: todas bajan del repo, la 2.ª pasada no baja nada ni deja textos, 0 fallidos. Fabric 1.21.1 (es_es) usó nombres cortos de es_ar.
-- **1.3.0 publicada en GitHub (tag `v1.3.0`)**; no hace falta subirla a CurseForge: va directo la 1.4.0, que la incluye.
-- **1.4.0 lista (2026-11-12): compartir desde el juego.** Herramientas → Compartir…: "Enviar a la comunidad" (PR con la cuenta de GitHub del jugador, inicio de sesión por código; OAuth App "Traductor ES" en la cuenta luchomart, Client ID en `GitHubShare`) o "Exportar carpeta" (subida a mano por la web). Título fijo del PR, no se repite lo ya enviado (`enviados.json`). En el repo de datos, `index.json` lo rehace una acción al entrar algo a main.
-  Probado: exportar carpeta en 1.19.2 y envío real como dueño (PR #1 de prueba, cerrado). El camino con fork (otro jugador) solo con el GitHub falso de los tests. Los PR de apps quedan en "Approve and run" hasta aprobarlos.
-- **1.4.1 (2026-11-12):** descarga de a 6 archivos con barra celeste (StaTech: 226 archivos en ~10 s, antes ~90 s) y clic en el aviso del menú abre el panel. Probada en StaTech con envío real (PR #2, corrección hecha mal a propósito: cerrado sin aceptar).
-- **Próximo paso:** subir la **1.4.1** a CurseForge (`publicacion/subir-1.4.1/`), con el changelog de 1.3.0 + 1.4.0 + 1.4.1 y la descripción nueva. Después: **mejorar el editor de correcciones** (Luciano quiere encararlo). Opcional: probar el envío con otra cuenta de GitHub (camino con fork).
-- Revisar aportes: en cada PR, "Approve and run" (solo corre el control), mirar el diff y recién ahí "Merge". El control revisa formato y marcadores, no ortografía.
-- Pendientes chicos de 1.3.0: ajustar "texto corto" para otras variantes (hoy ≤40 caracteres sin punto final) cuando haya datos de otra variante; el estimador del asistente todavía no descuenta lo de la comunidad.
-- Opcionales: tag `v1.1.0` en `784f1ce` (nunca se creó); en las fichas la IA alterna "Mena de" y "Mineral de" (se corrige con el editor).
+- **Versión actual: 1.4.1** (tag `v1.4.1` en GitHub). En CurseForge sigue la 1.2.0 (de sus 3 jars de Fabric, 1 aprobado y 2 en revisión).
+- **Próximo paso:** subir la 1.4.1 a CurseForge: los 5 jars de `publicacion/subir-1.4.1/`, changelog = secciones 1.4.1 + 1.4.0 + 1.3.0 de `CHANGELOG.md`, y pegar la descripción nueva (`publicacion/curseforge.md`, trae la privacidad de bajar/compartir). Antes, conviene un `/revisar`.
+- **Después:** mejorar el editor de correcciones (Luciano quiere encararlo; todavía sin plan).
+- Traducciones de la comunidad (1.3.0–1.4.1): repo de datos `luchomart/traductor-es-traducciones` (local en `../traductor-es-traducciones/`, CC BY-NC-SA; 350 archivos es_ar de StaTech + Valhelsia). El mod baja solo lo de los mods instalados (de a 6, con barra) y lo usa en este orden: correcciones → comunidad revisada → caché propio → comunidad IA → IA. Herramientas → Compartir… manda lo nuevo como PR (device flow; OAuth App "Traductor ES" en la cuenta luchomart, Client ID en `GitHubShare`) o exporta una carpeta. Probado en las 5 versiones y con envíos reales (PR #1 y #2 de prueba, cerrados).
+- Revisar aportes: en cada PR, "Approve and run" (solo corre el control: formato y marcadores, no ortografía), mirar el diff y recién ahí "Merge". `index.json` se rehace solo.
+- Opcionales: probar el envío con otra cuenta de GitHub (camino con fork; hoy solo con el GitHub falso de los tests); ajustar "texto corto" para otras variantes (≤40 caracteres sin punto final) cuando haya datos; el estimador del asistente no descuenta lo de la comunidad; tag `v1.1.0` en `784f1ce`; "Mena de"/"Mineral de" en las fichas.
 - Misiones y libros en 1.20.1: a la espera de un modpack real que lo necesite. Atender reportes.
 
 Publicación: **CurseForge + GitHub**, declarando que el mod se hizo con ayuda de IA.

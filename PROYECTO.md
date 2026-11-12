@@ -29,6 +29,8 @@ que ya traían chino (142 en FTB OceanBlock 2).
 | Claves | Fuera de `config.json`, en `~/.traductor_es`, para que no viajen al exportar un modpack. |
 | Conexión | `127.0.0.1` y no `localhost` (Java 17 resolvía `::1`). HTTP/1.1 forzado. |
 | Ícono | El de 128 px escalado sin suavizar (`publicacion/icono-512.png`), elegido por el autor. |
+| Traducciones de la comunidad | Repo público aparte (`traductor-es-traducciones`, CC BY-NC-SA), por mod y variante, con el inglés como clave. Se bajan solas (apagable). Prioridad: correcciones → revisadas → caché propio → IA de otros → IA. Otra variante solo para nombres cortos. |
+| Compartir | Pull request con la cuenta de GitHub del jugador (device flow, sin servidor) o carpeta para subir a mano. Servidor propio descartado por ahora (mantenimiento y spam). |
 | Descartado | Arreglar los cortes de renglón del manual de Actually Additions (es un error de su propio dibujado). |
 
 ## Pruebas de modelos locales (2026-10-13)

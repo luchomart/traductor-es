@@ -39,3 +39,7 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - Repo público: commits con el email noreply (ya configurado). Nada personal en el repo.
 - Antes de una prueba real en `run/`, mirar el caché: puede tener traducciones de la IA falsa y entonces no se le manda nada a la IA (moverlo aparte).
 - En mixins `@Pseudo` sobre mods opcionales (REI, FTB Quests) no usar `@Shadow`: si el campo cambia de nombre, crashea; leerlo por reflexión.
+- Repo de datos de la comunidad en `../traductor-es-traducciones/` (se carga con `tools/compartir.py`, se valida con `herramientas/validar.py`).
+  El formato de sus JSON lo escriben Python (`json.dumps(indent=1, ensure_ascii=False)`) y `CommunityExport.toJson`: si cambia uno, cambiar el otro.
+- Para ver la descarga de la comunidad en una prueba, mover `compartidas/` aparte (si está al día no baja nada).
+- Cerrar un cliente de `run/` desde un script: matar solo el `java` cuyo `/proc/<pid>/cwd` es ese `run/`.

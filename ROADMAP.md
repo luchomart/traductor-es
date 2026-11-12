@@ -4,10 +4,10 @@
 - **v1.0.0 lista** y con tag en GitHub. Repo público. Fases 1 a 4 y extras hechos (salvo Forge 1.19.2).
 - **Publicado en CurseForge:** https://www.curseforge.com/minecraft/mc-mods/traductor-es-ai-spanish-translator
 - **1.2.0 lista, sin publicar:** Fabric 1.19.2 nueva, con libros de Patchouli en `data/` y misiones en formato viejo (solo esa versión). Probada en StaTech Industry: traducción completa y 2.936 textos de misiones aplicados. Commits solo locales; jars en `publicacion/subir-1.2.0/`.
-- **Antes de publicar:** traducción real con Ollama en una versión de 1.20.1 y una de 1.21.1 (después del refactor solo se abrieron pantallas). Alt en StaTech ya probado: funciona.
+- **Pruebas antes de publicar, hechas (2026-11-12):** traducción real con Ollama en Fabric 1.20.1 (es_ar, 121/121) y Fabric 1.21.1 (es_es, 517/517), sin fallidos. Alt en StaTech ya probado.
 - **Probado en StaTech (2026-11-12):** fichas de información de REI (128 plantillas traducidas, se ven en español) y tarjeta "Última traducción". Jars nuevos en `publicacion/subir-1.2.0/`.
 - Detalle menor: la IA alterna "Mena de" y "Mineral de" en las fichas; se corrige con el editor si molesta.
-- **Próximo paso:** traducción real con Ollama en 1.20.1 y 1.21.1 (en `run/`), después commit, push y tag `v1.2.0`, y subir a CurseForge.
+- **Próximo paso:** push y tag `v1.2.0`, y subir a CurseForge los jars de `publicacion/subir-1.2.0/` con su `changelog.md`.
 - **Misiones y libros en 1.20.1:** "Create- Too Many Addons" no da motivo para portarlos: no tiene FTB Quests ni Patchouli, y sus libros son de formatos ya soportados (AE2 con GuideME, Alex's Mobs y Citadel). Queda a la espera de un modpack real que lo necesite.
 - También pendiente: atender los primeros reportes.
 

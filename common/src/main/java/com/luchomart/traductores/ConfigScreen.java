@@ -112,19 +112,21 @@ public class ConfigScreen extends BaseScreen {
         y += ROW + 4;
         if (cfg.communityOnly) {
             // Sin IA: no hay servicio ni clave que configurar.
-            // Las dos formas de completar lo que la comunidad no tiene, una al lado de la otra: primero a mano (ayuda a todos).
-            int bw = (innerW - 4) / 2;
+            // Las dos formas de completar lo que la comunidad no tiene: la IA, ancha y primero (la principal);
+            // a mano, angosta al lado (decisión de Luciano: protagonismo a la IA).
+            int smallW = 100;
+            int bigW = innerW - smallW - 4;
             int textH = communityTextHeight();
-            addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta a mano"), b -> {
-                cfg.save();
-                minecraft.setScreen(CorrectionScreen.missing(this));
-            }).bounds(innerX, y + textH, bw, 20).tooltip(Component.literal(
-                    "Abre el editor en la pestaña «Faltan». Lo que traduzcas compartilo en Herramientas → Compartir…: así le sirve a todos.")).build());
             addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta con IA"), b -> {
                 cfg.save();
                 minecraft.setScreen(WizardScreen.completeWithAi(this));
-            }).bounds(innerX + bw + 4, y + textH, bw, 20).tooltip(Component.literal(
+            }).bounds(innerX, y + textH, bigW, 20).tooltip(Component.literal(
                     "El asistente te ayuda a elegir una IA (en tu PC o en la nube) para traducir lo que la comunidad todavía no tiene.")).build());
+            addRenderableWidget(Widgets.button(Component.literal("Traducir a mano"), b -> {
+                cfg.save();
+                minecraft.setScreen(CorrectionScreen.missing(this));
+            }).bounds(innerX + bigW + 4, y + textH, smallW, 20).tooltip(Component.literal(
+                    "Abre el editor en la pestaña «Faltan». Lo que traduzcas compartilo en Herramientas → Compartir…: así le sirve a todos.")).build());
             return;
         }
         addRenderableWidget(Widgets.button(Component.literal("◀"), b -> applyPreset(Preset.fromUrl(cfg.apiUrl).previous()))

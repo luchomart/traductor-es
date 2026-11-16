@@ -194,7 +194,7 @@ Si la comunidad ya tradujo casi todo tu modpack, no hace falta instalar Ollama n
 
 - El mod baja y usa lo de la comunidad (y tus correcciones), y **nunca llama a una IA**.
 - Lo que la comunidad todavía no tiene **queda en inglés**. El aviso del menú y el informe te dicen cuánto.
-- **¿Nos ayudás a completarlo?** En **Conexión → Traducir lo que falta a mano** se abre el editor en la pestaña **Faltan**: traducilo con *Guardar y siguiente* y después compartilo (abajo). Así el próximo jugador ya lo tiene en español.
+- **¿Nos ayudás a completarlo?** En **Conexión → Traducir a mano** se abre el editor en la pestaña **Faltan**: traducilo con *Guardar y siguiente* y después compartilo (abajo). Así el próximo jugador ya lo tiene en español.
 - ¿Preferís que lo haga una IA? **Conexión → Traducir lo que falta con IA** abre el asistente para elegir una.
 
 ### Compartir lo tuyo

@@ -40,6 +40,8 @@ public class ConfigScreen extends BaseScreen {
     private volatile Component testResult;
     /** Hay una prueba de conexión en curso (no se puede lanzar otra). */
     private volatile boolean testing;
+    /** Cuándo empezó «Probar conexión» (para los segundos que corren). */
+    private long testStartMs;
     private String lastReport = "";
 
     // Geometría, calculada en init().
@@ -117,6 +119,7 @@ public class ConfigScreen extends BaseScreen {
             int smallW = 100;
             int bigW = innerW - smallW - 4;
             int textH = communityTextHeight();
+            laidOutTextH = textH;
             addRenderableWidget(Widgets.button(Component.literal("Traducir lo que falta con IA"), b -> {
                 cfg.save();
                 minecraft.setScreen(WizardScreen.completeWithAi(this));
@@ -178,12 +181,24 @@ public class ConfigScreen extends BaseScreen {
     /** Lo que explica el modo "solo comunidad" y la invitación a ayudar (en Conexión, arriba de los botones). */
     private static final Component COMMUNITY_INFO = Component.literal("Se usa solo lo que ya tradujo la comunidad: no se llama a "
             + "ninguna IA ni hace falta una clave. Lo que la comunidad todavía no tiene queda en inglés.");
-    private static final Component COMMUNITY_INVITE = Component.literal("¿Nos ayudás? Traducí lo que falta y compartilo en "
-            + "Herramientas → Compartir…: así el próximo jugador ya lo tiene en español.").withStyle(ChatFormatting.YELLOW);
+    private static final String COMMUNITY_INVITE_TAIL = "Traducí lo que falta y compartilo en "
+            + "Herramientas → Compartir…: así el próximo jugador ya lo tiene en español.";
+
+    /** La invitación, con el % ya en español si hubo una pasada sin IA con faltantes. */
+    private static Component communityInvite() {
+        TranslationJob j = Traductor.job();
+        int pct = j != null && j.hasMissing() ? j.coveredPct() : -1;
+        String head = pct >= 0 ? "Ya tenés el " + pct + " % en español gracias a la comunidad. ¿Nos ayudás con el resto? "
+                : "¿Nos ayudás? ";
+        return Component.literal(head + COMMUNITY_INVITE_TAIL).withStyle(ChatFormatting.YELLOW);
+    }
+
+    /** Alto con el que se ubicaron los botones (si la pasada termina con el panel abierto, el texto cambia). */
+    private int laidOutTextH = -1;
 
     /** Alto real de esos dos párrafos con el ancho de ahora (con la interfaz grande ocupan más renglones). */
     private int communityTextHeight() {
-        int lines = font.split(COMMUNITY_INFO, innerW).size() + font.split(COMMUNITY_INVITE, innerW).size();
+        int lines = font.split(COMMUNITY_INFO, innerW).size() + font.split(communityInvite(), innerW).size();
         return lines * (font.lineHeight + 1) + 4 + 6;
     }
 
@@ -438,6 +453,7 @@ public class ConfigScreen extends BaseScreen {
                 ? "Probando… (la primera vez puede tardar unos segundos mientras la IA carga el modelo)"
                 : "Probando… (algunos servicios tardan en responder la primera vez)").withStyle(ChatFormatting.GRAY);
         testing = true;
+        testStartMs = System.currentTimeMillis();
         Thread t = new Thread(() -> {
             LlmClient client = new LlmClient();
             // Lo que pasó con los modelos probados, para explicarlo en el resultado (bien o mal).
@@ -635,6 +651,9 @@ public class ConfigScreen extends BaseScreen {
 
     @Override
     public void tick() {
+        // La pasada terminó con el panel abierto y la invitación ahora trae el %: los botones bajan con el texto.
+        if (tab == Tab.CONEXION && Config.get().communityOnly && laidOutTextH >= 0
+                && communityTextHeight() != laidOutTextH) rebuildWidgets();
         updateButtons();
         if (useBtn != null) {
             useBtn.visible = otherAiRunning() != null;
@@ -679,7 +698,7 @@ public class ConfigScreen extends BaseScreen {
                 y += ROW + 4;
                 if (cfg.communityOnly) {
                     int ty = UiKit.wrapped(g, font, COMMUNITY_INFO, innerX, y, innerW, UiKit.MUTED) + 4;
-                    UiKit.wrapped(g, font, COMMUNITY_INVITE, innerX, ty, innerW, UiKit.WHITE);
+                    UiKit.wrapped(g, font, communityInvite(), innerX, ty, innerW, UiKit.WHITE);
                     drawMessage(g, y + communityTextHeight() + 26);
                     break;
                 }
@@ -737,7 +756,12 @@ public class ConfigScreen extends BaseScreen {
 
     private void drawMessage(Gfx g, int y) {
         Component msg = testResult;
-        if (msg != null) UiKit.wrapped(g, font, msg, innerX, y, innerW, UiKit.WHITE);
+        if (msg == null) return;
+        if (testing) { // esperando a la IA: ruedita y segundos, para que no parezca trabado
+            UiKit.spinner(g, innerX, y - 1, 3, UiKit.MUTED);
+            int indent = UiKit.SPINNER_W + UiKit.SPINNER_GAP;
+            UiKit.wrapped(g, font, msg.copy().append(UiKit.elapsed(testStartMs)), innerX + indent, y, innerW - indent, UiKit.WHITE);
+        } else UiKit.wrapped(g, font, msg, innerX, y, innerW, UiKit.WHITE);
     }
 
     private void drawConnectionChip(Gfx g) {
@@ -803,7 +827,7 @@ public class ConfigScreen extends BaseScreen {
                     g.drawString(font, right, x + w - font.width(right), y, UiKit.MUTED, false);
                     UiKit.progressBar(g, x, y + 11, w, 7, (double) dDone / dTotal, true, 0xFF55C8FF, 0xFF2A8AC0);
                 } else {
-                    g.drawString(font, font.plainSubstrByWidth(j.message, w), x, y + 6, UiKit.MUTED, false);
+                    UiKit.loading(g, font, font.plainSubstrByWidth(j.message, w - UiKit.SPINNER_W - UiKit.SPINNER_GAP), x, y + 6, UiKit.MUTED);
                 }
             }
             case DONE -> {

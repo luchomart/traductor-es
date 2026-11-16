@@ -160,7 +160,10 @@ public final class Traductor {
 
     /** La invitación a completar lo que la comunidad todavía no tiene. */
     static String missingInvite(TranslationJob j) {
-        return fmt(j.missing) + " textos quedaron en inglés. Traducilos en Correcciones → «Faltan» y compartilos: así le sirven a todos.";
+        int pct = j.coveredPct();
+        String head = pct >= 0 ? "Ya tenés el " + pct + " % en español gracias a la comunidad. ¿Nos ayudás con el resto? "
+                : fmt(j.missing) + " textos quedaron en inglés. ";
+        return head + "Traducilo en Correcciones → «Faltan» y compartilo: así le sirve a todos.";
     }
 
     private static void toast(String title, String msg) {
@@ -274,7 +277,7 @@ public final class Traductor {
                     g.drawString(font, fmt(dDone) + " de " + fmt(dTotal) + " archivos", tx, y + 26, UiKit.MUTED, false);
                 } else {
                     g.drawString(font, "Traductor ES", tx, y + 8, UiKit.YELLOW, false);
-                    g.drawString(font, font.plainSubstrByWidth(j.message, tw), tx, y + 21, UiKit.MUTED, false);
+                    UiKit.loading(g, font, font.plainSubstrByWidth(j.message, tw - UiKit.SPINNER_W - UiKit.SPINNER_GAP), tx, y + 21, UiKit.MUTED);
                 }
             }
             case TRANSLATING, PAUSED -> {
@@ -302,7 +305,12 @@ public final class Traductor {
                 if (j.hasMissing()) {
                     UiKit.icon(g, x + 6, y + 11, 1);
                     g.drawString(font, "Listo con la comunidad", tx, y + 8, UiKit.GREEN, false);
-                    g.drawString(font, font.plainSubstrByWidth("Faltan " + fmt(j.missing) + " · ¿nos ayudás?", tw), tx, y + 21, UiKit.YELLOW, false);
+                    String head = j.coveredPct() >= 0 ? j.coveredPct() + " % en español" : "Faltan " + fmt(j.missing);
+                    // La más larga que entra (con la interfaz grande el recuadro queda angosto).
+                    String line = head + " · ¿nos ayudás?";
+                    if (font.width(line) > tw) line = head + " · ¿ayudás?";
+                    if (font.width(line) > tw) line = font.plainSubstrByWidth(head, tw);
+                    g.drawString(font, line, tx, y + 21, UiKit.YELLOW, false);
                     return;
                 }
                 UiKit.check(g, x + 6, y + 11, 1);

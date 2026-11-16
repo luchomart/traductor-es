@@ -286,7 +286,7 @@ public class ShareScreen extends BaseScreen {
         CommunityExport.Result r = result;
         int y = 80;
         switch (step) {
-            case LOADING -> g.drawCenteredString(font, "Buscando qué hay de nuevo…", mid, y, UiKit.MUTED);
+            case LOADING -> UiKit.loadingCentered(g, font, "Buscando qué hay de nuevo…", mid, y, UiKit.MUTED);
             case READY -> {
                 if (r == null || r.isEmpty()) {
                     UiKit.wrappedCentered(g, font, Component.literal("No hay nada nuevo para compartir: todo lo tuyo ya está en el repo "
@@ -304,15 +304,15 @@ public class ShareScreen extends BaseScreen {
             case LOGIN -> {
                 GitHubShare.DeviceCode c = code;
                 if (c == null) {
-                    g.drawCenteredString(font, "Pidiendo un código a GitHub…", mid, y, UiKit.MUTED);
+                    UiKit.loadingCentered(g, font, "Pidiendo un código a GitHub…", mid, y, UiKit.MUTED);
                 } else {
                     UiKit.wrappedCentered(g, font, Component.literal("Se abrió GitHub en el navegador. Pegá este código (ya está copiado) "
                             + "y tocá «Authorize»:"), mid, y, W, UiKit.TEXT);
                     g.drawScaledCentered(font, c.userCode(), mid, y + 30, UiKit.GOLD, 2f);
-                    g.drawCenteredString(font, "Esperando que autorices…", mid, y + 56, UiKit.DIM);
+                    UiKit.loadingCentered(g, font, "Esperando que autorices…", mid, y + 56, UiKit.DIM);
                 }
             }
-            case SENDING -> g.drawCenteredString(font, "Enviando tus traducciones…", mid, y, UiKit.MUTED);
+            case SENDING -> UiKit.loadingCentered(g, font, "Enviando tus traducciones…", mid, y, UiKit.MUTED);
             case DONE -> {
                 g.drawCenteredString(font, "¡Enviado, gracias!", mid, y, UiKit.GREEN);
                 UiKit.wrappedCentered(g, font, Component.literal("Cuando se acepte, las va a bajar cualquiera que use el mod. "

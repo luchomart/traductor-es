@@ -163,6 +163,17 @@ public class TranslationJob implements Runnable {
     /** Pasada en modo "solo comunidad" que dejó textos en inglés: se invita a completarlos. */
     public boolean hasMissing() { return state == State.DONE && missing > 0; }
 
+    /**
+     * En modo "solo comunidad": qué parte de lo que no tiene español oficial ya está en español (0-100), o -1 si no
+     * corresponde. Cuenta comunidad, correcciones y caché propio (por eso el texto dice "gracias a la comunidad" y no
+     * "la comunidad tradujo": el caché pudo venir de una IA). Redondea para abajo: con faltantes nunca dice 100 %.
+     */
+    public int coveredPct() {
+        if (missing < 0) return -1;
+        int covered = fromCache + fromShared + corrected, all = covered + missing;
+        return all == 0 ? -1 : (int) Math.floor(covered * 100.0 / all);
+    }
+
     private long pauseStartMs;
     /** Candado propio de la pausa del jugador (no el de la traducción: se consulta desde cualquier hilo). */
     private final Object pauseStateLock = new Object();

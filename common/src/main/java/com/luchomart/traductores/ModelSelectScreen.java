@@ -146,7 +146,7 @@ public class ModelSelectScreen extends BaseScreen {
         g.drawCenteredString(font, "Elegir modelo · " + Preset.fromUrl(Config.get().apiUrl).label, width / 2, 12, UiKit.GOLD);
         List<String> all = models;
         if (all == null) {
-            g.drawCenteredString(font, "Cargando modelos…", width / 2, listTop + 6, UiKit.MUTED);
+            UiKit.loadingCentered(g, font, "Cargando modelos…", width / 2, listTop + 6, UiKit.MUTED);
         } else if (error != null) {
             UiKit.wrappedCentered(g, font, Component.literal(error), width / 2, listTop + 6, W, UiKit.RED);
         } else {

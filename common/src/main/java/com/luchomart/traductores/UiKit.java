@@ -66,6 +66,45 @@ public final class UiKit {
         }
     }
 
+    /** Ancho de la ruedita de espera, más el espacio hasta el texto que la acompaña. */
+    public static final int SPINNER_W = 9, SPINNER_GAP = 4;
+    /** Las 8 celdas del anillo de 3×3, en el sentido de las agujas del reloj. */
+    private static final int[][] RING = {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {2, 2}, {1, 2}, {0, 2}, {0, 1}};
+
+    /**
+     * Ruedita de espera: un anillo de 8 cuadraditos con una cabeza clara que gira y deja una estela. Se anima sola
+     * con el reloj (cada cuadro de la pantalla la dibuja de nuevo), así que se ve que el mod sigue trabajando.
+     * cell = lado de cada cuadradito (3 → ruedita de 9×9, del alto de un renglón).
+     */
+    public static void spinner(Gfx g, int x, int y, int cell, int color) {
+        int head = (int) (System.currentTimeMillis() / 90 % RING.length);
+        int rgb = color & 0xFFFFFF;
+        for (int i = 0; i < RING.length; i++) {
+            int behind = (head - i + RING.length) % RING.length; // 0 = la cabeza, 7 = la más vieja
+            int alpha = behind < 4 ? 0xFF - behind * 0x38 : 0x30;
+            int cx = x + RING[i][0] * cell, cy = y + RING[i][1] * cell;
+            g.fill(cx, cy, cx + cell, cy + cell, alpha << 24 | rgb);
+        }
+    }
+
+    /** Ruedita y texto en un renglón (y = la del texto). Devuelve el ancho total. */
+    public static int loading(Gfx g, Font font, String text, int x, int y, int color) {
+        spinner(g, x, y - 1, 3, color);
+        g.drawString(font, text, x + SPINNER_W + SPINNER_GAP, y, color, false);
+        return SPINNER_W + SPINNER_GAP + font.width(text);
+    }
+
+    /** Igual que loading, centrado en cx. */
+    public static void loadingCentered(Gfx g, Font font, String text, int cx, int y, int color) {
+        loading(g, font, text, cx - (SPINNER_W + SPINNER_GAP + font.width(text)) / 2, y, color);
+    }
+
+    /** " (12 s)" desde sinceMs, o "" en los primeros 3 segundos (si responde rápido no hace falta). */
+    public static String elapsed(long sinceMs) {
+        long s = (System.currentTimeMillis() - sinceMs) / 1000;
+        return s < 3 ? "" : s < 120 ? " (" + s + " s)" : " (" + s / 60 + " min)";
+    }
+
     /** Cuadradito de estado (verde, rojo, gris). */
     public static void dot(Gfx g, int x, int y, int color) {
         g.fill(x, y, x + 5, y + 5, color);

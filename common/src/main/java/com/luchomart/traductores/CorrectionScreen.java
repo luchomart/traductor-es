@@ -684,7 +684,9 @@ public class CorrectionScreen extends BaseScreen {
             info = Traductor.fmt(matches.size()) + " textos" + (maxScroll() > 0 ? " · viendo " + Traductor.fmt(scroll + 1) + "–" + Traductor.fmt(last) : "");
             renderScrollbar(g);
         }
-        g.drawString(font, font.plainSubstrByWidth(info, W - (pickingMod ? 110 : 214)), left, height - 22, UiKit.MUTED, false);
+        int infoW = W - (pickingMod ? 110 : 214);
+        if (all == null && loadError == null) UiKit.loading(g, font, info, left, height - 22, UiKit.MUTED);
+        else g.drawString(font, font.plainSubstrByWidth(info, infoW), left, height - 22, UiKit.MUTED, false);
         if (warningInList != null) g.drawString(font, font.plainSubstrByWidth(warningInList, W - 150), left + 150, 10, UiKit.RED, false);
         else if (status != null) g.drawString(font, font.plainSubstrByWidth(status, W - 150), left + 150, 10, UiKit.GREEN, false);
         if (all != null && all.isEmpty() && loadError == null) {

@@ -38,9 +38,12 @@ public class WizardScreen extends BaseScreen {
         volatile String title = "", detail = "";
         volatile String actionLabel;
         volatile Runnable action;
+        /** Desde cuándo muestra este título (para los segundos que corren mientras espera). */
+        volatile long sinceMs = System.currentTimeMillis();
 
         void set(Status s, String t, String d) {
             if (!current()) return;
+            if (s != status || !t.equals(title)) sinceMs = System.currentTimeMillis();
             status = s; title = t; detail = d; actionLabel = null; action = null;
         }
 
@@ -338,7 +341,11 @@ public class WizardScreen extends BaseScreen {
         Minecraft mc = Minecraft.getInstance();
         checking = true;
         checkedLang = mc.options.languageCode;
-        for (Check c : new Check[]{cAi, cModel, cLang, cTexts}) c.set(Status.PENDING, "Comprobando…", "");
+        Preset shownPreset = Preset.fromUrl(cfg.apiUrl);
+        cAi.set(Status.PENDING, "Conectando con " + aiName(shownPreset) + "…", "");
+        cModel.set(Status.PENDING, "Esperando a la IA…", "");
+        cLang.set(Status.PENDING, "Comprobando…", "");
+        cTexts.set(Status.PENDING, "Contando los textos de los mods…", "");
         boolean communityOnly = cfg.communityOnly;
 
         String target = SpanishTarget.resolve(cfg.targetLanguage, mc.options.languageCode);
@@ -388,6 +395,11 @@ public class WizardScreen extends BaseScreen {
         t.start();
     }
 
+    /** El nombre del servicio sin la aclaración: "Ollama (en tu PC)" → "Ollama". */
+    private static String aiName(Preset p) {
+        return p.label.replaceFirst(" \\(.*\\)$", "");
+    }
+
     private void checkAi(Config cfg, Preset preset) {
         boolean cloud = preset.isCloud();
         if (cloud && cfg.apiKey.isBlank()) {
@@ -426,9 +438,13 @@ public class WizardScreen extends BaseScreen {
             }
         }
         String switched = null;
+        // Con IA local, la primera respuesta incluye subir el modelo a la placa de video: puede tardar un minuto.
+        String waitTitle = cloud ? "Esperando la respuesta de " + aiName(preset) + "…" : "Cargando el modelo en tu PC…";
+        String waitDetail = cloud ? "" : "la primera vez puede tardar hasta un minuto";
         for (int attempt = 0; ; attempt++) {
             try {
-                ConfigScreen.pingPatiently(client, cfg, msg -> cAi.set(Status.PENDING, "Comprobando…", msg));
+                cAi.set(Status.PENDING, waitTitle, waitDetail);
+                ConfigScreen.pingPatiently(client, cfg, msg -> cAi.set(Status.PENDING, waitTitle, msg));
                 ModelStatus.ok(cfg.apiUrl, cfg.model);
                 break;
             } catch (LlmClient.LlmException e) {
@@ -452,7 +468,7 @@ public class WizardScreen extends BaseScreen {
             }
         }
         Traductor.setConnection(Traductor.Connection.OK, cfg.model);
-        cAi.set(Status.OK, "La IA responde", "en " + where + " · midiendo la velocidad…");
+        cAi.set(Status.PENDING, "La IA responde: midiendo la velocidad…", "en " + where + " · traduce unos textos de prueba");
         // Minitest: con la velocidad medida, el tiempo de "textos sin traducir" sale más preciso.
         String target = SpanishTarget.resolve(cfg.targetLanguage, Minecraft.getInstance().options.languageCode);
         SpeedTest.Result speed = ConfigScreen.speedTestAllowed() ? SpeedTest.tryMeasure(client, cfg, target != null ? target : "es_es") : null;
@@ -617,10 +633,14 @@ public class WizardScreen extends BaseScreen {
             case WARN -> "!";
             default -> "…";
         };
+        // Pendiente con la comprobación en marcha: la ruedita gira y corren los segundos (si no, parece trabado).
+        boolean working = c.status == Status.PENDING && checking;
         g.fill(left, y + 4, left + 14, y + 18, color);
-        g.drawCenteredString(font, mark, left + 7, y + 7, UiKit.WHITE);
+        if (working) UiKit.spinner(g, left + 1, y + 5, 4, UiKit.WHITE);
+        else g.drawCenteredString(font, mark, left + 7, y + 7, UiKit.WHITE);
         int tw = W - 22 - (c.actionLabel != null ? 100 : 0);
-        g.drawString(font, font.plainSubstrByWidth(c.title, tw), left + 22, y + 3, UiKit.TEXT, false);
+        String title = working ? c.title + UiKit.elapsed(c.sinceMs) : c.title;
+        g.drawString(font, font.plainSubstrByWidth(title, tw), left + 22, y + 3, UiKit.TEXT, false);
         g.drawString(font, font.plainSubstrByWidth(c.detail, tw), left + 22, y + 14, UiKit.DIM, false);
     }
 

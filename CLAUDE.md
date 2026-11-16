@@ -48,3 +48,6 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - Archivos que pueden escribir dos hilos a la vez: `JsonFiles.writeAtomic` (`Files.move` con REPLACE_EXISTING borra el destino antes de renombrar y falla con NoSuchFileException).
 - No compilar con el cliente de `run/` abierto: lee las clases de `build/` y puede crashear (como al reemplazar un jar).
 - Probar el modo solo comunidad en `run/`: apartar `cache/` (Mod Menu tiene traducciones en la comunidad, así hay % y faltantes) y comprobar con `ollama ps` que no se cargó ningún modelo.
+- Subir a CurseForge arrastrando los jars desde Dolphin y mirar que el nombre tenga la versión nueva: el selector abre la carpeta anterior y CurseForge los rechaza como "duplicate".
+- Al devolver un `run/` de prueba puede haber un `cache/` nuevo (misiones recuperadas de los archivos de FTB Quests): compararlo con el apartado antes de pisarlo.
+- Para ver la escala de interfaz 4 en `run/`, maximizar la ventana (con 854×480 llega a 3).

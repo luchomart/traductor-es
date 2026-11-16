@@ -106,6 +106,7 @@ public class ConfigScreen extends BaseScreen {
         addRenderableWidget(Widgets.button(modeLabel(cfg), b -> {
             cfg.communityOnly = !cfg.communityOnly;
             if (cfg.communityOnly) cfg.useSharedTranslations = true;
+            cfg.releaseMode(); // elegido a mano: gana sobre lo que haya retenido el asistente
             cfg.save();
             testResult = null;
             rebuildWidgets();

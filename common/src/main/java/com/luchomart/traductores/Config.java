@@ -66,6 +66,23 @@ public class Config {
      * queda en inglés y se anota para traducirlo a mano en el editor (pestaña "Faltan").
      */
     public boolean communityOnly = false;
+    /**
+     * Mientras el asistente está abierto: el modo que queda en el disco hasta «Empezar» (null = el de memoria).
+     * El asistente cambia el modo en memoria para comprobar la IA y guarda en el medio; si el juego se cierra ahí,
+     * sin esto quedaba "con IA" sin que nadie lo eligiera. transient: Gson no lo escribe.
+     */
+    private transient Boolean heldCommunityOnly, heldUseShared;
+
+    /** Desde ahora y hasta releaseMode, save escribe este modo en vez del de memoria. */
+    public void holdMode(boolean communityOnly, boolean useShared) {
+        heldCommunityOnly = communityOnly;
+        heldUseShared = useShared;
+    }
+
+    public void releaseMode() {
+        heldCommunityOnly = null;
+        heldUseShared = null;
+    }
     /** Namespaces (ids de mods) que no se traducen. */
     public List<String> excludedNamespaces = new ArrayList<>();
     /**
@@ -123,6 +140,11 @@ public class Config {
         try {
             Files.createDirectories(DIR);
             com.google.gson.JsonObject json = GSON.toJsonTree(this).getAsJsonObject();
+            Boolean heldMode = heldCommunityOnly, heldShared = heldUseShared;
+            if (heldMode != null && heldShared != null) {
+                json.addProperty("communityOnly", heldMode);
+                json.addProperty("useSharedTranslations", heldShared);
+            }
             if (keysElsewhere) {
                 json.addProperty("apiKey", "");
                 json.add("apiKeys", new com.google.gson.JsonObject());

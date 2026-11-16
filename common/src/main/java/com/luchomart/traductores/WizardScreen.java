@@ -83,6 +83,8 @@ public class WizardScreen extends BaseScreen {
         this.parent = parent;
         startCommunityOnly = Config.get().communityOnly;
         startUseShared = Config.get().useSharedTranslations;
+        // Hasta «Empezar», en el disco queda el modo de antes (aunque se cierre el juego con el asistente abierto).
+        Config.get().holdMode(startCommunityOnly, startUseShared);
         mode = startCommunityOnly ? Mode.COMMUNITY : aiMode();
         detectOllama();
         estimateEarly();
@@ -509,6 +511,7 @@ public class WizardScreen extends BaseScreen {
     /** Sale sin «Empezar»: el modo vuelve a ser el de antes (si no, quedaba "con IA" sin ninguna IA comprobada). */
     private void restoreMode() {
         Config cfg = Config.get();
+        cfg.releaseMode();
         cfg.communityOnly = startCommunityOnly;
         cfg.useSharedTranslations = startUseShared || startCommunityOnly;
     }
@@ -516,6 +519,7 @@ public class WizardScreen extends BaseScreen {
     private void finish() {
         Config cfg = Config.get();
         cfg.setupDone = true;
+        cfg.releaseMode(); // «Empezar»: ahora sí se guarda el modo elegido
         cfg.save();
         if (cfg.communityOnly) TraductorES.LOG.info("[Traductor ES] Asistente completado: solo comunidad");
         else TraductorES.LOG.info("[Traductor ES] Asistente completado: {} · {}", Preset.fromUrl(cfg.apiUrl).label, cfg.model);

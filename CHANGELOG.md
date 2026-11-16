@@ -7,6 +7,7 @@
 - **Help complete it:** the menu notice and the report say how many texts are missing. *Conexión → Traducir a mano* opens the editor on the new **Faltan** tab to translate them yourself (then share them in *Herramientas → Compartir…*), and *Traducir lo que falta con IA* opens the assistant to pick an AI.
 - The notice, the menu box and *Conexión* say how much is already in Spanish thanks to the community («86 % en español»).
 - Waiting screens no longer look frozen: a spinner and a seconds counter while the AI loads the model, checks the connection or loads lists; the assistant says what it is doing («Cargando el modelo en tu PC…», «Midiendo la velocidad…»).
+- Fixed: closing the game while the setup assistant was open could leave the mode changed to "with AI" without choosing it.
 - Fixed: two downloads of the same community file at the same time (assistant and translation) could fail with "NoSuchFileException".
 
 **Español**
@@ -14,6 +15,7 @@
 - **Ayudá a completarlo:** el aviso del menú y el informe dicen cuántos textos faltan. *Conexión → Traducir a mano* abre el editor en la pestaña nueva **Faltan** para traducirlos vos (después compartilos en *Herramientas → Compartir…*), y *Traducir lo que falta con IA* abre el asistente para elegir una IA.
 - El aviso, el recuadro del menú y *Conexión* dicen cuánto ya está en español gracias a la comunidad («86 % en español»).
 - Las esperas ya no parecen trabadas: una ruedita y los segundos que corren mientras la IA carga el modelo, se prueba la conexión o se cargan listas; el asistente dice qué está haciendo («Cargando el modelo en tu PC…», «Midiendo la velocidad…»).
+- Arreglado: cerrar el juego con el asistente abierto podía dejar el modo en «con IA» sin haberlo elegido.
 - Arreglado: dos descargas del mismo archivo de la comunidad a la vez (el asistente y la traducción) podían fallar con "NoSuchFileException".
 
 ## 1.5.0

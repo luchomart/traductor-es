@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.1
+
+**English**
+- **Sharing is much faster and runs in the background.** *Herramientas → Compartir… → Enviar a la comunidad* now sends everything in one or two requests instead of one per file (a big modpack went from minutes to seconds). You can go back and keep playing while it sends: a notice in the corner tells you when it's done (or if it failed), and **Ver último envío** opens your pull request.
+
+**Español**
+- **Compartir es mucho más rápido y sigue en segundo plano.** *Herramientas → Compartir… → Enviar a la comunidad* ahora manda todo en uno o dos pedidos en vez de uno por archivo (en un modpack grande, de minutos a segundos). Podés volver y seguir jugando mientras se manda: un aviso en la esquina te dice cuando terminó (o si falló), y **Ver último envío** abre tu pull request.
+
 ## 1.6.0
 
 **English**

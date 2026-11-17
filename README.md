@@ -201,7 +201,7 @@ Si la comunidad ya tradujo casi todo tu modpack, no hace falta instalar Ollama n
 
 **Herramientas → Compartir…** muestra cuántas traducciones nuevas tenés (las que todavía no están en el repo) y te da dos caminos:
 
-- **Enviar a la comunidad:** la primera vez te pide conectar tu cuenta de GitHub (gratis): el mod muestra un código, se abre `github.com/login/device`, lo pegás y autorizás. Después es un clic: el mod copia el repo a tu cuenta, sube tus traducciones y abre el pull request. Tus correcciones entran como revisadas.
+- **Enviar a la comunidad:** la primera vez te pide conectar tu cuenta de GitHub (gratis): el mod muestra un código, se abre `github.com/login/device`, lo pegás y autorizás. Después es un clic: el mod copia el repo a tu cuenta, sube tus traducciones y abre el pull request. Tarda unos segundos y no hace falta esperar: podés volver y seguir jugando, y un aviso en la esquina te dice cuando terminó (**Ver último envío** abre el pull request). Tus correcciones entran como revisadas.
 - **Exportar carpeta:** sin conectar la cuenta. El mod arma la carpeta en `config/traductor_es/para-compartir/` y abre la página de subida del repo: arrastrás la carpeta (`es_ar`, o la de tu variante) y tocás *Propose changes*.
 
 Cada archivo lleva lo que ya estaba en el repo más lo tuyo, así que no se pisa nada, y lo que ya mandaste no se vuelve a mandar. Solo van textos de mods y libros; las misiones no.

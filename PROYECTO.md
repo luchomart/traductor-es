@@ -35,6 +35,7 @@ que ya traían chino (142 en FTB OceanBlock 2).
 | Solo comunidad (1.6.0) | Modo sin IA: lo que falta queda en inglés y se anota (`faltan-<variante>.json`) para traducirlo a mano en «Faltan». Sin internet termina con error en vez de dar todo por faltante. La tarjeta del asistente solo se marca como recomendada (≥ 90 %) y nunca cambia la elección sola. El clic en el aviso abre el panel en Conexión, no el editor. |
 | Invitar a completar (1.6.0) | El % se muestra como «en español gracias a la comunidad» (cuenta también caché y correcciones: decir «la comunidad tradujo» no sería cierto). En Conexión, «con IA» es el botón principal y «a mano» el secundario (decisión de Luciano). |
 | Descartado | Arreglar los cortes de renglón del manual de Actually Additions (es un error de su propio dibujado). |
+| Envío a la comunidad | Contenido dentro del árbol del commit, en tandas de ~1 MB (no un blob por archivo), y en un hilo que no depende de la pantalla, con aviso al terminar. 2026-11-17. |
 
 ## Pruebas de modelos locales (2026-10-13)
 300 textos reales de OceanBlock, el mismo pedido que hace el mod, en una RX 6700 XT 12 GB:

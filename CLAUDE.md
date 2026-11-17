@@ -52,3 +52,6 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - Al devolver un `run/` de prueba puede haber un `cache/` nuevo (misiones recuperadas de los archivos de FTB Quests): compararlo con el apartado antes de pisarlo.
 - Para ver la escala de interfaz 4 en `run/`, maximizar la ventana (con 854×480 llega a 3).
 - Al publicar una versión, además de los jars: pegar `publicacion/curseforge.md` en la descripción de CurseForge (no se actualiza sola; sin el comentario de arriba: `sed '1,/^-->$/d' publicacion/curseforge.md | wl-copy`, editor en modo Markdown) y hacer la release de GitHub con el tag en el commit del que salieron los jars y las notas en `publicacion/subir-X.Y.Z/notas-github.md`.
+- Tests: `./gradlew :neoforge-1.21.1:test` (no hay proyecto `common`); resultados en `neoforge-1.21.1/build/test-results/test/`.
+- Probar `GitHubShare` contra GitHub real sin el juego: un main en el paquete `com.luchomart.traductores` con classpath `neoforge-1.21.1/build/classes/java/main` + gson. Camino con fork: cuenta `luchomartnvl1-lang`, device flow en dos pasos (pedir código → Luciano autoriza → esperar). Cerrar los PR de prueba.
+- No crear release ni tag de GitHub hasta que Luciano confirme que se publica (a veces junta versiones). Título: «Traductor ES X.Y.Z».

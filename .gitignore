@@ -41,3 +41,4 @@ repo/
 
 # Archivos listos para subir a CurseForge (se generan al compilar)
 publicacion/subir-*/
+.playwright-mcp/

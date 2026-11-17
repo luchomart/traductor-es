@@ -51,3 +51,4 @@ Para las otras versiones no hay instancia: se prueban en `run/`.
 - Subir a CurseForge arrastrando los jars desde Dolphin y mirar que el nombre tenga la versión nueva: el selector abre la carpeta anterior y CurseForge los rechaza como "duplicate".
 - Al devolver un `run/` de prueba puede haber un `cache/` nuevo (misiones recuperadas de los archivos de FTB Quests): compararlo con el apartado antes de pisarlo.
 - Para ver la escala de interfaz 4 en `run/`, maximizar la ventana (con 854×480 llega a 3).
+- Al publicar una versión, además de los jars: pegar `publicacion/curseforge.md` en la descripción de CurseForge (no se actualiza sola) y hacer la release de GitHub con el tag en el commit del que salieron los jars y las notas en `publicacion/subir-X.Y.Z/notas-github.md`.

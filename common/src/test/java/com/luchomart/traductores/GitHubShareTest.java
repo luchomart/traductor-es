@@ -82,7 +82,8 @@ class GitHubShareTest {
         String url = share(gh).share(new GitHubShare.Login("tok", "jugador"), FILES, "Traducciones", "cuerpo");
 
         assertEquals("https://github.com/luchomart/traductor-es-traducciones/pull/7", url);
-        assertEquals(2, gh.calls.stream().filter(c -> c.endsWith("/git/blobs")).count());
+        assertFalse(gh.calls.stream().anyMatch(c -> c.endsWith("/git/blobs")), "el contenido va dentro del árbol");
+        assertEquals(1, gh.calls.stream().filter(c -> c.endsWith("/git/trees")).count());
         assertTrue(gh.calls.stream().anyMatch(c -> c.startsWith("PATCH /repos/jugador/traductor-es-traducciones/git/refs/heads/traducciones-")));
         assertEquals(List.of(3000L), sleeps, "esperó una vez a que el fork esté listo");
 
@@ -92,7 +93,34 @@ class GitHubShareTest {
         var tree = JsonParser.parseString(gh.bodies.get("POST /repos/jugador/traductor-es-traducciones/git/trees")).getAsJsonObject();
         assertEquals("tree1", tree.get("base_tree").getAsString());
         assertEquals(2, tree.getAsJsonArray("tree").size());
+        assertEquals("{\"revisadas\": {}, \"ia\": {\"a\": \"b\"}}",
+                tree.getAsJsonArray("tree").get(0).getAsJsonObject().get("content").getAsString());
         assertFalse(gh.bodies.values().stream().anyMatch(b -> b.contains("index.json")), "index.json lo rehace GitHub");
+    }
+
+    @Test
+    void muchosArchivosVanEnTandasEncadenadas() throws IOException {
+        String repo = "luchomart/traductor-es-traducciones";
+        FakeGitHub gh = new FakeGitHub().repoBase("luchomart")
+                .on("POST /repos/" + repo + "/git/refs", 201, "{}")
+                .on("POST /repos/" + repo + "/git/trees", 201, "{\"sha\": \"tree2\"}")
+                .on("POST /repos/" + repo + "/git/trees", 201, "{\"sha\": \"tree3\"}")
+                .on("POST /repos/" + repo + "/git/commits", 201, "{\"sha\": \"commit2\"}");
+        List<String> bodies = new ArrayList<>();
+        GitHubShare.Http spy = (m, url, token, body) -> {
+            if (url.endsWith("/git/trees")) bodies.add(body);
+            return gh.send(m, url, token, body);
+        };
+        GitHubShare share = new GitHubShare(spy, sleeps::add);
+        share.treeBatchChars = 10; // cada archivo llena una tanda
+        share.share(new GitHubShare.Login("tok", "luchomart"), FILES, "T", "B");
+
+        assertEquals(2, bodies.size());
+        assertEquals("tree1", JsonParser.parseString(bodies.get(0)).getAsJsonObject().get("base_tree").getAsString());
+        assertEquals("tree2", JsonParser.parseString(bodies.get(1)).getAsJsonObject().get("base_tree").getAsString(),
+                "la segunda tanda va encima de la primera");
+        var commit = JsonParser.parseString(gh.bodies.get("POST /repos/" + repo + "/git/commits")).getAsJsonObject();
+        assertEquals("tree3", commit.get("tree").getAsString());
     }
 
     @Test

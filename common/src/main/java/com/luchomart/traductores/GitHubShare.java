@@ -32,6 +32,8 @@ public final class GitHubShare {
     public static final String REPO = "traductor-es-traducciones";
     /** Permiso para hacer el fork, subir la rama y abrir el pull request en repos públicos. */
     static final String SCOPE = "public_repo";
+    /** Tamaño de cada tanda de archivos al armar el árbol del commit (los tests lo achican). */
+    int treeBatchChars = 1_000_000;
     private static final String API = "https://api.github.com";
 
     public record Response(int status, String body) {
@@ -167,25 +169,26 @@ public final class GitHubShare {
         String branch = "traducciones-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
         createBranch(repo, branch, base, token);
 
+        // El contenido va dentro del árbol (sin un pedido por archivo, que con muchos mods tardaba minutos).
+        // En tandas de ~1 MB, cada una encima de la anterior, para no mandar un pedido gigante.
+        String treeSha = baseTree;
         JsonArray tree = new JsonArray();
+        int size = 0;
         for (Map.Entry<String, String> f : files.entrySet()) {
-            JsonObject blob = new JsonObject();
-            blob.addProperty("content", f.getValue());
-            blob.addProperty("encoding", "utf-8");
-            String sha = call("POST", "/repos/" + repo + "/git/blobs", token, blob.toString(), "subir " + f.getKey())
-                    .get("sha").getAsString();
             JsonObject item = new JsonObject();
             item.addProperty("path", f.getKey());
             item.addProperty("mode", "100644");
             item.addProperty("type", "blob");
-            item.addProperty("sha", sha);
+            item.addProperty("content", f.getValue());
             tree.add(item);
+            size += f.getValue().length();
+            if (size >= treeBatchChars) {
+                treeSha = tree(repo, treeSha, tree, token);
+                tree = new JsonArray();
+                size = 0;
+            }
         }
-        JsonObject treeReq = new JsonObject();
-        treeReq.addProperty("base_tree", baseTree);
-        treeReq.add("tree", tree);
-        String treeSha = call("POST", "/repos/" + repo + "/git/trees", token, treeReq.toString(), "armar el envío")
-                .get("sha").getAsString();
+        if (tree.size() > 0) treeSha = tree(repo, treeSha, tree, token);
 
         JsonObject commit = new JsonObject();
         commit.addProperty("message", title);
@@ -208,6 +211,13 @@ public final class GitHubShare {
         pr.addProperty("maintainer_can_modify", true);
         return call("POST", "/repos/" + upstream + "/pulls", token, pr.toString(), "abrir el pull request")
                 .get("html_url").getAsString();
+    }
+
+    private String tree(String repo, String base, JsonArray items, String token) throws IOException {
+        JsonObject req = new JsonObject();
+        req.addProperty("base_tree", base);
+        req.add("tree", items);
+        return call("POST", "/repos/" + repo + "/git/trees", token, req.toString(), "armar el envío").get("sha").getAsString();
     }
 
     /** Crea la rama. Un fork recién creado tarda unos segundos en estar listo: se reintenta hasta ~1 minuto. */

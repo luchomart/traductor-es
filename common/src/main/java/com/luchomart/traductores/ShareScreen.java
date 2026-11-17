@@ -41,13 +41,17 @@ public class ShareScreen extends BaseScreen {
     private volatile String prUrl;
     private volatile String message;
     private volatile boolean cancelLogin;
+    /** El envío sigue aunque se cierre la pantalla: esto es de la sesión, no de cada pantalla. */
+    private static volatile boolean sendingNow;
+    private static volatile String lastPrUrl;
     private int W, left;
 
     public ShareScreen(ConfigScreen parent, String target) {
         super(Component.literal("Compartir con la comunidad"));
         this.parent = parent;
         this.target = target;
-        background("Traductor ES - compartir", this::load);
+        if (sendingNow) step = Step.SENDING; // se volvió a abrir mientras se manda lo anterior
+        else background("Traductor ES - compartir", this::load);
     }
 
     // ---------- Trabajo en segundo plano ----------
@@ -106,8 +110,7 @@ public class ShareScreen extends BaseScreen {
             cancelLogin = false;
             background("Traductor ES - GitHub", this::loginThenSend);
         } else {
-            step = Step.SENDING;
-            background("Traductor ES - enviar", this::doSend);
+            startSending();
         }
     }
 
@@ -125,9 +128,10 @@ public class ShareScreen extends BaseScreen {
             GitHubShare.saveLogin(LOGIN_FILE, l);
             login = l;
             code = null;
-            step = Step.SENDING;
-            Minecraft.getInstance().execute(this::rebuildWidgets);
-            doSend();
+            Minecraft.getInstance().execute(() -> {
+                startSending();
+                rebuildWidgets();
+            });
         } catch (IOException e) {
             code = null;
             if (cancelLogin) { step = Step.READY; return; }
@@ -135,19 +139,53 @@ public class ShareScreen extends BaseScreen {
         }
     }
 
-    private void doSend() {
+    /** Manda en un hilo propio: se puede cerrar la pantalla y seguir jugando; al terminar avisa. */
+    private void startSending() {
         CommunityExport.Result r = result;
-        try {
-            prUrl = GitHubShare.real().share(login, r.files(), CommunityExport.title(r), body(r));
-            markSent(r);
-            result = new CommunityExport.Result(Map.of(), Map.of());
-            step = Step.DONE;
-        } catch (GitHubShare.LoginNeeded e) {
-            forgetLogin();
-            fail(e.getMessage());
-        } catch (IOException e) {
-            fail(e.getMessage());
+        GitHubShare.Login l = login;
+        step = Step.SENDING;
+        sendingNow = true;
+        Thread t = new Thread(() -> {
+            String url = null, error = null;
+            boolean loginLost = false;
+            try {
+                url = GitHubShare.real().share(l, r.files(), CommunityExport.title(r), body(r));
+                markSent(r);
+            } catch (GitHubShare.LoginNeeded e) {
+                deleteLogin();
+                loginLost = true;
+                error = e.getMessage();
+            } catch (Exception e) {
+                TraductorES.LOG.error("[Traductor ES] Compartir", e);
+                error = e.getMessage();
+            }
+            String u = url, err = error;
+            boolean lost = loginLost;
+            Minecraft.getInstance().execute(() -> finished(u, err, lost));
+        }, "Traductor ES - enviar");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** En el hilo del juego: lo muestra esta pantalla si está abierta; si no, un aviso en la esquina. */
+    private static void finished(String url, String error, boolean loginLost) {
+        sendingNow = false;
+        if (url != null) lastPrUrl = url;
+        if (Minecraft.getInstance().screen instanceof ShareScreen s) {
+            if (loginLost) s.login = null;
+            if (error != null) {
+                s.fail(error);
+            } else {
+                s.prUrl = url;
+                s.result = new CommunityExport.Result(Map.of(), Map.of());
+                s.step = Step.DONE;
+            }
+            s.rebuildWidgets();
+            return;
         }
+        Platform.toast(Component.literal("Traductor ES"), Component.literal(error == null
+                ? "¡Traducciones enviadas, gracias! El link está en Herramientas → Compartir."
+                : "No se pudieron enviar las traducciones: " + error));
     }
 
     private static List<String> variants(CommunityExport.Result r) {
@@ -191,12 +229,16 @@ public class ShareScreen extends BaseScreen {
     }
 
     private void forgetLogin() {
+        deleteLogin();
+        login = null;
+    }
+
+    private static void deleteLogin() {
         try {
             GitHubShare.forget(LOGIN_FILE);
         } catch (IOException e) {
             TraductorES.LOG.warn("[Traductor ES] No se pudo borrar {}: {}", LOGIN_FILE, e.toString());
         }
-        login = null;
     }
 
     private static Set<String> sent() {
@@ -230,6 +272,7 @@ public class ShareScreen extends BaseScreen {
         CommunityExport.Result r = result;
         switch (step) {
             case READY -> {
+                bottomRow(mid, y + 52);
                 if (r == null || r.isEmpty()) break;
                 var sendBtn = addRenderableWidget(Widgets.button(Component.literal("Enviar a la comunidad").withStyle(ChatFormatting.GOLD), b -> {
                     message = null;
@@ -244,12 +287,6 @@ public class ShareScreen extends BaseScreen {
                 addRenderableWidget(Widgets.button(Component.literal("Exportar carpeta"), b -> exportFolder())
                         .bounds(mid + 4, y, 150, 20).tooltip(Component.literal(
                                 "Sin conectar la cuenta: arma la carpeta y abre la página del repo para que la subas arrastrándola.")).build());
-                if (login != null) {
-                    addRenderableWidget(Widgets.button(Component.literal("Desconectar GitHub"), b -> {
-                        forgetLogin();
-                        rebuildWidgets();
-                    }).bounds(mid - 70, y + 52, 140, 20).build());
-                }
             }
             case LOGIN -> {
                 GitHubShare.DeviceCode c = code;
@@ -274,6 +311,24 @@ public class ShareScreen extends BaseScreen {
                 background("Traductor ES - compartir", this::load);
             }).bounds(mid - 60, y, 120, 20).build());
             default -> {}
+        }
+    }
+
+    /** «Desconectar GitHub» y «Ver último envío», los que correspondan, centrados. */
+    private void bottomRow(int mid, int y) {
+        String url = lastPrUrl;
+        int n = (login != null ? 1 : 0) + (url != null ? 1 : 0);
+        int x = mid - (n * 144 - 4) / 2;
+        if (login != null) {
+            addRenderableWidget(Widgets.button(Component.literal("Desconectar GitHub"), b -> {
+                forgetLogin();
+                rebuildWidgets();
+            }).bounds(x, y, 140, 20).build());
+            x += 144;
+        }
+        if (url != null) {
+            addRenderableWidget(Widgets.button(Component.literal("Ver último envío"), b -> Util.getPlatform().openUri(url))
+                    .bounds(x, y, 140, 20).tooltip(Component.literal("El pull request que mandaste en esta sesión.")).build());
         }
     }
 
@@ -312,7 +367,11 @@ public class ShareScreen extends BaseScreen {
                     UiKit.loadingCentered(g, font, "Esperando que autorices…", mid, y + 56, UiKit.DIM);
                 }
             }
-            case SENDING -> UiKit.loadingCentered(g, font, "Enviando tus traducciones…", mid, y, UiKit.MUTED);
+            case SENDING -> {
+                UiKit.loadingCentered(g, font, "Enviando tus traducciones…", mid, y, UiKit.MUTED);
+                UiKit.wrappedCentered(g, font, Component.literal("Podés volver y seguir jugando: se manda solo y te avisamos "
+                        + "cuando termine."), mid, y + 16, W, UiKit.DIM);
+            }
             case DONE -> {
                 g.drawCenteredString(font, "¡Enviado, gracias!", mid, y, UiKit.GREEN);
                 UiKit.wrappedCentered(g, font, Component.literal("Cuando se acepte, las va a bajar cualquiera que use el mod. "
